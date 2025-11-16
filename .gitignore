@@ -1,3 +1,6 @@
 node_modules
 .env
 dist
+kadai.txt
+.DS_Store
+.vscode
