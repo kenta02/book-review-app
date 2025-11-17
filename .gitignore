@@ -80,3 +80,9 @@ config/config.json
 tmp/
 temp/
 .cache/
+kadai.txt
+.gitignore
+現状整理.md
+
+# ドキュメント類
+docs/
