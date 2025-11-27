@@ -1,7 +1,8 @@
 import express from "express";
 import { Request, Response } from "express";
 import cors from "cors";
-import bookRoutes from "./routes/books";
+import bookRouter from "./routes/books";
+import authRouter from "./routes/auth";
 
 const app = express();
 app.use(cors());
@@ -10,6 +11,9 @@ app.use(express.json());
 app.get("/health", (_req: Request, res: Response) => res.json({ ok: true }));
 
 // ルートのインポート
-app.use("/api/books", bookRoutes);
+app.use("/api/books", bookRouter);
+
+// 認証ルートのインポート
+app.use("/api/auth", authRouter);
 
 export default app;
