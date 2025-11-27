@@ -1,33 +1,28 @@
 import express, { Request, Response } from "express";
 import Book from "../models/Book";
 
-// Routerのインスタンスを作成
+// GET /api/books - 本一覧取得エンドポイント
 const router = express.Router();
-
-// GET エンドポイントを定義
 router.get("/", async (req: Request, res: Response) => {
   try {
-    // DB処理
-    // クエリパラメータを取得
-    const page = parseInt(req.query.page as string) || 1; // 文字列 → 数値
+    // クエリパラメータからページネーション情報を取得（文字列から数値に変換）
+    const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
-    const offset = (page - 1) * limit; // ページ1なら offset=0, ページ2なら offset=20
-    // データベースから取得
+    const offset = (page - 1) * limit;
+    // ページネーション設定でDBから本データを取得
     const { count, rows } = await Book.findAndCountAll({
       limit: limit,
       offset: offset,
       order: [["createdAt", "DESC"]],
     });
 
-    // ページネーション情報をログ出力（レスポンス前）
+    // 取得情報をログ出力
     console.log(
       `Fetching books - page: ${page}, limit: ${limit}, offset: ${offset}`
     );
-
-    // 結果をログ出力（レスポンス前）
     console.log(`Found ${count} books in total`);
 
-    // レスポンスを返す
+    // ページネーション情報を含めたレスポンスを返す
     res.json({
       success: true,
       data: {
@@ -41,37 +36,31 @@ router.get("/", async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    // エラー処理
+    // エラーをログ出力し500ステータスで返す
     console.error("Error fetching books:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// POST /api/booksを実装する
+// POST /api/books - 新規本登録エンドポイント
 router.post("/", async (req: Request, res: Response) => {
   try {
-    // req.body から本の情報を取得
+    // リクエストボディから本の情報を抽出
     const { title, author, publicationYear, ISBN, summary } = req.body;
     console.log("Received new book data:", req.body);
-    // 手動でバリデーションを行う
-
-    // エラーを格納する配列
+    // 入力バリデーション: 各フィールドの必須チェック
     const errors = [];
 
-    // titleの必須チェック
+    // バリデーション: titleは必須
     if (!title || title.trim() === "") {
       errors.push({ field: "title", message: "タイトルは必須項目です。" });
     }
-    // authorの必須チェック
+    // バリデーション: authorは必須
     if (!author || author.trim() === "") {
       errors.push({ field: "author", message: "著者は必須項目です。" });
     }
 
-    // 複数のバリデーションエラーがある場合
-    // 例: details:[
-    //   { field: "title", message: "タイトルは必須項目です。" },
-    //   { field: "author", message: "著者は必須項目です。" },
-    // ]
+    // バリデーションエラーが存在する場合は400ステータスで返す
     if (errors.length > 0) {
       return res.status(400).json({
         success: false,
@@ -83,11 +72,11 @@ router.post("/", async (req: Request, res: Response) => {
       });
     }
 
-    // 重複チェック（ISBN）
+    // 重複チェック: ISBNが既に存在するか確認
     if (ISBN) {
       const existingBook = await Book.findOne({ where: { ISBN } });
       if (existingBook) {
-        // 409エラーを返す
+        // 409 Conflictで既存リソースを返す
         return res.status(409).json({
           success: false,
           error: {
@@ -98,7 +87,7 @@ router.post("/", async (req: Request, res: Response) => {
       }
     }
 
-    // データベースに保存
+    // 本データをDBに保存
     const newBook = await Book.create({
       title,
       author,
@@ -107,15 +96,14 @@ router.post("/", async (req: Request, res: Response) => {
       summary,
     });
 
-    // 201成功レスポンスを返す
+    // 201 Createdで作成された本情報を返す
     res.status(201).json({
       success: true,
       data: newBook,
     });
   } catch (error) {
-    // エラー処理
+    // エラーをログ出力し500ステータスで返す
     console.error("Error creating new book:", error);
-    // 500エラーを返す
     res.status(500).json({
       success: false,
       error: {
@@ -126,5 +114,4 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
-// ルーターをエクスポート
 export default router;
