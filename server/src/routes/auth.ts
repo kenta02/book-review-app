@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import User from "../models/Users";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { error } from "console";
 
 // POST /api/auth/register - ユーザー登録
 // パスワードをハッシュ化して DB に保存し、JWT トークンを返す
@@ -228,6 +229,64 @@ router.post("/login", async (req: Request, res: Response) => {
         code: "INTERNAL_SERVER_ERROR",
       },
     });
+  }
+});
+
+// 認証ミドルウェアの作成
+router.get("/me", async (req: Request, res: Response) => {
+  // ヘッダーからAuthroizationを取得する。。
+  const authHeader = req.headers.authorization;
+
+  // ”Bearer ”を取り除いてトークン部分だけを抽出する
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({
+      success: false,
+      error: {
+        message: "トークンが無い、または無効です。",
+        code: "AUTHENTICATION_FAILED",
+      },
+    });
+  } else {
+    // トークン部分を取り出す(7文字目以降)
+    const token = authHeader.substring(7);
+    const jwtSecret = (process.env.JWT_SECRET ||
+      "dev_secret_key_12345") as string;
+    try {
+      const decoded = jwt.verify(token, jwtSecret) as { id: number };
+      const user = await User.findByPk(decoded.id);
+
+      // ユーザー情報をレスポンス
+      if (user) {
+        const userToJson = user.toJSON();
+        return res.status(200).json({
+          success: true,
+          data: {
+            user: {
+              id: userToJson.id,
+              username: userToJson.username,
+              email: userToJson.email,
+            },
+          },
+        });
+      } else {
+        return res.status(401).json({
+          success: false,
+          error: {
+            message: "ユーザーが存在しません。",
+            code: "USER_NOT_FOUND",
+          },
+        });
+      }
+    } catch (error) {
+      // 401: 認証失敗
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: "トークンが無い、または無効です。",
+          code: "AUTHENTICATION_FAILED",
+        },
+      });
+    }
   }
 });
 
