@@ -166,60 +166,59 @@ router.post("/login", async (req: Request, res: Response) => {
       });
     }
 
-    if (email) {
-      const existUser = await User.findOne({ where: { email } });
-      if (!existUser) {
-        return res.status(401).json({
-          success: false,
-          error: {
-            message: "認証に失敗しました。メールアドレスが正しくありません。",
-            code: "AUTHENTICATION_FAILED",
+    const existUser = await User.findOne({ where: { email } });
+    if (!existUser) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message:
+            "認証に失敗しました。メールアドレスまたはパスワードが正しくありません。",
+          code: "AUTHENTICATION_FAILED",
+        },
+      });
+    }
+
+    // bcrypt.compare: 平文とハッシュを比較（戻り値: true/false）
+    const isPasswordVaild = await bcrypt.compare(
+      password,
+      existUser.toJSON().password as string
+    );
+
+    if (isPasswordVaild) {
+      const jwtSecret = (process.env.JWT_SECRET ||
+        "dev_secret_key_12345") as string;
+      const userJson = existUser.toJSON();
+
+      const jwtPayload = {
+        username: userJson.username,
+        email: userJson.email,
+        id: userJson.id,
+      };
+
+      const token = jwt.sign(jwtPayload, jwtSecret, {
+        expiresIn: "30d",
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          user: {
+            id: userJson.id,
+            username: userJson.username,
+            email: userJson.email,
           },
-        });
-      }
-
-      // bcrypt.compare: 平文とハッシュを比較（戻り値: true/false）
-      const isPasswordVaild = await bcrypt.compare(
-        password,
-        existUser.toJSON().password as string
-      );
-
-      if (isPasswordVaild) {
-        const jwtSecret = (process.env.JWT_SECRET ||
-          "dev_secret_key_12345") as string;
-        const userJson = existUser.toJSON();
-
-        const jwtPayload = {
-          username: userJson.username,
-          email: userJson.email,
-          id: userJson.id,
-        };
-
-        const token = jwt.sign(jwtPayload, jwtSecret, {
-          expiresIn: "30d",
-        });
-
-        return res.status(200).json({
-          success: true,
-          data: {
-            user: {
-              id: userJson.id,
-              username: userJson.username,
-              email: userJson.email,
-            },
-            token: token,
-          },
-        });
-      } else {
-        // 401: 認証失敗（404 ではない）
-        return res.status(401).json({
-          success: false,
-          error: {
-            message: "認証に失敗しました。パスワードが一致しません。",
-            code: "AUTHENTICATION_FAILED",
-          },
-        });
-      }
+          token: token,
+        },
+      });
+    } else {
+      // 401: 認証失敗（404 ではない）
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: "認証に失敗しました。パスワードが一致しません。",
+          code: "AUTHENTICATION_FAILED",
+        },
+      });
     }
   } catch (error) {
     res.status(500).json({
