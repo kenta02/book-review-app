@@ -1,0 +1,861 @@
+openapi: 3.0.3
+info:
+  title: Book Review App API
+  description: |
+    書籍レビューアプリケーションのREST API仕様
+
+    🔐 認証について：
+    - 保護されたエンドポイント（🔒マーク）には Authorization ヘッダーが必要です
+    - Format: `Authorization: Bearer <JWT_TOKEN>`
+  version: 1.0.0
+  contact:
+    name: Book Review App
+  license:
+    name: ISC
+
+servers:
+  - url: http://localhost:3001/api
+    description: ローカル開発環境
+
+tags:
+  - name: Auth
+    description: 認証関連
+  - name: Books
+    description: 書籍管理
+  - name: Reviews
+    description: レビュー管理
+  - name: Users
+    description: ユーザー情報
+  - name: Favorites
+    description: お気に入り管理
+  - name: Comments
+    description: コメント管理
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT認証トークン
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: tanaka
+        email:
+          type: string
+          format: email
+          example: tanaka@example.com
+        role:
+          type: string
+          enum: [user, admin]
+          example: user
+
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: 吾輩は猫である
+        author:
+          type: string
+          example: 夏目漱石
+        publicationYear:
+          type: integer
+          example: 1905
+        ISBN:
+          type: string
+          example: 9784101010014
+        summary:
+          type: string
+        averageRating:
+          type: number
+          format: float
+          example: 4.2
+        reviewCount:
+          type: integer
+          example: 15
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+        bookId:
+          type: integer
+        userId:
+          type: integer
+        username:
+          type: string
+        content:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        helpfulCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        username:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+        totalPages:
+          type: integer
+        totalItems:
+          type: integer
+        itemsPerPage:
+          type: integer
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+
+paths:
+  /auth/register:
+    post:
+      summary: ユーザー登録
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+                - password
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 150
+                  example: tanaka
+                email:
+                  type: string
+                  format: email
+                  example: tanaka@example.com
+                password:
+                  type: string
+                  minLength: 8
+                  example: password123
+      responses:
+        "201":
+          description: ユーザー登録成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: "#/components/schemas/User"
+                      token:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        "400":
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: ユーザー名またはメール既存
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      summary: ユーザーログイン
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: tanaka@example.com
+                password:
+                  type: string
+                  example: password123
+      responses:
+        "200":
+          description: ログイン成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: "#/components/schemas/User"
+                      token:
+                        type: string
+        "401":
+          description: 認証失敗
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      summary: 現在のユーザー情報取得
+      tags: [Auth]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: ユーザー情報取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: "#/components/schemas/User"
+        "401":
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /books:
+    get:
+      summary: 書籍一覧取得
+      tags: [Books]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: タイトルまたは著者で検索
+        - name: minRating
+          in: query
+          schema:
+            type: number
+        - name: maxRating
+          in: query
+          schema:
+            type: number
+        - name: yearFrom
+          in: query
+          schema:
+            type: integer
+        - name: yearTo
+          in: query
+          schema:
+            type: integer
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [title, author, publicationYear, rating, createdAt]
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [ASC, DESC]
+      responses:
+        "200":
+          description: 書籍一覧取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      books:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Book"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+
+    post:
+      summary: 書籍追加
+      tags: [Books]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - author
+              properties:
+                title:
+                  type: string
+                author:
+                  type: string
+                publicationYear:
+                  type: integer
+                ISBN:
+                  type: string
+                summary:
+                  type: string
+      responses:
+        "201":
+          description: 書籍追加成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: "#/components/schemas/Book"
+        "400":
+          description: バリデーションエラー
+        "401":
+          description: 未認証
+        "409":
+          description: ISBN既存
+
+  /books/{id}:
+    get:
+      summary: 書籍詳細取得
+      tags: [Books]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 書籍詳細取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: "#/components/schemas/Book"
+        "404":
+          description: 書籍が見つからない
+
+    put:
+      summary: 書籍更新
+      tags: [Books]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                author:
+                  type: string
+                publicationYear:
+                  type: integer
+                ISBN:
+                  type: string
+                summary:
+                  type: string
+      responses:
+        "200":
+          description: 書籍更新成功
+        "403":
+          description: 権限不足
+        "404":
+          description: 書籍が見つからない
+
+    delete:
+      summary: 書籍削除
+      tags: [Books]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 書籍削除成功
+        "403":
+          description: 権限不足
+        "404":
+          description: 書籍が見つからない
+
+  /books/{bookId}/reviews:
+    get:
+      summary: 特定書籍のレビュー取得
+      tags: [Books]
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: レビュー取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      reviews:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Review"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+                      averageRating:
+                        type: number
+                      reviewCount:
+                        type: integer
+        "404":
+          description: 書籍が見つからない
+
+  /reviews:
+    get:
+      summary: レビュー一覧取得
+      tags: [Reviews]
+      parameters:
+        - name: bookId
+          in: query
+          schema:
+            type: integer
+        - name: userId
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: レビュー一覧取得成功
+
+    post:
+      summary: レビュー投稿
+      tags: [Reviews]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - bookId
+                - content
+                - rating
+              properties:
+                bookId:
+                  type: integer
+                content:
+                  type: string
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+      responses:
+        "201":
+          description: レビュー投稿成功
+        "404":
+          description: 書籍が見つからない
+
+  /reviews/{id}:
+    get:
+      summary: レビュー詳細取得
+      tags: [Reviews]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: レビュー詳細取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      bookId:
+                        type: integer
+                      userId:
+                        type: integer
+                      username:
+                        type: string
+                      content:
+                        type: string
+                      rating:
+                        type: integer
+                      helpfulCount:
+                        type: integer
+                      comments:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Comment"
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+
+    put:
+      summary: レビュー更新
+      tags: [Reviews]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookId:
+                  type: integer
+                content:
+                  type: string
+                rating:
+                  type: integer
+      responses:
+        "200":
+          description: レビュー更新成功
+        "403":
+          description: 権限不足
+
+    delete:
+      summary: レビュー削除
+      tags: [Reviews]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: レビュー削除成功
+
+  /reviews/{id}/helpful:
+    post:
+      summary: レビューを役に立ったとしる
+      tags: [Reviews]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 役に立ったカウント追加成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      helpfulCount:
+                        type: integer
+
+  /users/{id}:
+    get:
+      summary: ユーザープロファイル取得
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: ユーザープロファイル取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      username:
+                        type: string
+                      reviewCount:
+                        type: integer
+                      favoriteCount:
+                        type: integer
+                      createdAt:
+                        type: string
+                        format: date-time
+
+  /users/{id}/reviews:
+    get:
+      summary: ユーザーのレビュー一覧
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: ユーザーレビュー一覧取得成功
+
+  /users/{id}/favorites:
+    get:
+      summary: ユーザーのお気に入り書籍一覧
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: お気に入り一覧取得成功
+
+  /favorites:
+    post:
+      summary: お気に入り追加
+      tags: [Favorites]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - bookId
+              properties:
+                bookId:
+                  type: integer
+      responses:
+        "201":
+          description: お気に入り追加成功
+
+  /favorites/{bookId}:
+    delete:
+      summary: お気に入り削除
+      tags: [Favorites]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: お気に入り削除成功
+
+  /comments:
+    post:
+      summary: コメント投稿
+      tags: [Comments]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reviewId
+                - content
+              properties:
+                reviewId:
+                  type: integer
+                content:
+                  type: string
+                parentId:
+                  type: integer
+                  description: リプライの場合、親コメントID
+      responses:
+        "201":
+          description: コメント投稿成功
+
+  /comments/{id}:
+    delete:
+      summary: コメント削除
+      tags: [Comments]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: コメント削除成功
