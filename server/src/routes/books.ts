@@ -44,8 +44,6 @@ router.get("/", async (req: Request, res: Response) => {
 router.get("/:id", async (req: Request, res: Response) => {
   try {
     const bookId = Number(req.params.id);
-    console.log(`Fetching book with ID: ${bookId}`);
-
     const errors = [];
 
     // idの数値チェック
