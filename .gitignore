@@ -87,3 +87,4 @@ kadai.txt
 # ドキュメント類
 docs/
 .copilot-instructions
+.github/agents/コーチングスタイルさん.agent.md
