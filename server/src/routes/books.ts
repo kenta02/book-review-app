@@ -95,8 +95,6 @@ router.get("/:id", async (req: Request, res: Response) => {
 router.post("/", async (req: Request, res: Response) => {
   try {
     const { title, author, publicationYear, ISBN, summary } = req.body;
-    console.log("Received new book data:", req.body);
-
     const errors = [];
 
     if (!title || title.trim() === "") {
@@ -153,6 +151,24 @@ router.post("/", async (req: Request, res: Response) => {
       },
     });
   }
+});
+
+// PUT /api/books/:id - 書籍情報更新
+router.put("/:id", async(req: Request, res: Response) => {
+try {
+    const bookId = Number(req.params.id);
+    const { title, author, publicationYear, ISBN, summary } = req.body;
+    const errors = [];
+
+  // 必要そうなこと
+  // 型チェック
+  // 送られたフィールドの型チェック（publicationYearはnumber、ISBNはstring）や重複チェック（ISBN）が適切。空文字列やnullの扱いはどうする？ 
+  // 重複チェック
+  // エラーメッセージ
+
+} catch (error) {
+
+}
 });
 
 export default router;
