@@ -4,6 +4,7 @@
   "description": "",
   "scripts": {
     "dev": "ts-node --transpileOnly ./src/server.ts",
+    "swagger": "ts-node --transpileOnly ./src/swagger-server.ts",
     "build": "tsc",
     "start": "node dist/server.js"
   },
@@ -17,7 +18,9 @@
     "express": "5.1.0",
     "jsonwebtoken": "9.0.2",
     "mysql2": "3.15.1",
-    "sequelize": "6.37.7"
+    "sequelize": "6.37.7",
+    "swagger-ui-express": "5.0.0",
+    "yaml": "2.4.1"
   },
   "devDependencies": {
     "@types/bcrypt": "6.0.0",
