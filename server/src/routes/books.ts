@@ -258,4 +258,21 @@ router.put("/:id", async (req: Request, res: Response) => {
   }
 });
 
+// DELETE /api/books/:id - 書籍削除
+router.delete(":id", async (req: Request, res: Response) => {
+  try {
+    // 書籍の存在チェック
+    // レビューとお気に入り登録を並列でチェック
+  } catch (error) {
+    console.error("Error deleting book:", error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: "Internal server error",
+        code: "INTERNAL_SERVER_ERROR",
+      },
+    });
+  }
+});
+
 export default router;
