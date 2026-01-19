@@ -11,6 +11,11 @@ const Review = sequelize.define("Review", {
   bookId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: "Books",
+      key: "id",
+    },
+    onDelete: "RESTRICT",
   },
 
   userId: {

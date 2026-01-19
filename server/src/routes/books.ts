@@ -1,7 +1,5 @@
 import express, { Request, Response } from "express";
 import Book from "../models/Book";
-import { authenticate } from "../middleware/auth";
-import User from "../models/Users";
 
 const router = express.Router();
 
@@ -237,7 +235,8 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     if (title !== undefined) updateData.title = title;
     if (author !== undefined) updateData.author = author;
-    if (publicationYear !== undefined) updateData.publicationYear = publicationYear;
+    if (publicationYear !== undefined)
+      updateData.publicationYear = publicationYear;
     if (ISBN !== undefined) updateData.ISBN = ISBN;
     if (summary !== undefined) updateData.summary = summary;
 

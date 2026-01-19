@@ -16,6 +16,11 @@ const Favorite = sequelize.define("Favorite", {
   bookId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: "Books",
+      key: "id",
+    },
+    onDelete: "RESTRICT",
   },
 
   createdAt: {
