@@ -155,26 +155,12 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
-// PUT /api/books/:id - 書籍情報更新
-router.put("/:id", authenticate, async (req: Request, res: Response) => {
+// PUT /api/books/:id - 書籍情報更新（部分更新対応）
+router.put("/:id", async (req: Request, res: Response) => {
   try {
     const bookId = Number(req.params.id);
     const { title, author, publicationYear, ISBN, summary } = req.body;
     const errors = [];
-    // 認証済みユーザーを取得
-    const user = await User.findByPk(req.userId);
-    const isAdmin = user?.toJSON().role === "admin";
-
-    // 管理者権限チェック
-    if (!user || !isAdmin) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          message: "権限がありません。",
-          code: "FORBIDDEN",
-        },
-      });
-    }
 
     if (!Number.isInteger(bookId) || bookId <= 0) {
       // idの数値チェック
@@ -207,26 +193,55 @@ router.put("/:id", authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    // ISBN 重複チェック
-    const isISBN = await Book.findOne({ where: { ISBN } });
-    if (isISBN && isISBN.get("id") !== bookId) {
-      return res.status(409).json({
+    // title, author のバリデーション（送られた場合のみチェック）
+    if (title !== undefined && (!title || title.trim() === "")) {
+      errors.push({ field: "title", message: "タイトルは必須項目です。" });
+    }
+    if (author !== undefined && (!author || author.trim() === "")) {
+      errors.push({ field: "author", message: "著者は必須項目です。" });
+    }
+
+    if (errors.length > 0) {
+      return res.status(400).json({
         success: false,
         error: {
-          message: "同じISBNの本が既に存在します。",
-          code: "DUPLICATE_RESOURCE",
+          message: "Validation failed",
+          code: "VALIDATION_ERROR",
+          details: errors,
         },
       });
     }
 
-    // 書籍情報更新
-    await bookInfo.update({
-      title,
-      author,
-      publicationYear,
-      ISBN,
-      summary,
-    });
+    // ISBN 重複チェック（送られた場合のみ）
+    if (ISBN !== undefined) {
+      const isISBN = await Book.findOne({ where: { ISBN } });
+      if (isISBN && isISBN.get("id") !== bookId) {
+        return res.status(409).json({
+          success: false,
+          error: {
+            message: "同じISBNの本が既に存在します。",
+            code: "DUPLICATE_RESOURCE",
+          },
+        });
+      }
+    }
+
+    // 部分更新：送られたフィールドのみを更新
+    const updateData: Partial<{
+      title: string;
+      author: string;
+      publicationYear: number;
+      ISBN: string;
+      summary: string;
+    }> = {};
+
+    if (title !== undefined) updateData.title = title;
+    if (author !== undefined) updateData.author = author;
+    if (publicationYear !== undefined) updateData.publicationYear = publicationYear;
+    if (ISBN !== undefined) updateData.ISBN = ISBN;
+    if (summary !== undefined) updateData.summary = summary;
+
+    await bookInfo.update(updateData);
 
     res.json({
       success: true,
