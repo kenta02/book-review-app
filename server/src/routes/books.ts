@@ -156,67 +156,48 @@ router.post("/", async (req: Request, res: Response) => {
 });
 
 // PUT /api/books/:id - 書籍情報更新
-router.put("/:id", authenticate, async(req: Request, res: Response) => {
-try {
+router.put("/:id", authenticate, async (req: Request, res: Response) => {
+  try {
     const bookId = Number(req.params.id);
     const { title, author, publicationYear, ISBN, summary } = req.body;
     const errors = [];
+    // 認証済みユーザーを取得
+    const user = await User.findByPk(req.userId);
+    const isAdmin = user?.toJSON().role === "admin";
 
-  // 必要そうなこと
-// 1. 認証ミドルウェア（authenticate）
-//    ↓（通った時点で req.userId が設定されている）
-   
-// 2. ユーザー取得 + 権限（role）チェック
-//    ↓（ここで admin でなければ 403 で即座に返す）
-   
-// 3. ID の数値チェック
-//    ↓
-   
-// 4. 書籍の存在チェック
-//    ↓
-   
-// 5. リクエストボディのバリデーション
-//    ↓
-   
-// 6. ISBN 重複チェック
-//    ↓
-   
-// 7. 書籍情報の更新
+    // 管理者権限チェック
+    if (!user || !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          message: "権限がありません。",
+          code: "FORBIDDEN",
+        },
+      });
+    }
 
-  // 認証済みユーザーを取得
-  const userInfo = await User.findByPk(req.userId);
+    if (!Number.isInteger(bookId) || bookId <= 0) {
+      // idの数値チェック
+      errors.push({
+        field: "id",
+        message: "IDは1以上の整数である必要があります。",
+      });
+    }
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: "Invalid book id",
+          code: "INVALID_BOOK_ID",
+          details: errors,
+        },
+      });
+    }
 
-  // 権限不足
-  if(!userInfo){
-    return res.status(403).json({
-      success: false,
-      error: {
-        message: "権限がありません。",
-        code: "FORBIDDEN",
-      },
-    })
-  }
-  // idの数値チェック
-  if (!Number.isInteger(bookId) || bookId <= 0) {
-    errors.push({
-      field: "id",
-      message: "IDは1以上の整数である必要があります。",
-    });
-  }
-  if(errors.length>0){
-    return res.status(400).json({
-      success: false,
-      error: {
-        message: "Invalid book id",
-        code: "INVALID_BOOK_ID",
-        details: errors,
-      },
-    })
-  }
-
+    // 書籍の存在チェック
     const bookInfo = await Book.findByPk(bookId);
 
-    if(!bookInfo){
+    if (!bookInfo) {
       return res.status(404).json({
         success: false,
         error: {
@@ -226,10 +207,41 @@ try {
       });
     }
 
-} catch (error) {
+    // ISBN 重複チェック
+    const isISBN = await Book.findOne({ where: { ISBN } });
+    if (isISBN && isISBN.get("id") !== bookId) {
+      return res.status(409).json({
+        success: false,
+        error: {
+          message: "同じISBNの本が既に存在します。",
+          code: "DUPLICATE_RESOURCE",
+        },
+      });
+    }
 
+    // 書籍情報更新
+    await bookInfo.update({
+      title,
+      author,
+      publicationYear,
+      ISBN,
+      summary,
+    });
 
-}
+    res.json({
+      success: true,
+      data: bookInfo,
+    });
+  } catch (error) {
+    console.error("Error updating book:", error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: "Internal server error",
+        code: "INTERNAL_SERVER_ERROR",
+      },
+    });
+  }
 });
 
 export default router;
