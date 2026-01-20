@@ -1,10 +1,13 @@
-import express, { Request, Response } from "express";
-import Book from "../models/Book";
+import express, { Request, Response } from 'express';
+import Book from '../models/Book';
+import { BookParams } from '../types/route-params';
+import Review from '../models/Review';
+import Favorite from '../models/Favorite';
 
 const router = express.Router();
 
 // GET /api/books - 書籍一覧取得（ページネーション対応）
-router.get("/", async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
@@ -14,12 +17,10 @@ router.get("/", async (req: Request, res: Response) => {
     const { count, rows } = await Book.findAndCountAll({
       limit,
       offset,
-      order: [["createdAt", "DESC"]],
+      order: [['createdAt', 'DESC']],
     });
 
-    console.log(
-      `Fetching books - page: ${page}, limit: ${limit}, offset: ${offset}`
-    );
+    console.log(`Fetching books - page: ${page}, limit: ${limit}, offset: ${offset}`);
     console.log(`Found ${count} books in total`);
 
     res.json({
@@ -35,13 +36,13 @@ router.get("/", async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error fetching books:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('Error fetching books:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // GET /api/books/:id - 書籍詳細取得
-router.get("/:id", async (req: Request, res: Response) => {
+router.get('/:id', async (req: Request<BookParams>, res: Response) => {
   try {
     const bookId = Number(req.params.id);
     const errors = [];
@@ -49,16 +50,16 @@ router.get("/:id", async (req: Request, res: Response) => {
     // idの数値チェック
     if (!Number.isInteger(bookId) || bookId <= 0) {
       errors.push({
-        field: "id",
-        message: "IDは1以上の整数である必要があります。",
+        field: 'id',
+        message: 'IDは1以上の整数である必要があります。',
       });
     }
     if (errors.length > 0) {
       return res.status(400).json({
         success: false,
         error: {
-          message: "Invalid book id",
-          code: "INVALID_BOOK_ID",
+          message: 'Invalid book id',
+          code: 'INVALID_BOOK_ID',
           details: errors,
         },
       });
@@ -74,42 +75,42 @@ router.get("/:id", async (req: Request, res: Response) => {
       return res.status(404).json({
         success: false,
         error: {
-          message: "指定されたIDの本が見つかりません。",
-          code: "BOOK_NOT_FOUND",
+          message: '指定されたIDの本が見つかりません。',
+          code: 'BOOK_NOT_FOUND',
         },
       });
     }
   } catch (error) {
-    console.error("Error fetching book:", error);
+    console.error('Error fetching book:', error);
     return res.status(500).json({
       success: false,
       error: {
-        message: "Internal server error",
-        code: "INTERNAL_SERVER_ERROR",
+        message: 'Internal server error',
+        code: 'INTERNAL_SERVER_ERROR',
       },
     });
   }
 });
 
 // POST /api/books - 新規書籍登録
-router.post("/", async (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const { title, author, publicationYear, ISBN, summary } = req.body;
     const errors = [];
 
-    if (!title || title.trim() === "") {
-      errors.push({ field: "title", message: "タイトルは必須項目です。" });
+    if (!title || title.trim() === '') {
+      errors.push({ field: 'title', message: 'タイトルは必須項目です。' });
     }
-    if (!author || author.trim() === "") {
-      errors.push({ field: "author", message: "著者は必須項目です。" });
+    if (!author || author.trim() === '') {
+      errors.push({ field: 'author', message: '著者は必須項目です。' });
     }
 
     if (errors.length > 0) {
       return res.status(400).json({
         success: false,
         error: {
-          message: "Validation failed",
-          code: "VALIDATION_ERROR",
+          message: 'Validation failed',
+          code: 'VALIDATION_ERROR',
           details: errors,
         },
       });
@@ -122,8 +123,8 @@ router.post("/", async (req: Request, res: Response) => {
         return res.status(409).json({
           success: false,
           error: {
-            message: "同じISBNの本が既に存在します。",
-            code: "DUPLICATE_RESOURCE",
+            message: '同じISBNの本が既に存在します。',
+            code: 'DUPLICATE_RESOURCE',
           },
         });
       }
@@ -142,19 +143,19 @@ router.post("/", async (req: Request, res: Response) => {
       data: newBook,
     });
   } catch (error) {
-    console.error("Error creating new book:", error);
+    console.error('Error creating new book:', error);
     res.status(500).json({
       success: false,
       error: {
-        message: "Internal server error",
-        code: "INTERNAL_SERVER_ERROR",
+        message: 'Internal server error',
+        code: 'INTERNAL_SERVER_ERROR',
       },
     });
   }
 });
 
 // PUT /api/books/:id - 書籍情報更新（部分更新対応）
-router.put("/:id", async (req: Request, res: Response) => {
+router.put('/:id', async (req: Request<BookParams>, res: Response) => {
   try {
     const bookId = Number(req.params.id);
     const { title, author, publicationYear, ISBN, summary } = req.body;
@@ -163,16 +164,16 @@ router.put("/:id", async (req: Request, res: Response) => {
     if (!Number.isInteger(bookId) || bookId <= 0) {
       // idの数値チェック
       errors.push({
-        field: "id",
-        message: "IDは1以上の整数である必要があります。",
+        field: 'id',
+        message: 'IDは1以上の整数である必要があります。',
       });
     }
     if (errors.length > 0) {
       return res.status(400).json({
         success: false,
         error: {
-          message: "Invalid book id",
-          code: "INVALID_BOOK_ID",
+          message: 'Invalid book id',
+          code: 'INVALID_BOOK_ID',
           details: errors,
         },
       });
@@ -185,26 +186,26 @@ router.put("/:id", async (req: Request, res: Response) => {
       return res.status(404).json({
         success: false,
         error: {
-          message: "指定されたIDの本が見つかりません。",
-          code: "BOOK_NOT_FOUND",
+          message: '指定されたIDの本が見つかりません。',
+          code: 'BOOK_NOT_FOUND',
         },
       });
     }
 
     // title, author のバリデーション（送られた場合のみチェック）
-    if (title !== undefined && (!title || title.trim() === "")) {
-      errors.push({ field: "title", message: "タイトルは必須項目です。" });
+    if (title !== undefined && (!title || title.trim() === '')) {
+      errors.push({ field: 'title', message: 'タイトルは必須項目です。' });
     }
-    if (author !== undefined && (!author || author.trim() === "")) {
-      errors.push({ field: "author", message: "著者は必須項目です。" });
+    if (author !== undefined && (!author || author.trim() === '')) {
+      errors.push({ field: 'author', message: '著者は必須項目です。' });
     }
 
     if (errors.length > 0) {
       return res.status(400).json({
         success: false,
         error: {
-          message: "Validation failed",
-          code: "VALIDATION_ERROR",
+          message: 'Validation failed',
+          code: 'VALIDATION_ERROR',
           details: errors,
         },
       });
@@ -213,12 +214,12 @@ router.put("/:id", async (req: Request, res: Response) => {
     // ISBN 重複チェック（送られた場合のみ）
     if (ISBN !== undefined) {
       const isISBN = await Book.findOne({ where: { ISBN } });
-      if (isISBN && isISBN.get("id") !== bookId) {
+      if (isISBN && isISBN.get('id') !== bookId) {
         return res.status(409).json({
           success: false,
           error: {
-            message: "同じISBNの本が既に存在します。",
-            code: "DUPLICATE_RESOURCE",
+            message: '同じISBNの本が既に存在します。',
+            code: 'DUPLICATE_RESOURCE',
           },
         });
       }
@@ -235,8 +236,7 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     if (title !== undefined) updateData.title = title;
     if (author !== undefined) updateData.author = author;
-    if (publicationYear !== undefined)
-      updateData.publicationYear = publicationYear;
+    if (publicationYear !== undefined) updateData.publicationYear = publicationYear;
     if (ISBN !== undefined) updateData.ISBN = ISBN;
     if (summary !== undefined) updateData.summary = summary;
 
@@ -247,29 +247,65 @@ router.put("/:id", async (req: Request, res: Response) => {
       data: bookInfo,
     });
   } catch (error) {
-    console.error("Error updating book:", error);
+    console.error('Error updating book:', error);
     res.status(500).json({
       success: false,
       error: {
-        message: "Internal server error",
-        code: "INTERNAL_SERVER_ERROR",
+        message: 'Internal server error',
+        code: 'INTERNAL_SERVER_ERROR',
       },
     });
   }
 });
 
 // DELETE /api/books/:id - 書籍削除
-router.delete(":id", async (req: Request, res: Response) => {
+router.delete('/:id', async (req: Request<BookParams>, res: Response) => {
   try {
     // 書籍の存在チェック
-    // レビューとお気に入り登録を並列でチェック
+    const bookId = Number(req.params.id);
+    const bookInfo = await Book.findByPk(bookId);
+
+    if (!bookInfo) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '指定されたIDの本が見つかりません。',
+          code: 'BOOK_NOT_FOUND',
+        },
+      });
+    }
+
+    // .count() を使ってReviewとFavoriteの関連データの件数を取得
+    const results = await Promise.all([
+      Review.count({ where: { bookId } }),
+      Favorite.count({ where: { bookId } }),
+    ]);
+
+    const reviewCount = results[0];
+    const favoriteCount = results[1];
+
+    // 関連データが存在する場合は削除しない
+    if (reviewCount > 0 || favoriteCount > 0) {
+      return res.status(409).json({
+        success: false,
+        error: {
+          message: 'この本には関連するレビューまたはお気に入りが存在するため、削除できません。',
+          code: 'RELATED_DATA_EXISTS',
+        },
+      });
+    } else {
+      // 関連データがなければ書籍を削除
+      await bookInfo.destroy();
+      // 成功時は204 No Contentを返す
+      return res.sendStatus(204);
+    }
   } catch (error) {
-    console.error("Error deleting book:", error);
+    console.error('Error deleting book:', error);
     res.status(500).json({
       success: false,
       error: {
-        message: "Internal server error",
-        code: "INTERNAL_SERVER_ERROR",
+        message: 'Internal server error',
+        code: 'INTERNAL_SERVER_ERROR',
       },
     });
   }

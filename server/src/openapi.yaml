@@ -198,7 +198,7 @@ paths:
                   minLength: 8
                   example: password123
       responses:
-        "201":
+        '201':
           description: ユーザー登録成功
           content:
             application/json:
@@ -212,22 +212,22 @@ paths:
                     type: object
                     properties:
                       user:
-                        $ref: "#/components/schemas/User"
+                        $ref: '#/components/schemas/User'
                       token:
                         type: string
                         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        "400":
+        '400':
           description: バリデーションエラー
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "409":
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
           description: ユーザー名またはメール既存
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ErrorResponse'
 
   /auth/login:
     post:
@@ -251,7 +251,7 @@ paths:
                   type: string
                   example: password123
       responses:
-        "200":
+        '200':
           description: ログイン成功
           content:
             application/json:
@@ -265,15 +265,15 @@ paths:
                     type: object
                     properties:
                       user:
-                        $ref: "#/components/schemas/User"
+                        $ref: '#/components/schemas/User'
                       token:
                         type: string
-        "401":
+        '401':
           description: 認証失敗
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ErrorResponse'
 
   /auth/me:
     get:
@@ -282,7 +282,7 @@ paths:
       security:
         - BearerAuth: []
       responses:
-        "200":
+        '200':
           description: ユーザー情報取得成功
           content:
             application/json:
@@ -295,13 +295,13 @@ paths:
                     type: object
                     properties:
                       user:
-                        $ref: "#/components/schemas/User"
-        "401":
+                        $ref: '#/components/schemas/User'
+        '401':
           description: 未認証
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ErrorResponse'
 
   /books:
     get:
@@ -350,7 +350,7 @@ paths:
             type: string
             enum: [ASC, DESC]
       responses:
-        "200":
+        '200':
           description: 書籍一覧取得成功
           content:
             application/json:
@@ -365,15 +365,13 @@ paths:
                       books:
                         type: array
                         items:
-                          $ref: "#/components/schemas/Book"
+                          $ref: '#/components/schemas/Book'
                       pagination:
-                        $ref: "#/components/schemas/Pagination"
+                        $ref: '#/components/schemas/Pagination'
 
     post:
       summary: 書籍追加
       tags: [Books]
-      security:
-        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -395,7 +393,7 @@ paths:
                 summary:
                   type: string
       responses:
-        "201":
+        '201':
           description: 書籍追加成功
           content:
             application/json:
@@ -405,12 +403,12 @@ paths:
                   success:
                     type: boolean
                   data:
-                    $ref: "#/components/schemas/Book"
-        "400":
+                    $ref: '#/components/schemas/Book'
+        '400':
           description: バリデーションエラー
-        "401":
+        '401':
           description: 未認証
-        "409":
+        '409':
           description: ISBN既存
 
   /books/{id}:
@@ -424,7 +422,7 @@ paths:
           schema:
             type: integer
       responses:
-        "200":
+        '200':
           description: 書籍詳細取得成功
           content:
             application/json:
@@ -434,15 +432,13 @@ paths:
                   success:
                     type: boolean
                   data:
-                    $ref: "#/components/schemas/Book"
-        "404":
+                    $ref: '#/components/schemas/Book'
+        '404':
           description: 書籍が見つからない
 
     put:
       summary: 書籍更新
       tags: [Books]
-      security:
-        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -467,18 +463,16 @@ paths:
                 summary:
                   type: string
       responses:
-        "200":
+        '200':
           description: 書籍更新成功
-        "403":
+        '403':
           description: 権限不足
-        "404":
+        '404':
           description: 書籍が見つからない
 
     delete:
       summary: 書籍削除
       tags: [Books]
-      security:
-        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -486,11 +480,11 @@ paths:
           schema:
             type: integer
       responses:
-        "200":
+        '200':
           description: 書籍削除成功
-        "403":
+        '403':
           description: 権限不足
-        "404":
+        '404':
           description: 書籍が見つからない
 
   /books/{bookId}/reviews:
@@ -514,7 +508,7 @@ paths:
             type: integer
             default: 20
       responses:
-        "200":
+        '200':
           description: レビュー取得成功
           content:
             application/json:
@@ -529,14 +523,14 @@ paths:
                       reviews:
                         type: array
                         items:
-                          $ref: "#/components/schemas/Review"
+                          $ref: '#/components/schemas/Review'
                       pagination:
-                        $ref: "#/components/schemas/Pagination"
+                        $ref: '#/components/schemas/Pagination'
                       averageRating:
                         type: number
                       reviewCount:
                         type: integer
-        "404":
+        '404':
           description: 書籍が見つからない
 
   /reviews:
@@ -561,7 +555,7 @@ paths:
           schema:
             type: integer
       responses:
-        "200":
+        '200':
           description: レビュー一覧取得成功
 
     post:
@@ -589,9 +583,9 @@ paths:
                   minimum: 1
                   maximum: 5
       responses:
-        "201":
+        '201':
           description: レビュー投稿成功
-        "404":
+        '404':
           description: 書籍が見つからない
 
   /reviews/{id}:
@@ -605,7 +599,7 @@ paths:
           schema:
             type: integer
       responses:
-        "200":
+        '200':
           description: レビュー詳細取得成功
           content:
             application/json:
@@ -634,7 +628,7 @@ paths:
                       comments:
                         type: array
                         items:
-                          $ref: "#/components/schemas/Comment"
+                          $ref: '#/components/schemas/Comment'
                       createdAt:
                         type: string
                         format: date-time
@@ -667,9 +661,9 @@ paths:
                 rating:
                   type: integer
       responses:
-        "200":
+        '200':
           description: レビュー更新成功
-        "403":
+        '403':
           description: 権限不足
 
     delete:
@@ -684,7 +678,7 @@ paths:
           schema:
             type: integer
       responses:
-        "200":
+        '200':
           description: レビュー削除成功
 
   /reviews/{id}/helpful:
@@ -700,7 +694,7 @@ paths:
           schema:
             type: integer
       responses:
-        "200":
+        '200':
           description: 役に立ったカウント追加成功
           content:
             application/json:
@@ -726,7 +720,7 @@ paths:
           schema:
             type: integer
       responses:
-        "200":
+        '200':
           description: ユーザープロファイル取得成功
           content:
             application/json:
@@ -761,7 +755,7 @@ paths:
           schema:
             type: integer
       responses:
-        "200":
+        '200':
           description: ユーザーレビュー一覧取得成功
 
   /users/{id}/favorites:
@@ -777,7 +771,7 @@ paths:
           schema:
             type: integer
       responses:
-        "200":
+        '200':
           description: お気に入り一覧取得成功
 
   /favorites:
@@ -798,7 +792,7 @@ paths:
                 bookId:
                   type: integer
       responses:
-        "201":
+        '201':
           description: お気に入り追加成功
 
   /favorites/{bookId}:
@@ -814,7 +808,7 @@ paths:
           schema:
             type: integer
       responses:
-        "200":
+        '200':
           description: お気に入り削除成功
 
   /comments:
@@ -841,7 +835,7 @@ paths:
                   type: integer
                   description: リプライの場合、親コメントID
       responses:
-        "201":
+        '201':
           description: コメント投稿成功
 
   /comments/{id}:
@@ -857,5 +851,5 @@ paths:
           schema:
             type: integer
       responses:
-        "200":
+        '200':
           description: コメント削除成功
