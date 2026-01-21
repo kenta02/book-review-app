@@ -381,6 +381,9 @@ paths:
               required:
                 - title
                 - author
+                - publicationYear
+                - ISBN
+                - summary
               properties:
                 title:
                   type: string
@@ -406,8 +409,6 @@ paths:
                     $ref: '#/components/schemas/Book'
         '400':
           description: バリデーションエラー
-        '401':
-          description: 未認証
         '409':
           description: ISBN既存
 
@@ -437,7 +438,7 @@ paths:
           description: 書籍が見つからない
 
     put:
-      summary: 書籍更新
+      summary: 書籍更新（部分更新対応）
       tags: [Books]
       parameters:
         - name: id
@@ -446,7 +447,7 @@ paths:
           schema:
             type: integer
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -465,10 +466,21 @@ paths:
       responses:
         '200':
           description: 書籍更新成功
-        '403':
-          description: 権限不足
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Book'
+        '400':
+          description: バリデーションエラー
         '404':
           description: 書籍が見つからない
+        '409':
+          description: 重複ISBN
 
     delete:
       summary: 書籍削除
@@ -480,12 +492,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
-          description: 書籍削除成功
-        '403':
-          description: 権限不足
+        '204':
+          description: 書籍削除成功（ボディなし）
         '404':
           description: 書籍が見つからない
+        '409':
+          description: 関連データが存在するため削除不可
 
   /books/{bookId}/reviews:
     get:
