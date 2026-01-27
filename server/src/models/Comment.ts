@@ -1,7 +1,7 @@
-import { DataTypes } from "sequelize";
-import { sequelize } from "../sequelize";
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../sequelize';
 
-const Comment = sequelize.define("Comment", {
+const Comment = sequelize.define('Comment', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -11,11 +11,21 @@ const Comment = sequelize.define("Comment", {
   reviewId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: 'Reviews', // 'Reviews' テーブルを参照
+      key: 'id', // 'id' カラムを参照
+    },
+    onDelete: 'RESTRICT', // レビューが削除されたときにコメントを削除しない
   },
 
   userId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: 'Users',
+      key: 'id',
+    },
+    onDelete: 'RESTRICT',
   },
 
   content: {
@@ -26,6 +36,12 @@ const Comment = sequelize.define("Comment", {
   parentId: {
     type: DataTypes.INTEGER,
     allowNull: true,
+    // 自己参照の外部キー（親コメントのID）
+    references: {
+      model: 'Comments',
+      key: 'id',
+    },
+    onDelete: 'SET NULL', // 親コメントが削除されたときにこのフィールドをNULLに設定
   },
 
   createdAt: {
