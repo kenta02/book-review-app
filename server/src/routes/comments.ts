@@ -1,39 +1,56 @@
 import express, { Request, Response } from 'express';
-import Book from '../models/Book';
-import { BookParams } from '../types/route-params';
 import Review from '../models/Review';
-import Favorite from '../models/Favorite';
+import Comment from '../models/Comment';
+import { CommentParams } from '../types/route-params';
 
 const router = express.Router();
 
-// TODO: 時間あるときにやる;
 // GET /api/reviews/:reviewId/comments - レビューのコメント一覧取得
-router.get('/', async (req: Request, res: Response) => {
+router.get('/reviews/:reviewId/comments', async (req: Request<CommentParams>, res: Response) => {
   try {
-    // findAndCountAll で総件数と該当行を同時取得（N+1 クエリ回避）
-    const { count, rows } = await Book.findAndCountAll({
-      // limit,
-      // offset,
+    const reviewId = Number(req.params.reviewId);
+
+    const rows = await Comment.findAll({
+      where: { reviewId: reviewId },
       order: [['createdAt', 'DESC']],
     });
 
-    console.log(`Fetching books - page: ${page}, limit: ${limit}, offset: ${offset}`);
-    console.log(`Found ${count} books in total`);
+    // rowの中からparentIdがnullのコメントを抽出
+    const topLevelComments = rows.filter((comment) => comment.get('parentId') === null);
 
+    // 各トップレベルのコメントに対して、そのコメントのIdと一致するparentIdを持つコメント」をrepliesとして格納
+    const commentWithReplies = topLevelComments.map((comment) => {
+      // commentをJSONに変換
+      const commentData = comment.toJSON();
+      // repliesプロパティを追加し、該当する返信コメントを格納
+      commentData.replies = rows
+        .filter((reply) => reply.get(`parentId`) === comment.get(`id`))
+        .map((reply) => reply.toJSON());
+      return commentData;
+    });
+
+    console.log(`Found ${rows.length} comments in total for reviewId: ${req.params.reviewId}`);
+
+    // レスポンスにコメントとページネーション情報を含めて返す
     res.json({
       success: true,
       data: {
-        // // books: rows,
-        // pagination: {
-        //   currentPage: page,
-        //   totalItems: count,
-        //   totalPages: Math.ceil(count / limit),
-        //   itemsPerPage: limit,
-        // },
+        comments: commentWithReplies,
       },
     });
   } catch (error) {
-    console.error('Error fetching books:', error);
+    console.error('Error fetching comments:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// GET /api/reviews/:reviewId - レビュー詳細取得
+// router.get('/:reviewId', async (req: Request, res: Response) => {
+//   try {
+//     const reviewId = Number(req.params.reviewId);
+//     const errors = [];
+//   } catch (error) {
+//     console.error('Error fetching review:', error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// });
