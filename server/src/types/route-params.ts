@@ -16,8 +16,6 @@ export interface CommentParams {
   commentId: string;
 }
 
-// 将来的に必要になったら追加
-// export interface ReviewParams {
-//   bookId: string;
-//   reviewId: string;
-// }
+export interface ReviewParams {
+  reviewId: string;
+}

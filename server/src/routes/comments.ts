@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import Review from '../models/Review';
 import Comment from '../models/Comment';
-import { CommentParams } from '../types/route-params';
+import { CommentParams, ReviewParams } from '../types/route-params';
 
 const router = express.Router();
 
@@ -44,13 +44,7 @@ router.get('/reviews/:reviewId/comments', async (req: Request<CommentParams>, re
   }
 });
 
-// GET /api/reviews/:reviewId - レビュー詳細取得
-// router.get('/:reviewId', async (req: Request, res: Response) => {
-//   try {
-//     const reviewId = Number(req.params.reviewId);
-//     const errors = [];
-//   } catch (error) {
-//     console.error('Error fetching review:', error);
-//     res.status(500).json({ error: 'Internal server error' });
-//   }
-// });
+// POST /api/reviews/:reviewId/comments - レビューにコメントを追加
+router.post(`/reviews/:reviewId/comments`, async (req: Request<ReviewParams>, res: Response) => {
+  // 実装予定
+});
