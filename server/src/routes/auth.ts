@@ -1,48 +1,39 @@
-import express, { Request, Response } from "express";
-import User from "../models/Users";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import { error } from "console";
-import { authenticate } from "../middleware/auth";
+import express, { Request, Response } from 'express';
+import User from '../models/Users';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { error } from 'console';
+import { authenticateToken } from '../middleware/auth';
 
 // POST /api/auth/register - ユーザー登録
 // パスワードをハッシュ化して DB に保存し、JWT トークンを返す
 
 const router = express.Router();
 
-router.post("/register", async (req: Request, res: Response) => {
+router.post('/register', async (req: Request, res: Response) => {
   try {
     const { username, email, password } = req.body;
-    console.log("Received registration data:", req.body);
+    console.log('Received registration data:', req.body);
 
     const errors = [];
-    if (
-      !username ||
-      typeof username !== "string" ||
-      username.length < 3 ||
-      username.length > 150
-    ) {
+    if (!username || typeof username !== 'string' || username.length < 3 || username.length > 150) {
       errors.push({
-        field: "username",
-        message: "ユーザー名は3~150文字で入力してください.",
+        field: 'username',
+        message: 'ユーザー名は3~150文字で入力してください.',
       });
     }
 
-    if (
-      !email ||
-      typeof email !== "string" ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    ) {
+    if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.push({
-        field: "email",
-        message: "メールアドレスは有効なメール形式で入力してください.",
+        field: 'email',
+        message: 'メールアドレスは有効なメール形式で入力してください.',
       });
     }
 
-    if (!password || typeof password !== "string" || password.length < 8) {
+    if (!password || typeof password !== 'string' || password.length < 8) {
       errors.push({
-        field: "password",
-        message: "パスワードは8文字以上で入力してください.",
+        field: 'password',
+        message: 'パスワードは8文字以上で入力してください.',
       });
     }
 
@@ -50,8 +41,8 @@ router.post("/register", async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         error: {
-          message: "Validation failed",
-          code: "VALIDATION_ERROR",
+          message: 'Validation failed',
+          code: 'VALIDATION_ERROR',
           details: errors,
         },
       });
@@ -64,8 +55,8 @@ router.post("/register", async (req: Request, res: Response) => {
         return res.status(409).json({
           success: false,
           error: {
-            message: "同じユーザー名が既に存在します。",
-            code: "DUPLICATE_RESOURCE",
+            message: '同じユーザー名が既に存在します。',
+            code: 'DUPLICATE_RESOURCE',
           },
         });
       }
@@ -78,8 +69,8 @@ router.post("/register", async (req: Request, res: Response) => {
         return res.status(409).json({
           success: false,
           error: {
-            message: "同じメールアドレスが既に存在します。",
-            code: "DUPLICATE_RESOURCE",
+            message: '同じメールアドレスが既に存在します。',
+            code: 'DUPLICATE_RESOURCE',
           },
         });
       }
@@ -95,8 +86,7 @@ router.post("/register", async (req: Request, res: Response) => {
     });
 
     const userJson = newUser.toJSON();
-    const jwtSecret = (process.env.JWT_SECRET ||
-      "dev_secret_key_12345") as string;
+    const jwtSecret = (process.env.JWT_SECRET || 'dev_secret_key_12345') as string;
 
     // JWT ペイロード: 機密情報（パスワード等）は含めない
     const jwtPayload = {
@@ -106,7 +96,7 @@ router.post("/register", async (req: Request, res: Response) => {
     };
 
     const token = jwt.sign(jwtPayload, jwtSecret, {
-      expiresIn: "30d",
+      expiresIn: '30d',
     });
 
     res.status(201).json({
@@ -124,8 +114,8 @@ router.post("/register", async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: {
-        message: "サーバーエラーが発生しました。",
-        code: "INTERNAL_SERVER_ERROR",
+        message: 'サーバーエラーが発生しました。',
+        code: 'INTERNAL_SERVER_ERROR',
       },
     });
   }
@@ -133,26 +123,22 @@ router.post("/register", async (req: Request, res: Response) => {
 
 // POST /api/auth/login - ログイン認証
 // email とパスワードで認証し、JWT トークンを返す（失敗時は 401）
-router.post("/login", async (req: Request, res: Response) => {
+router.post('/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-    console.log("Received login data:", req.body);
+    console.log('Received login data:', req.body);
 
     const errors = [];
-    if (
-      !email ||
-      typeof email !== "string" ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    ) {
+    if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.push({
-        field: "email",
-        message: "メールアドレスは有効なメール形式で入力してください。",
+        field: 'email',
+        message: 'メールアドレスは有効なメール形式で入力してください。',
       });
     }
-    if (!password || typeof password !== "string" || password.length < 8) {
+    if (!password || typeof password !== 'string' || password.length < 8) {
       errors.push({
-        field: "password",
-        message: "パスワードは8文字以上で入力してください。",
+        field: 'password',
+        message: 'パスワードは8文字以上で入力してください。',
       });
     }
 
@@ -160,8 +146,8 @@ router.post("/login", async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         error: {
-          message: "Validation failed",
-          code: "VALIDATION_ERROR",
+          message: 'Validation failed',
+          code: 'VALIDATION_ERROR',
           details: errors,
         },
       });
@@ -172,22 +158,17 @@ router.post("/login", async (req: Request, res: Response) => {
       return res.status(401).json({
         success: false,
         error: {
-          message:
-            "認証に失敗しました。メールアドレスまたはパスワードが正しくありません。",
-          code: "AUTHENTICATION_FAILED",
+          message: '認証に失敗しました。メールアドレスまたはパスワードが正しくありません。',
+          code: 'AUTHENTICATION_FAILED',
         },
       });
     }
 
     // bcrypt.compare: 平文とハッシュを比較（戻り値: true/false）
-    const isPasswordVaild = await bcrypt.compare(
-      password,
-      existUser.toJSON().password as string
-    );
+    const isPasswordVaild = await bcrypt.compare(password, existUser.toJSON().password as string);
 
     if (isPasswordVaild) {
-      const jwtSecret = (process.env.JWT_SECRET ||
-        "dev_secret_key_12345") as string;
+      const jwtSecret = (process.env.JWT_SECRET || 'dev_secret_key_12345') as string;
       const userJson = existUser.toJSON();
 
       const jwtPayload = {
@@ -197,7 +178,7 @@ router.post("/login", async (req: Request, res: Response) => {
       };
 
       const token = jwt.sign(jwtPayload, jwtSecret, {
-        expiresIn: "30d",
+        expiresIn: '30d',
       });
 
       return res.status(200).json({
@@ -216,8 +197,8 @@ router.post("/login", async (req: Request, res: Response) => {
       return res.status(401).json({
         success: false,
         error: {
-          message: "認証に失敗しました。パスワードが一致しません。",
-          code: "AUTHENTICATION_FAILED",
+          message: '認証に失敗しました。パスワードが一致しません。',
+          code: 'AUTHENTICATION_FAILED',
         },
       });
     }
@@ -225,15 +206,15 @@ router.post("/login", async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: {
-        message: "サーバーエラーが発生しました。",
-        code: "INTERNAL_SERVER_ERROR",
+        message: 'サーバーエラーが発生しました。',
+        code: 'INTERNAL_SERVER_ERROR',
       },
     });
   }
 });
 
 // 認証ミドルウェアの作成
-router.get("/me", authenticate, async (req: Request, res: Response) => {
+router.get('/me', authenticateToken, async (req: Request, res: Response) => {
   // ミドルウェアで取得した userId を使ってユーザー情報を取得
   const user = await User.findByPk(req.userId);
   if (user) {
@@ -252,8 +233,8 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
     return res.status(404).json({
       success: false,
       error: {
-        message: "ユーザーが見つかりません。",
-        code: "USER_NOT_FOUND",
+        message: 'ユーザーが見つかりません。',
+        code: 'USER_NOT_FOUND',
       },
     });
   }

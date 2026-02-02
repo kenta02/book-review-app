@@ -47,4 +47,9 @@ router.get('/reviews/:reviewId/comments', async (req: Request<CommentParams>, re
 // POST /api/reviews/:reviewId/comments - レビューにコメントを追加
 router.post(`/reviews/:reviewId/comments`, async (req: Request<ReviewParams>, res: Response) => {
   // 実装予定
+  //   books.ts の POST エンドポイント → 認証・userId 取得の方法を確認
+  // 同じパターンを comments.ts の POST にコピー
+  // requestBody のバリデーション（reviewId, content, parentId）を追加
 });
+
+export default router;

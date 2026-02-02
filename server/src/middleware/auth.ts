@@ -16,7 +16,11 @@ declare global {
   }
 }
 
-export const authenticate = async (req: Request, res: Response, next: express.NextFunction) => {
+export const authenticateToken = async (
+  req: Request,
+  res: Response,
+  next: express.NextFunction
+) => {
   // authHeader が存在するか確認
   // 「Bearer 」で始まっているか確認
 
