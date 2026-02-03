@@ -87,7 +87,7 @@ kadai.txt
 # ドキュメント類
 docs/
 .copilot-instructions
-.github/agents/コーチングスタイルさん.agent.md
 book-review-app.code-workspace
 CODING_GUIDELINES.md
 .github/agents/copilot-instructions.md
+.github/agents/Coding Buddy.agent.md
