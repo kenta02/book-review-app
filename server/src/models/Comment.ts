@@ -15,17 +15,17 @@ const Comment = sequelize.define('Comment', {
       model: 'Reviews', // 'Reviews' テーブルを参照
       key: 'id', // 'id' カラムを参照
     },
-    onDelete: 'RESTRICT', // レビューが削除されたときにコメントを削除しない
+    onDelete: 'CASCADE', // レビューが削除されたときにコメントも削除される
   },
 
   userId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'Users',
       key: 'id',
     },
-    onDelete: 'RESTRICT',
+    onDelete: 'SET NULL',
   },
 
   content: {

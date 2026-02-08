@@ -1,7 +1,7 @@
-import { DataTypes } from "sequelize";
-import { sequelize } from "../sequelize";
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../sequelize';
 
-const Review = sequelize.define("Review", {
+const Review = sequelize.define('Review', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -12,15 +12,20 @@ const Review = sequelize.define("Review", {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "Books",
-      key: "id",
+      model: 'Books',
+      key: 'id',
     },
-    onDelete: "RESTRICT",
+    onDelete: 'RESTRICT',
   },
 
   userId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
+    references: {
+      model: 'Users',
+      key: 'id',
+    },
+    onDelete: 'SET NULL',
   },
 
   content: {
