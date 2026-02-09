@@ -37,17 +37,34 @@ DB_NAME=book_review
 
 ## 🚀 コマンド
 
+### 0. テストデータ（Seeder）
+
+開発用のテストデータを投入するスクリプトを `server/scripts/seed-demo.ts` に用意しました。
+事前に `.env` を設定した上で、以下で実行してください：
+
+```bash
+# 例：ts-node が未インストールの場合
+npx ts-node server/scripts/seed-demo.ts
+# 実行後：users=3, books=2, reviews=2, comments=2, favorites=2 が投入されます
+```
+
+---
+
+## 🚀 コマンド
+
 ### 1. APIサーバーの起動
 
 ```bash
 npm run dev
 ```
 
-**目的：** 
+**目的：**
+
 - REST APIサーバーをポート `3001` で起動
 - データベースに接続し、テーブルを自動作成・同期
 
 **出力例：**
+
 ```
 ✅ DB connected
 ✅ DB synced
@@ -55,6 +72,7 @@ npm run dev
 ```
 
 **アクセス可能なエンドポイント：**
+
 - `GET http://localhost:3001/api/books` - 書籍一覧取得
 - `POST http://localhost:3001/api/auth/register` - ユーザー登録
 - その他のAPIエンドポイント
@@ -68,11 +86,13 @@ npm run swagger
 ```
 
 **目的：**
+
 - Swagger UIをポート `8080` で起動
 - OpenAPI仕様を視覚的に確認・テスト可能にする
 - APIサーバーへのプロキシ機能を提供
 
 **出力例：**
+
 ```
 📚 Swagger UI running on http://localhost:8080
 📄 OpenAPI spec: http://localhost:8080/openapi.yaml
@@ -81,6 +101,7 @@ npm run swagger
 ```
 
 **アクセス方法：**
+
 - ブラウザで [http://localhost:8080](http://localhost:8080) を開く
 - OpenAPI仕様に基づいて、APIエンドポイントの動作確認・テストが可能
 
@@ -89,12 +110,15 @@ npm run swagger
 ## 🔄 開発時の推奨フロー
 
 1. **ターミナル1でAPIサーバーを起動：**
+
    ```bash
    npm run dev
    ```
+
    待機：`🚀 API running on http://localhost:3001` が表示されるまで
 
 2. **ターミナル2でSwagger UIを起動：**
+
    ```bash
    npm run swagger
    ```
@@ -113,6 +137,7 @@ npm run swagger
 ```
 
 **解決方法：**
+
 ```bash
 # MySQLサーバーを起動
 sudo systemctl start mysql
@@ -137,6 +162,7 @@ Failed to fetch http://localhost:3001/api
 ```
 
 **解決方法：**
+
 - 別のターミナルで `npm run dev` を実行
 
 ---
