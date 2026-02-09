@@ -140,13 +140,13 @@ router.post(`/reviews/:reviewId/comments`, async (req: Request<ReviewParams>, re
 
     // ----- 5-3: parentId の検証（指定されている場合のみ） -----
     // parentId は省略可能。null/undefined の場合は最上位レベルのコメントとなり、
-    // スキップ。指定されている場合は、型チェック → DB存在確認 → reviewId一致確認 を実行
+    // スキップ。指定されている場合は、型チェック → 値チェック（1以上の整数） → DB存在確認 → reviewId一致確認 を実行
     if (parentId !== null && parentId !== undefined) {
-      // 型チェック: parentId は number である必要がある
-      if (typeof parentId !== 'number') {
+      // 型・値チェック: parentId は 1 以上の整数である必要がある
+      if (typeof parentId !== 'number' || !Number.isInteger(parentId) || parentId <= 0) {
         errors.push({
           field: 'parentId',
-          message: '親コメントIDは数値である必要があります。',
+          message: '親コメントIDは1以上の整数である必要があります。',
         });
       } else {
         // DB検索: 指定された parentId が実在するコメントか確認
