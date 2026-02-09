@@ -29,7 +29,7 @@ router.get('/reviews/:reviewId/comments', async (req: Request<CommentParams>, re
       return commentData;
     });
 
-    console.log(`Found ${rows.length} comments in total for reviewId: ${req.params.reviewId}`);
+    console.info(`Found ${rows.length} comments in total for reviewId: ${req.params.reviewId}`);
 
     // レスポンスにコメントとページネーション情報を含めて返す
     res.json({
@@ -40,7 +40,13 @@ router.get('/reviews/:reviewId/comments', async (req: Request<CommentParams>, re
     });
   } catch (error) {
     console.error('Error fetching comments:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Internal server error',
+        code: 'INTERNAL_SERVER_ERROR',
+      },
+    });
   }
 });
 

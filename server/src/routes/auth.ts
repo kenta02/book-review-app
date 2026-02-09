@@ -2,7 +2,6 @@ import express, { Request, Response } from 'express';
 import User from '../models/Users';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { error } from 'console';
 import { authenticateToken } from '../middleware/auth';
 
 // POST /api/auth/register - ユーザー登録
@@ -13,7 +12,7 @@ const router = express.Router();
 router.post('/register', async (req: Request, res: Response) => {
   try {
     const { username, email, password } = req.body;
-    console.log('Received registration data:', req.body);
+    console.info('Received registration data:', req.body);
 
     const errors = [];
     if (!username || typeof username !== 'string' || username.length < 3 || username.length > 150) {
@@ -111,6 +110,7 @@ router.post('/register', async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
+    console.error('Error registering user:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -126,7 +126,7 @@ router.post('/register', async (req: Request, res: Response) => {
 router.post('/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-    console.log('Received login data:', req.body);
+    console.error('Received login data:', req.body);
 
     const errors = [];
     if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -203,6 +203,7 @@ router.post('/login', async (req: Request, res: Response) => {
       });
     }
   } catch (error) {
+    console.error('Error logging in:', error);
     res.status(500).json({
       success: false,
       error: {

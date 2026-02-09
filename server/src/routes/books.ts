@@ -20,8 +20,8 @@ router.get('/', async (req: Request, res: Response) => {
       order: [['createdAt', 'DESC']],
     });
 
-    console.log(`Fetching books - page: ${page}, limit: ${limit}, offset: ${offset}`);
-    console.log(`Found ${count} books in total`);
+    console.info(`Fetching books - page: ${page}, limit: ${limit}, offset: ${offset}`);
+    console.info(`Found ${count} books in total`);
 
     res.json({
       success: true,
@@ -37,7 +37,13 @@ router.get('/', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching books:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Internal server error',
+        code: 'INTERNAL_SERVER_ERROR',
+      },
+    });
   }
 });
 
