@@ -105,6 +105,29 @@ npm run swagger
 - ブラウザで [http://localhost:8080](http://localhost:8080) を開く
 - OpenAPI仕様に基づいて、APIエンドポイントの動作確認・テストが可能
 
+**開発時の認証トークンについて（便利な補助コマンド）**
+
+開発・テスト時に毎回ログインしてトークンを取得するのが手間な場合、ヘルパースクリプト `get-token` を用意しています。ログインして取得した JWT を標準出力に表示するため、Swagger の Authorize へ貼り付けたり、`curl` の検証に利用できます。
+
+- 実行例（tanaka ユーザーを使用）：
+
+```bash
+npm run token -- --email tanaka@example.com --password password123
+```
+
+- 出力例：
+
+```
+=== TOKEN ===
+<JWT_TOKEN>
+=== END TOKEN ===
+
+curl example:
+curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:3001/api/auth/me
+```
+
+- オプション：`--save` をつけると `server/.env` に `TEST_TOKEN=<JWT_TOKEN>` を追記します（ローカル限定の利便性向上。`.env` はコミットしないでください）。
+
 ---
 
 ## 🔄 開発時の推奨フロー
