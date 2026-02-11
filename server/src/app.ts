@@ -20,5 +20,12 @@ app.use('/api/auth', authRouter);
 
 // コメントルートのインポート
 // app.use('/api/comments', require('./routes/comments'));
+
+// Temporary debug middleware: log Authorization header for incoming /api requests
+app.use('/api', (req: Request, _res: Response, next) => {
+  console.info('[AUTH-DEBUG] path=', req.path, 'authorization=', req.headers.authorization);
+  next();
+});
+
 app.use('/api', authenticateToken, commentRouter);
 export default app;

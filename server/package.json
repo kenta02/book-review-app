@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "ts-node --transpileOnly ./src/server.ts",
     "swagger": "ts-node --transpileOnly ./src/swagger-server.ts",
+    "token": "ts-node ./scripts/get-token.ts",
     "build": "tsc",
     "start": "node dist/server.js"
   },

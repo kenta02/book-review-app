@@ -30,6 +30,10 @@ tags:
     description: お気に入り管理
   - name: Comments
     description: コメント管理
+  - name: Notifications
+    description: 通知管理
+  - name: External
+    description: 外部 API 連携
 
 components:
   securitySchemes:
@@ -37,7 +41,11 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT認証トークン
+      description: |
+        JWT認証トークン
+        
+        **使用法:** Swagger UI の Authorize ダイアログには **トークン本体のみ** を貼り付けてください（先頭に `Bearer ` を付ける必要はありません）。
+        もし `Bearer ` を含めてしまうと `Bearer Bearer ...` となり認証に失敗します。
 
   schemas:
     User:
@@ -825,7 +833,9 @@ paths:
 
   /comments:
     post:
-      summary: コメント投稿
+      summary: コメント投稿（Deprecated）
+      description: "Deprecated: API ドキュメントに合わせて POST /reviews/{reviewId}/comments を利用してください。"
+      deprecated: true
       tags: [Comments]
       security:
         - BearerAuth: []
@@ -851,6 +861,32 @@ paths:
           description: コメント投稿成功
 
   /comments/{id}:
+    put:
+      summary: コメント編集
+      description: 自分が投稿したコメントを編集します。投稿者のみ編集可能。
+      tags: [Comments]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+      responses:
+        '200':
+          description: コメント編集成功
     delete:
       summary: コメント削除
       tags: [Comments]
@@ -863,5 +899,112 @@ paths:
           schema:
             type: integer
       responses:
+        '204':
+          description: コメント削除成功（ボディなし）
+
+  /reviews/{reviewId}/comments:
+    post:
+      summary: コメント投稿（特定レビュー）
+      tags: [Comments]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                parentId:
+                  type: integer
+                  description: リプライの場合、親コメントID
+      responses:
+        '201':
+          description: コメント投稿成功
+
+    get:
+      summary: 特定レビューのコメント一覧取得
+      tags: [Comments]
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
         '200':
-          description: コメント削除成功
+          description: コメント一覧取得成功
+
+  /notifications:
+    get:
+      summary: 通知一覧取得
+      tags: [Notifications]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 通知一覧取得成功
+
+  /notifications/{id}/read:
+    put:
+      summary: 通知を既読にする
+      tags: [Notifications]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 通知既読化成功
+
+  /external/books/search:
+    get:
+      summary: 外部 API (Google Books) 検索
+      tags: [External]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 検索成功
+
+  /external/books/isbn/{isbn}:
+    get:
+      summary: ISBN から書籍情報取得
+      tags: [External]
+      parameters:
+        - name: isbn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 取得成功
