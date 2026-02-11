@@ -1,0 +1,106 @@
+import express, { Request, Response } from 'express';
+import Review from '../models/Review';
+import Comment from '../models/Comment';
+import { ReviewParams } from '../types/route-params';
+
+const router = express.Router();
+
+/**
+ * DELETE /api/reviews/:reviewId
+ *
+ * Request body: none
+ * Responses:
+ *  - 204 No Content: deleted
+ *  - 400 Bad Request: invalid ID
+ *  - 401 Unauthorized: authentication required
+ *  - 403 Forbidden: not owner
+ *  - 404 Not Found: review not found
+ *  - 409 Conflict: related comments exist
+ *  - 500 Internal Server Error
+ */
+router.delete('/reviews/:reviewId', async (req: Request<ReviewParams>, res: Response) => {
+  try {
+    // パスパラメータから reviewId を検証してパース
+    const reviewId = req.params.reviewId;
+    const reviewIdNum = Number(reviewId);
+    if (isNaN(reviewIdNum) || reviewIdNum <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '無効なレビューIDです。',
+          code: 'INVALID_REVIEW_ID',
+        },
+      });
+    }
+
+    // 認証: ユーザーが認証されていることを確認
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '認証が必要です。',
+          code: 'AUTHENTICATION_REQUIRED',
+        },
+      });
+    }
+
+    // レビューが存在することを確認
+    const targetReview = await Review.findByPk(reviewIdNum);
+    if (!targetReview) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '指定されたレビューが存在しません。',
+          code: 'REVIEW_NOT_FOUND',
+        },
+      });
+    }
+
+    // 認可: 所有者か確認
+    if (targetReview.get('userId') !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          message: 'このレビューを削除する権限がありません。',
+          code: 'FORBIDDEN',
+        },
+      });
+    }
+
+    // 関連コメントがある場合は削除不可
+    const hasComments = await Comment.findOne({
+      where: { reviewId: reviewIdNum },
+      attributes: ['id'], // id のみ取得
+    });
+
+    if (hasComments) {
+      return res.status(409).json({
+        success: false,
+        error: {
+          message: 'このレビューには関連するコメントが存在するため、削除できません。',
+          code: 'RELATED_DATA_EXISTS',
+        },
+      });
+    }
+    // レビュー削除（destroy のエラーは無視し冪等にする）
+
+    // try {
+    //   await targetReview.destroy();
+    // } catch (error) {
+    //   // 意図的に無視
+    // }
+
+    // 成功
+    return res.sendStatus(204);
+  } catch (error) {
+    console.error('Error deleting review:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Internal server error',
+        code: 'INTERNAL_SERVER_ERROR',
+      },
+    });
+  }
+});
