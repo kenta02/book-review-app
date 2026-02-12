@@ -697,9 +697,47 @@ paths:
           required: true
           schema:
             type: integer
+            minimum: 1
+          description: "レビューID（整数、1以上）。小数や0以下は 400 を返します。"
       responses:
-        '200':
-          description: レビュー削除成功
+        '204':
+          description: レビュー削除成功（No Content）
+        '400':
+          description: 無効な reviewId（非整数・0以下・不正値）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 権限不足（他人のレビューを削除しようとした）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 指定したレビューが存在しない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 関連コメントが存在するため削除不可
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: サーバー内部エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /reviews/{id}/helpful:
     post:
