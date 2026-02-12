@@ -673,18 +673,48 @@ paths:
           application/json:
             schema:
               type: object
+              required: [content]
               properties:
-                bookId:
-                  type: integer
                 content:
                   type: string
-                rating:
-                  type: integer
+                  maxLength: 1000
       responses:
         '200':
-          description: レビュー更新成功
+          description: レビュー更新成功（更新後のレビューオブジェクトを返却）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Review'
+        '400':
+          description: バリデーションエラー（無効な reviewId や content）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: 権限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: レビューが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
     delete:
       summary: レビュー削除
