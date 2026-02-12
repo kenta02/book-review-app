@@ -116,4 +116,112 @@ router.delete('/reviews/:reviewId', async (req: Request<ReviewParams>, res: Resp
   }
 });
 
+/**
+ * PUT /api/reviews/:reviewId - レビュー更新
+ *
+ * Request body: {
+ *   content: string (required, max 1000 chars)
+ * }
+ * Responses:
+ * 200 OK: review updated
+ * 400 Bad Request: invalid ID or validation error
+ * 401 Unauthorized: authentication required
+ * 403 Forbidden: not owner
+ * 404 Not Found: review not found
+ * 500 Internal Server Error
+ */
+router.put('/reviews/:reviewId', async (req: Request<ReviewParams>, res: Response) => {
+  try {
+    const { content } = req.body;
+
+    // 認証チェック（最初）
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: '認証が必要です。',
+          code: 'AUTHENTICATION_REQUIRED',
+        },
+      });
+    }
+
+    // reviewIdの形式チェック（早期に）
+    const reviewId = Number(req.params.reviewId);
+    const isValidId = Number.isInteger(reviewId) && reviewId > 0;
+    if (!isValidId) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '無効なレビューIDです。',
+          code: 'INVALID_REVIEW_ID',
+        },
+      });
+    }
+
+    // レビューの存在確認（早期に）
+    const foundReview = await Review.findByPk(reviewId);
+    if (!foundReview) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '指定されたレビューが存在しません。',
+          code: 'REVIEW_NOT_FOUND',
+        },
+      });
+    }
+
+    // 所有者チェック
+    if (Number(foundReview.get('userId')) !== Number(userId)) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          message: 'このレビューを更新する権限がありません。',
+          code: 'FORBIDDEN',
+        },
+      });
+    }
+
+    // contentバリデーション
+    const errors = [];
+    if (!content || typeof content !== 'string') {
+      errors.push({
+        field: 'content',
+        message: 'contentは文字列で必須項目です。',
+      });
+    } else if (content.length > 1000) {
+      errors.push({
+        field: 'content',
+        message: 'contentは1000文字以内で入力してください。',
+      });
+    }
+
+    // バリデーションエラーがある場合は400で返す
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Validation failed',
+          code: 'VALIDATION_ERROR',
+          details: errors,
+        },
+      });
+    }
+
+    // 更新処理（結果を確認）
+    const updatedReview = await foundReview.update({ content });
+    // 成功時
+    return res.json({ success: true, data: updatedReview });
+  } catch (error) {
+    console.error('Error updating review:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Internal server error',
+        code: 'INTERNAL_SERVER_ERROR',
+      },
+    });
+  }
+});
+
 export default router;
