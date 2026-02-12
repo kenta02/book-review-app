@@ -23,7 +23,8 @@ router.delete('/reviews/:reviewId', async (req: Request<ReviewParams>, res: Resp
     // パスパラメータから reviewId を検証してパース
     const reviewId = req.params.reviewId;
     const reviewIdNum = Number(reviewId);
-    if (isNaN(reviewIdNum) || reviewIdNum <= 0) {
+    const isValidId = Number.isInteger(reviewIdNum) && reviewIdNum > 0;
+    if (!isValidId) {
       return res.status(400).json({
         success: false,
         error: {
@@ -58,7 +59,7 @@ router.delete('/reviews/:reviewId', async (req: Request<ReviewParams>, res: Resp
     }
 
     // 認可: 所有者か確認
-    if (targetReview.get('userId') !== userId) {
+    if (Number(targetReview.get('userId')) !== Number(userId)) {
       return res.status(403).json({
         success: false,
         error: {
@@ -83,13 +84,8 @@ router.delete('/reviews/:reviewId', async (req: Request<ReviewParams>, res: Resp
         },
       });
     }
-    // レビュー削除（destroy のエラーは無視し冪等にする）
-
-    // try {
-    //   await targetReview.destroy();
-    // } catch (error) {
-    //   // 意図的に無視
-    // }
+    // レビュー削除
+    await targetReview.destroy();
 
     // 成功
     return res.sendStatus(204);
