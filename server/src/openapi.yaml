@@ -43,7 +43,7 @@ components:
       bearerFormat: JWT
       description: |
         JWT認証トークン
-        
+
         **使用法:** Swagger UI の Authorize ダイアログには **トークン本体のみ** を貼り付けてください（先頭に `Bearer ` を付ける必要はありません）。
         もし `Bearer ` を含めてしまうと `Bearer Bearer ...` となり認証に失敗します。
 
@@ -698,7 +698,7 @@ paths:
           schema:
             type: integer
             minimum: 1
-          description: "レビューID（整数、1以上）。小数や0以下は 400 を返します。"
+          description: 'レビューID（整数、1以上）。小数や0以下は 400 を返します。'
       responses:
         '204':
           description: レビュー削除成功（No Content）
@@ -872,7 +872,7 @@ paths:
   /comments:
     post:
       summary: コメント投稿（Deprecated）
-      description: "Deprecated: API ドキュメントに合わせて POST /reviews/{reviewId}/comments を利用してください。"
+      description: 'Deprecated: API ドキュメントに合わせて POST /reviews/{reviewId}/comments を利用してください。'
       deprecated: true
       tags: [Comments]
       security:
