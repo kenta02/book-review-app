@@ -115,3 +115,5 @@ router.delete('/reviews/:reviewId', async (req: Request<ReviewParams>, res: Resp
     });
   }
 });
+
+export default router;
