@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import Review from '../models/Review';
 import Comment from '../models/Comment';
 import { ReviewParams } from '../types/route-params';
+import { sequelize } from '../sequelize';
 
 const router = express.Router();
 
@@ -69,26 +70,40 @@ router.delete('/reviews/:reviewId', async (req: Request<ReviewParams>, res: Resp
       });
     }
 
-    // 関連コメントがある場合は削除不可
-    const hasComments = await Comment.findOne({
-      where: { reviewId: reviewIdNum },
-      attributes: ['id'], // id のみ取得
-    });
-
-    if (hasComments) {
-      return res.status(409).json({
-        success: false,
-        error: {
-          message: 'このレビューには関連するコメントが存在するため、削除できません。',
-          code: 'RELATED_DATA_EXISTS',
-        },
+    // トランザクション開始
+    const transaction = await sequelize.transaction();
+    try {
+      // 関連コメントがある場合は削除不可
+      const hasComments = await Comment.findOne({
+        where: { reviewId: reviewIdNum },
+        attributes: ['id'], // id のみ取得
+        transaction, // トランザクション内で実行
       });
-    }
-    // レビュー削除
-    await targetReview.destroy();
 
-    // 成功
-    return res.sendStatus(204);
+      if (hasComments) {
+        // トランザクションロールバック
+        await transaction.rollback();
+        return res.status(409).json({
+          success: false,
+          error: {
+            message: 'このレビューには関連するコメントが存在するため、削除できません。',
+            code: 'RELATED_DATA_EXISTS',
+          },
+        });
+      }
+      // レビュー削除(トランザクション内)
+      await targetReview.destroy({ transaction });
+
+      // トランザクションコミット
+      await transaction.commit();
+
+      // 成功
+      return res.sendStatus(204);
+    } catch (error) {
+      // トランザクションロールバック
+      await transaction.rollback();
+      throw error;
+    }
   } catch (error) {
     console.error('Error deleting review:', error);
     res.status(500).json({
