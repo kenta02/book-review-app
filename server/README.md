@@ -112,7 +112,11 @@ npm run swagger
 - 実行例（tanaka ユーザーを使用）：
 
 ```bash
-npm run token -- --email tanaka@example.com --password password123
+# サーバー配下（推奨）
+cd server && npm run token -- --email tanaka@example.com --password password123
+
+# またはプロジェクトルートから（ディレクトリ移動したくない場合）
+npm --prefix server run token -- --email tanaka@example.com --password password123
 ```
 
 - 出力例：
