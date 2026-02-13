@@ -175,6 +175,16 @@ components:
               type: string
             code:
               type: string
+            details:
+              type: array
+              description: '（省略可能）バリデーションエラー等の詳細配列（{ field, message }）'
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
 
 paths:
   /auth/register:
