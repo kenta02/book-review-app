@@ -12,7 +12,7 @@ const router = express.Router();
 router.post('/register', async (req: Request, res: Response) => {
   try {
     const { username, email, password } = req.body;
-    console.info('Received registration data:', req.body);
+    console.debug('Received registration data:', req.body);
 
     const errors = [];
     if (!username || typeof username !== 'string' || username.length < 3 || username.length > 150) {
@@ -126,7 +126,7 @@ router.post('/register', async (req: Request, res: Response) => {
 router.post('/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-    console.error('Received login data:', req.body);
+    console.info('Received login data:', req.body);
 
     const errors = [];
     if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
