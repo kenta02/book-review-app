@@ -102,6 +102,7 @@ router.get('/:id', async (req: Request<BookParams>, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const { title, author, publicationYear, ISBN, summary } = req.body;
+    console.debug('Received new book data:', req.body);
     const errors = [];
 
     if (!title || title.trim() === '') {
@@ -165,6 +166,7 @@ router.put('/:id', async (req: Request<BookParams>, res: Response) => {
   try {
     const bookId = Number(req.params.id);
     const { title, author, publicationYear, ISBN, summary } = req.body;
+    console.debug('Received update data for bookId:', bookId, req.body);
     const errors = [];
 
     if (!Number.isInteger(bookId) || bookId <= 0) {
@@ -267,8 +269,20 @@ router.put('/:id', async (req: Request<BookParams>, res: Response) => {
 // DELETE /api/books/:id - 書籍削除
 router.delete('/:id', async (req: Request<BookParams>, res: Response) => {
   try {
-    // 書籍の存在チェック
+    // パスパラメータ id の形式チェック（整数かつ 1 以上）
     const bookId = Number(req.params.id);
+    if (!Number.isInteger(bookId) || bookId <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Invalid book id',
+          code: 'INVALID_BOOK_ID',
+          details: [{ field: 'id', message: 'IDは1以上の整数である必要があります。' }],
+        },
+      });
+    }
+
+    // 書籍の存在チェック
     const bookInfo = await Book.findByPk(bookId);
 
     if (!bookInfo) {
