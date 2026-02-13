@@ -5,9 +5,11 @@
 
 import express, { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+
 import User from '../models/Users';
 
 // Express の Request 型を拡張して userId プロパティを追加
+/* eslint-disable @typescript-eslint/no-namespace -- required for Express request augmentation */
 declare global {
   namespace Express {
     interface Request {
@@ -20,19 +22,21 @@ export const authenticateToken = async (
   req: Request,
   res: Response,
   next: express.NextFunction
-) => {
+): Promise<void> => {
   // authHeader が存在するか確認
   // 「Bearer 」で始まっているか確認
 
   const authHeader = req.headers.authorization;
+  console.info(
+    '[AUTH-MW] authorization header=',
+    authHeader ? authHeader.slice(0, 30) + '...' : authHeader
+  );
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
-      error: {
-        message: 'トークンが無い、または無効です。',
-        code: 'AUTHENTICATION_FAILED',
-      },
+      error: { message: 'トークンが無い、または無効です。', code: 'AUTHENTICATION_FAILED' },
     });
+    return;
   }
   // トークン部分を取り出す(7文字目以降)
   const token = authHeader.substring(7);
@@ -51,22 +55,18 @@ export const authenticateToken = async (
       next();
     } else {
       // ユーザーが見つからない場合
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
-        error: {
-          message: 'ユーザーが見つかりません。',
-          code: 'USER_NOT_FOUND',
-        },
+        error: { message: 'ユーザーが見つかりません。', code: 'USER_NOT_FOUND' },
       });
+      return;
     }
   } catch (error) {
     // 401: 認証失敗
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
-      error: {
-        message: 'トークンが無い、または無効です。',
-        code: 'AUTHENTICATION_FAILED',
-      },
+      error: { message: 'トークンが無い、または無効です。', code: 'AUTHENTICATION_FAILED' },
     });
+    return;
   }
 };

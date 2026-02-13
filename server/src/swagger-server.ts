@@ -1,11 +1,12 @@
-import express from "express";
-import { Request, Response } from "express";
-import cors from "cors";
 import path from "path";
 import fs from "fs";
+import http from "http";
+
+import express, { Request, Response } from "express";
+import cors from "cors";
 import yaml from "yaml";
 import swaggerUi from "swagger-ui-express";
-import http from "http";
+
 
 const app = express();
 app.use(cors());
@@ -36,7 +37,7 @@ app.get("/openapi.yaml", (_req: Request, res: Response) => {
   const yamlContent = fs.readFileSync(swaggerFilePath, "utf8");
   // servers をローカルプロキシに置換
   const modifiedYaml = yamlContent.replace(
-    /servers:[\s\S]*?(?=\n[a-z]|\Z)/,
+    /servers:[\s\S]*?(?=\n[a-z]|$)/,
     `servers:
   - url: /api
     description: Local proxy (port 8080)`
@@ -47,8 +48,6 @@ app.get("/openapi.yaml", (_req: Request, res: Response) => {
 // APIプロキシ: Swagger UIからのリクエストをメインサーバーにフォワード
 app.use("/api", (req: Request, res: Response) => {
   const apiPath = req.path.replace(/^\/api/, "");
-  const apiUrl = `http://localhost:3001/api${apiPath}`;
-
   const options = {
     hostname: "localhost",
     port: 3001,
@@ -67,7 +66,7 @@ app.use("/api", (req: Request, res: Response) => {
     headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS";
     headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
     
-    res.writeHead(proxyRes.statusCode!, headers);
+    res.writeHead(proxyRes.statusCode ?? 502, headers);
     proxyRes.pipe(res);
   });
 
@@ -107,9 +106,9 @@ app.use(
 const port = process.env.SWAGGER_PORT || 8080;
 
 app.listen(port, () => {
-  console.log(`📚 Swagger UI running on http://localhost:${port}`);
-  console.log(`📄 OpenAPI spec: http://localhost:${port}/openapi.yaml`);
-  console.log(`💾 OpenAPI JSON: http://localhost:${port}/openapi.json`);
-  console.log(`🔀 API proxy: http://localhost:${port}/api/* -> http://localhost:3001/api/*`);
-  console.log(`\n⚠️  Note: API server (npm run dev) must be running on port 3001`);
+  console.info(`📚 Swagger UI running on http://localhost:${port}`);
+  console.info(`📄 OpenAPI spec: http://localhost:${port}/openapi.yaml`);
+  console.info(`💾 OpenAPI JSON: http://localhost:${port}/openapi.json`);
+  console.info(`🔀 API proxy: http://localhost:${port}/api/* -> http://localhost:3001/api/*`);
+  console.info(`\n⚠️  Note: API server (npm run dev) must be running on port 3001`);
 });

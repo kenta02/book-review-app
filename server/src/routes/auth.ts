@@ -1,7 +1,8 @@
 import express, { Request, Response } from 'express';
-import User from '../models/Users';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+
+import User from '../models/Users';
 import { authenticateToken } from '../middleware/auth';
 
 // POST /api/auth/register - ユーザー登録

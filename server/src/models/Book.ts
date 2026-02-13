@@ -1,6 +1,7 @@
 // サンプル
 
 import { DataTypes } from "sequelize";
+
 import { sequelize } from "../sequelize";
 
 const Book = sequelize.define("Book", {

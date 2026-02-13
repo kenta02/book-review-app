@@ -1,10 +1,141 @@
 import express, { Request, Response } from 'express';
+
 import Review from '../models/Review';
+import { logger } from '../utils/logger';
 import Comment from '../models/Comment';
 import { ReviewParams } from '../types/route-params';
 import { sequelize } from '../sequelize';
+import { authenticateToken } from '../middleware/auth';
+import User from '../models/Users';
+import Book from '../models/Book';
 
 const router = express.Router();
+
+/**
+ * GET /api/reviews
+ * - 公開エンドポイント（認証不要）
+ * - クエリ: bookId?, userId?, page?, limit?
+ */
+router.get('/reviews', async (req: Request, res: Response) => {
+  logger.info('[REVIEWS] incoming request query=', req.query);
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Number(req.query.limit) || 20);
+    const offset = (page - 1) * limit;
+
+    const where: Record<string, unknown> = {};
+    if (req.query.bookId) (where as Record<string, unknown>).bookId = Number(req.query.bookId);
+    if (req.query.userId) (where as Record<string, unknown>).userId = Number(req.query.userId);
+
+    logger.info('[REVIEWS] executing DB query', { where, page, limit, offset });
+
+    // avoid eager-loading issues by returning core Review fields only
+    const { rows, count } = await Review.findAndCountAll({
+      where,
+      attributes: ['id', 'bookId', 'userId', 'content', 'rating', 'createdAt', 'updatedAt'],
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset,
+    });
+
+    logger.info('[REVIEWS] db returned rows=', rows.length, 'count=', count);
+
+    const reviews = rows.map((r) => {
+      const js = (typeof r.toJSON === 'function' ? r.toJSON() : r) as Record<string, unknown>;
+      return {
+        id: Number(js.id),
+        bookId: Number(js.bookId),
+        userId: js.userId === null || js.userId === undefined ? null : Number(js.userId),
+        content: String(js.content),
+        rating: Number(js.rating),
+        createdAt: js.createdAt,
+        updatedAt: js.updatedAt,
+      };
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        reviews,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(count / limit),
+          totalItems: count,
+          itemsPerPage: limit,
+        },
+      },
+    });
+  } catch (error) {
+    const e = error as { stack?: string } | undefined;
+    console.error('[REVIEWS] Error fetching reviews:', e && (e.stack || e));
+    return res.status(500).json({
+      success: false,
+      error: { message: 'Internal server error', code: 'INTERNAL_SERVER_ERROR' },
+    });
+  }
+});
+
+/**
+ * GET /api/reviews/:reviewId - レビュー詳細（公開）
+ */
+router.get('/reviews/:reviewId', async (req: Request, res: Response) => {
+  try {
+    const reviewId = Number(req.params.reviewId);
+    if (!Number.isInteger(reviewId) || reviewId <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: { message: '無効なレビューIDです。', code: 'INVALID_REVIEW_ID' },
+      });
+    }
+
+    const found = await Review.findByPk(reviewId, {
+      include: [
+        { model: User, attributes: ['id', 'username'] },
+        { model: Book, attributes: ['id', 'title'] },
+      ],
+    });
+
+    if (!found) {
+      return res.status(404).json({
+        success: false,
+        error: { message: '指定されたレビューが存在しません。', code: 'REVIEW_NOT_FOUND' },
+      });
+    }
+
+    // Sequelize Model の直接プロパティ参照は型が厳密ではないため toJSON() で安全に取得
+    const foundJson = found.toJSON() as {
+      id: number;
+      bookId: number;
+      Book?: { title?: string } | null;
+      userId?: number | null;
+      User?: { username?: string } | null;
+      content: string;
+      rating: number;
+      createdAt: Date;
+      updatedAt: Date;
+    };
+
+    const data = {
+      id: foundJson.id,
+      bookId: foundJson.bookId,
+      bookTitle: foundJson.Book ? foundJson.Book.title : undefined,
+      userId: foundJson.userId,
+      username: foundJson.User ? foundJson.User.username : undefined,
+      content: foundJson.content,
+      rating: foundJson.rating,
+      createdAt: foundJson.createdAt,
+      updatedAt: foundJson.updatedAt,
+    };
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching review detail:', error);
+    return res.status(500).json({
+      success: false,
+      error: { message: 'Internal server error', code: 'INTERNAL_SERVER_ERROR' },
+    });
+  }
+});
 
 /**
  * DELETE /api/reviews/:reviewId
@@ -19,7 +150,7 @@ const router = express.Router();
  *  - 409 Conflict: related comments exist
  *  - 500 Internal Server Error
  */
-router.delete('/reviews/:reviewId', async (req: Request<ReviewParams>, res: Response) => {
+router.delete<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req, res) => {
   try {
     // パスパラメータから reviewId を検証してパース
     const reviewId = req.params.reviewId;
@@ -130,7 +261,8 @@ router.delete('/reviews/:reviewId', async (req: Request<ReviewParams>, res: Resp
  * 404 Not Found: review not found
  * 500 Internal Server Error
  */
-router.put('/reviews/:reviewId', async (req: Request<ReviewParams>, res: Response) => {
+
+router.put<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req, res) => {
   try {
     const { content } = req.body;
 
