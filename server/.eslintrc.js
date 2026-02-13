@@ -26,7 +26,7 @@ module.exports = {
     // Recommended safety / style
     'no-var': 'error',
     'prefer-const': 'error',
-    'no-console': ['warn', { allow: ['warn', 'error'] }],
+    'no-console': ['warn', { allow: ['warn', 'error', 'info', 'debug'] }],
 
     // Imports / unused
     'unused-imports/no-unused-imports': 'error',
