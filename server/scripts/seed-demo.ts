@@ -58,6 +58,47 @@ async function main() {
       }),
     ]);
 
+    // 追加のダミーレビュー（フロント開発用に複数）
+    await Promise.all([
+      Review.create({
+        bookId: book1.get('id') as number,
+        userId: alice.get('id') as number,
+        content: '導入部分が良かった',
+        rating: 4,
+      }),
+      Review.create({
+        bookId: book1.get('id') as number,
+        userId: charlie.get('id') as number,
+        content: '具体例がもっと欲しい',
+        rating: 3,
+      }),
+      Review.create({
+        bookId: book1.get('id') as number,
+        userId: bob.get('id') as number,
+        content: 'リファクタの章が素晴らしい',
+        rating: 5,
+      }),
+      Review.create({
+        bookId: book1.get('id') as number,
+        userId: alice.get('id') as number,
+        content: 'サンプルコードが有用でした',
+        rating: 4,
+      }),
+      Review.create({
+        bookId: book1.get('id') as number,
+        userId: charlie.get('id') as number,
+        content: '章ごとのまとめが分かりやすい',
+        rating: 4,
+      }),
+      // 長文レビュー（トランケーション確認用）
+      Review.create({
+        bookId: book1.get('id') as number,
+        userId: bob.get('id') as number,
+        content: '長文レビュー: '.repeat(80),
+        rating: 4,
+      }),
+    ]);
+
     await Promise.all([
       Comment.create({
         reviewId: review1.get('id') as number,
