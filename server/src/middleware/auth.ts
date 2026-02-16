@@ -23,6 +23,11 @@ export const authenticateToken = async (
   res: Response,
   next: express.NextFunction
 ): Promise<void> => {
+  // テストや他のミドルウェアで既に req.userId が設定されていればそのまま通す
+  if (req.userId !== undefined && req.userId !== null) {
+    return next();
+  }
+
   // authHeader が存在するか確認
   // 「Bearer 」で始まっているか確認
 
@@ -34,7 +39,7 @@ export const authenticateToken = async (
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({
       success: false,
-      error: { message: 'トークンが無い、または無効です。', code: 'AUTHENTICATION_FAILED' },
+      error: { message: '認証が必要です。', code: 'AUTHENTICATION_REQUIRED' },
     });
     return;
   }
@@ -65,7 +70,7 @@ export const authenticateToken = async (
     // 401: 認証失敗
     res.status(401).json({
       success: false,
-      error: { message: 'トークンが無い、または無効です。', code: 'AUTHENTICATION_FAILED' },
+      error: { message: '認証が必要です。', code: 'AUTHENTICATION_REQUIRED' },
     });
     return;
   }
