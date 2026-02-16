@@ -1,13 +1,16 @@
 import express, { Request, Response } from 'express';
 
-import Review from '../models/Review';
 import { logger } from '../utils/logger';
-import Comment from '../models/Comment';
 import { ReviewParams } from '../types/route-params';
-import { sequelize } from '../sequelize';
 import { authenticateToken } from '../middleware/auth';
-import User from '../models/Users';
-import Book from '../models/Book';
+import * as reviewService from '../services/review.service';
+import {
+  parseCreateReview,
+  parseUpdateReview,
+  parseDeleteReview,
+  parseGetReviewDetail,
+  parseListReviewsQuery,
+} from '../parsers/review.parsers';
 
 const router = express.Router();
 
@@ -17,57 +20,28 @@ const router = express.Router();
  * - クエリ: bookId?, userId?, page?, limit?
  */
 router.get('/reviews', async (req: Request, res: Response) => {
-  logger.info('[REVIEWS] incoming request query=', req.query);
   try {
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(100, Number(req.query.limit) || 20);
-    const offset = (page - 1) * limit;
+    const parseResult = parseListReviewsQuery(req);
 
-    const where: Record<string, unknown> = {};
-    if (req.query.bookId) (where as Record<string, unknown>).bookId = Number(req.query.bookId);
-    if (req.query.userId) (where as Record<string, unknown>).userId = Number(req.query.userId);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Validation failed',
+          code: 'VALIDATION_ERROR',
+          details: parseResult.errors,
+        },
+      });
+    }
 
-    logger.info('[REVIEWS] executing DB query', { where, page, limit, offset });
-
-    // avoid eager-loading issues by returning core Review fields only
-    const { rows, count } = await Review.findAndCountAll({
-      where,
-      attributes: ['id', 'bookId', 'userId', 'content', 'rating', 'createdAt', 'updatedAt'],
-      order: [['createdAt', 'DESC']],
-      limit,
-      offset,
-    });
-
-    logger.info('[REVIEWS] db returned rows=', rows.length, 'count=', count);
-
-    const reviews = rows.map((r) => {
-      const js = (typeof r.toJSON === 'function' ? r.toJSON() : r) as Record<string, unknown>;
-      return {
-        id: Number(js.id),
-        bookId: Number(js.bookId),
-        userId: js.userId === null || js.userId === undefined ? null : Number(js.userId),
-        content: String(js.content),
-        rating: Number(js.rating),
-        createdAt: js.createdAt,
-        updatedAt: js.updatedAt,
-      };
-    });
+    const result = await reviewService.listReviews(parseResult.data);
 
     return res.json({
       success: true,
-      data: {
-        reviews,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(count / limit),
-          totalItems: count,
-          itemsPerPage: limit,
-        },
-      },
+      data: result,
     });
   } catch (error) {
-    const e = error as { stack?: string } | undefined;
-    console.error('[REVIEWS] Error fetching reviews:', e && (e.stack || e));
+    logger.error('[REVIEWS GET] Error:', error);
     return res.status(500).json({
       success: false,
       error: { message: 'Internal server error', code: 'INTERNAL_SERVER_ERROR' },
@@ -80,56 +54,32 @@ router.get('/reviews', async (req: Request, res: Response) => {
  */
 router.get('/reviews/:reviewId', async (req: Request, res: Response) => {
   try {
-    const reviewId = Number(req.params.reviewId);
-    if (!Number.isInteger(reviewId) || reviewId <= 0) {
+    const parseResult = parseGetReviewDetail(req);
+
+    if (!parseResult.success) {
+      const firstErrorCode = parseResult.errors?.[0]?.code || 'VALIDATION_ERROR';
       return res.status(400).json({
         success: false,
-        error: { message: '無効なレビューIDです。', code: 'INVALID_REVIEW_ID' },
+        error: {
+          message: 'Validation failed',
+          code: firstErrorCode,
+          details: parseResult.errors,
+        },
       });
     }
 
-    const found = await Review.findByPk(reviewId, {
-      include: [
-        { model: User, attributes: ['id', 'username'] },
-        { model: Book, attributes: ['id', 'title'] },
-      ],
-    });
-
-    if (!found) {
-      return res.status(404).json({
-        success: false,
-        error: { message: '指定されたレビューが存在しません。', code: 'REVIEW_NOT_FOUND' },
-      });
-    }
-
-    // Sequelize Model の直接プロパティ参照は型が厳密ではないため toJSON() で安全に取得
-    const foundJson = found.toJSON() as {
-      id: number;
-      bookId: number;
-      Book?: { title?: string } | null;
-      userId?: number | null;
-      User?: { username?: string } | null;
-      content: string;
-      rating: number;
-      createdAt: Date;
-      updatedAt: Date;
-    };
-
-    const data = {
-      id: foundJson.id,
-      bookId: foundJson.bookId,
-      bookTitle: foundJson.Book ? foundJson.Book.title : undefined,
-      userId: foundJson.userId,
-      username: foundJson.User ? foundJson.User.username : undefined,
-      content: foundJson.content,
-      rating: foundJson.rating,
-      createdAt: foundJson.createdAt,
-      updatedAt: foundJson.updatedAt,
-    };
+    const data = await reviewService.getReviewDetail(parseResult.data.reviewId);
 
     return res.json({ success: true, data });
   } catch (error) {
-    console.error('Error fetching review detail:', error);
+    if (error instanceof reviewService.ApiError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: { message: error.message, code: error.code },
+      });
+    }
+
+    logger.error('[REVIEWS GET DETAIL] Error:', error);
     return res.status(500).json({
       success: false,
       error: { message: 'Internal server error', code: 'INTERNAL_SERVER_ERROR' },
@@ -152,21 +102,6 @@ router.get('/reviews/:reviewId', async (req: Request, res: Response) => {
  */
 router.delete<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req, res) => {
   try {
-    // パスパラメータから reviewId を検証してパース
-    const reviewId = req.params.reviewId;
-    const reviewIdNum = Number(reviewId);
-    const isValidId = Number.isInteger(reviewIdNum) && reviewIdNum > 0;
-    if (!isValidId) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: '無効なレビューIDです。',
-          code: 'INVALID_REVIEW_ID',
-        },
-      });
-    }
-
-    // 認証: ユーザーが認証されていることを確認
     const userId = req.userId;
     if (!userId) {
       return res.status(401).json({
@@ -178,65 +113,35 @@ router.delete<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req,
       });
     }
 
-    // レビューが存在することを確認
-    const targetReview = await Review.findByPk(reviewIdNum);
-    if (!targetReview) {
-      return res.status(404).json({
+    const parseResult = parseDeleteReview(req);
+
+    if (!parseResult.success) {
+      const firstErrorCode = parseResult.errors?.[0]?.code || 'VALIDATION_ERROR';
+      return res.status(400).json({
         success: false,
         error: {
-          message: '指定されたレビューが存在しません。',
-          code: 'REVIEW_NOT_FOUND',
+          message: 'Validation failed',
+          code: firstErrorCode,
+          details: parseResult.errors,
         },
       });
     }
 
-    // 認可: 所有者か確認
-    if (Number(targetReview.get('userId')) !== Number(userId)) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          message: 'このレビューを削除する権限がありません。',
-          code: 'FORBIDDEN',
-        },
-      });
-    }
+    await reviewService.deleteReview({
+      reviewId: parseResult.data.reviewId,
+      userId,
+    });
 
-    // トランザクション開始
-    const transaction = await sequelize.transaction();
-    try {
-      // 関連コメントがある場合は削除不可
-      const hasComments = await Comment.findOne({
-        where: { reviewId: reviewIdNum },
-        attributes: ['id'], // id のみ取得
-        transaction, // トランザクション内で実行
-      });
-
-      if (hasComments) {
-        // トランザクションロールバック
-        await transaction.rollback();
-        return res.status(409).json({
-          success: false,
-          error: {
-            message: 'このレビューには関連するコメントが存在するため、削除できません。',
-            code: 'RELATED_DATA_EXISTS',
-          },
-        });
-      }
-      // レビュー削除(トランザクション内)
-      await targetReview.destroy({ transaction });
-
-      // トランザクションコミット
-      await transaction.commit();
-
-      // 成功
-      return res.sendStatus(204);
-    } catch (error) {
-      // トランザクションロールバック
-      await transaction.rollback();
-      throw error;
-    }
+    return res.sendStatus(204);
   } catch (error) {
-    console.error('Error deleting review:', error);
+    if (error instanceof reviewService.ApiError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: { message: error.message, code: error.code },
+      });
+    }
+
+    logger.error('[REVIEWS DELETE] Error:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -264,9 +169,6 @@ router.delete<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req,
 
 router.put<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req, res) => {
   try {
-    const { content } = req.body;
-
-    // 認証チェック（最初）
     const userId = req.userId;
     if (!userId) {
       return res.status(401).json({
@@ -278,74 +180,102 @@ router.put<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req, re
       });
     }
 
-    // reviewIdの形式チェック（早期に）
-    const reviewId = Number(req.params.reviewId);
-    const isValidId = Number.isInteger(reviewId) && reviewId > 0;
-    if (!isValidId) {
+    const parseResult = parseUpdateReview(req);
+
+    if (!parseResult.success) {
+      const firstErrorCode = parseResult.errors?.[0]?.code || 'VALIDATION_ERROR';
       return res.status(400).json({
         success: false,
         error: {
-          message: '無効なレビューIDです。',
-          code: 'INVALID_REVIEW_ID',
+          message: 'Validation failed',
+          code: firstErrorCode,
+          details: parseResult.errors,
         },
       });
     }
 
-    // レビューの存在確認（早期に）
-    const foundReview = await Review.findByPk(reviewId);
-    if (!foundReview) {
-      return res.status(404).json({
+    const data = await reviewService.updateReview({
+      reviewId: parseResult.data.reviewId,
+      content: parseResult.data.content,
+      userId,
+    });
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    if (error instanceof reviewService.ApiError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: { message: error.message, code: error.code },
+      });
+    }
+
+    logger.error('[REVIEWS PUT] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Internal server error',
+        code: 'INTERNAL_SERVER_ERROR',
+      },
+    });
+  }
+});
+/**
+ * POST /api/reviews - レビュー投稿
+ *
+ * Request body: {
+ *  content: string (required, max 1000 chars)
+ *  rating: number (optional, 1-5)
+ *  bookId: number (required)
+ * }
+ * Responses:
+ * 201 Created: review created
+ * 400 Bad Request: validation error
+ * 401 Unauthorized: authentication required
+ * 404 Not Found: book not found
+ * 500 Internal Server Error
+ */
+
+router.post<ReviewParams>('/reviews', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({
         success: false,
         error: {
-          message: '指定されたレビューが存在しません。',
-          code: 'REVIEW_NOT_FOUND',
+          message: '認証が必要です。',
+          code: 'AUTHENTICATION_REQUIRED',
         },
       });
     }
 
-    // 所有者チェック
-    if (Number(foundReview.get('userId')) !== Number(userId)) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          message: 'このレビューを更新する権限がありません。',
-          code: 'FORBIDDEN',
-        },
-      });
-    }
+    const parseResult = parseCreateReview(req);
 
-    // contentバリデーション
-    const errors = [];
-    if (!content || typeof content !== 'string') {
-      errors.push({
-        field: 'content',
-        message: 'contentは文字列で必須項目です。',
-      });
-    } else if (content.length > 1000) {
-      errors.push({
-        field: 'content',
-        message: 'contentは1000文字以内で入力してください。',
-      });
-    }
-
-    // バリデーションエラーがある場合は400で返す
-    if (errors.length > 0) {
+    if (!parseResult.success) {
       return res.status(400).json({
         success: false,
         error: {
           message: 'Validation failed',
           code: 'VALIDATION_ERROR',
-          details: errors,
+          details: parseResult.errors,
         },
       });
     }
 
-    // 更新処理（結果を確認）
-    const updatedReview = await foundReview.update({ content });
-    // 成功時
-    return res.json({ success: true, data: updatedReview });
+    const data = await reviewService.createReview({
+      ...parseResult.data,
+      userId,
+    });
+
+    return res.status(201).json({ success: true, data });
   } catch (error) {
-    console.error('Error updating review:', error);
+    if (error instanceof reviewService.ApiError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: { message: error.message, code: error.code },
+      });
+    }
+
+    logger.error('[REVIEWS POST] Error:', error);
     res.status(500).json({
       success: false,
       error: {
