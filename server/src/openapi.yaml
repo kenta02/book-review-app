@@ -131,13 +131,51 @@ components:
       properties:
         id:
           type: integer
+        reviewId:
+          type: integer
         userId:
           type: integer
         username:
           type: string
         content:
           type: string
+        parentId:
+          type: integer
+          nullable: true
+          description: リプライの場合の親コメントID
         createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        type:
+          type: string
+          enum: [review_comment, review_helpful]
+          description: 通知タイプ
+        content:
+          type: string
+        relatedUserId:
+          type: integer
+          description: 関連するユーザーID
+        relatedReviewId:
+          type: integer
+          description: 関連するレビューID
+        isRead:
+          type: boolean
+          default: false
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
           type: string
           format: date-time
 
@@ -580,13 +618,31 @@ paths:
           in: query
           schema:
             type: integer
+            default: 1
         - name: limit
           in: query
           schema:
             type: integer
+            default: 20
       responses:
         '200':
           description: レビュー一覧取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      reviews:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Review'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
 
     post:
       summary: レビュー投稿
@@ -608,6 +664,8 @@ paths:
                   type: integer
                 content:
                   type: string
+                  minLength: 1
+                  maxLength: 1000
                 rating:
                   type: integer
                   minimum: 1
@@ -615,8 +673,33 @@ paths:
       responses:
         '201':
           description: レビュー投稿成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Review'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: 書籍が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /reviews/{id}:
     get:
@@ -701,6 +784,20 @@ paths:
                     example: true
                   data:
                     $ref: '#/components/schemas/Review'
+              examples:
+                success:
+                  summary: Updated review example
+                  value:
+                    success: true
+                    data:
+                      id: 7
+                      bookId: 12
+                      userId: 2
+                      username: tanaka
+                      content: '更新されたレビュー本文'
+                      rating: 4
+                      createdAt: '2026-02-10T12:00:00Z'
+                      updatedAt: '2026-02-14T12:00:00Z'
         '400':
           description: バリデーションエラー（無効な reviewId や content）
           content:
@@ -781,7 +878,7 @@ paths:
 
   /reviews/{id}/helpful:
     post:
-      summary: レビューを役に立ったとしる
+      summary: レビューを役に立つとマークする
       tags: [Reviews]
       security:
         - BearerAuth: []
@@ -793,7 +890,7 @@ paths:
             type: integer
       responses:
         '200':
-          description: 役に立ったカウント追加成功
+          description: 役に立つマーク成功
           content:
             application/json:
               schema:
@@ -806,6 +903,18 @@ paths:
                     properties:
                       helpfulCount:
                         type: integer
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: レビューが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /users/{id}:
     get:
@@ -852,9 +961,41 @@ paths:
           required: true
           schema:
             type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
       responses:
         '200':
           description: ユーザーレビュー一覧取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      reviews:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Review'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '404':
+          description: ユーザーが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /users/{id}/favorites:
     get:
@@ -868,9 +1009,47 @@ paths:
           required: true
           schema:
             type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
       responses:
         '200':
           description: お気に入り一覧取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      books:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Book'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: ユーザーが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /favorites:
     post:
@@ -892,6 +1071,47 @@ paths:
       responses:
         '201':
           description: お気に入り追加成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      bookId:
+                        type: integer
+                      userId:
+                        type: integer
+                      createdAt:
+                        type: string
+                        format: date-time
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 書籍が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 既にお気に入り登録済み
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /favorites/{bookId}:
     delete:
@@ -908,11 +1128,30 @@ paths:
       responses:
         '200':
           description: お気に入り削除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: お気に入りが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /comments:
     post:
-      summary: コメント投稿（Deprecated）
-      description: 'Deprecated: API ドキュメントに合わせて POST /reviews/{reviewId}/comments を利用してください。'
+      summary: コメント投稿（非推奨）
+      description: '⚠️ 非推奨: 新しいコード では POST /reviews/{reviewId}/comments を利用してください。このエンドポイントは後方互換性のために残されています。'
       deprecated: true
       tags: [Comments]
       security:
@@ -937,6 +1176,33 @@ paths:
       responses:
         '201':
           description: コメント投稿成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Comment'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: レビューが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /comments/{id}:
     put:
@@ -962,9 +1228,44 @@ paths:
               properties:
                 content:
                   type: string
+                  minLength: 1
+                  maxLength: 1000
       responses:
         '200':
           description: コメント編集成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Comment'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 権限不足（他人のコメントを編集しようとした）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: コメントが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     delete:
       summary: コメント削除
       tags: [Comments]
@@ -979,6 +1280,24 @@ paths:
       responses:
         '204':
           description: コメント削除成功（ボディなし）
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 権限不足（他人のコメントを削除しようとした）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: コメントが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /reviews/{reviewId}/comments:
     post:
@@ -1003,12 +1322,42 @@ paths:
               properties:
                 content:
                   type: string
+                  minLength: 1
+                  maxLength: 1000
                 parentId:
                   type: integer
+                  nullable: true
                   description: リプライの場合、親コメントID
       responses:
         '201':
           description: コメント投稿成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Comment'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: レビューが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
     get:
       summary: 特定レビューのコメント一覧取得
@@ -1032,6 +1381,28 @@ paths:
       responses:
         '200':
           description: コメント一覧取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      comments:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Comment'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '404':
+          description: レビューが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /notifications:
     get:
@@ -1039,9 +1410,50 @@ paths:
       tags: [Notifications]
       security:
         - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: 未読のみ取得するかどうか
       responses:
         '200':
           description: 通知一覧取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      notifications:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Notification'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+                      unreadCount:
+                        type: integer
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /notifications/{id}/read:
     put:
@@ -1058,6 +1470,27 @@ paths:
       responses:
         '200':
           description: 通知既読化成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Notification'
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 通知が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /external/books/search:
     get:
@@ -1069,9 +1502,59 @@ paths:
           required: true
           schema:
             type: string
+          description: 検索クエリ（タイトル、著者など）
+        - name: maxResults
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 40
+          description: 最大結果数
       responses:
         '200':
           description: 検索成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      books:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            title:
+                              type: string
+                            authors:
+                              type: array
+                              items:
+                                type: string
+                            ISBN:
+                              type: string
+                            description:
+                              type: string
+                            thumbnail:
+                              type: string
+                              format: uri
+        '400':
+          description: バリデーションエラー（クエリが空など）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: 外部API一時的に利用不可
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /external/books/isbn/{isbn}:
     get:
@@ -1083,6 +1566,52 @@ paths:
           required: true
           schema:
             type: string
+          description: ISBN（ハイフン有無は両対応）
       responses:
         '200':
           description: 取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      title:
+                        type: string
+                      authors:
+                        type: array
+                        items:
+                          type: string
+                      ISBN:
+                        type: string
+                      publicationYear:
+                        type: integer
+                      description:
+                        type: string
+                      thumbnail:
+                        type: string
+                        format: uri
+        '400':
+          description: バリデーションエラー（無効なISBN形式）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: ISBNに該当する書籍が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: 外部API一時的に利用不可
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
