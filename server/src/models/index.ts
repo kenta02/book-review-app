@@ -4,6 +4,8 @@ import Book from './Book';
 import Review from './Review';
 import Favorite from './Favorite';
 import Comment from './Comment';
+import ReviewVote from './ReviewVote';
+import Notification from './Notification';
 
 // User と Review の関連付け
 User.hasMany(Review, {
@@ -18,6 +20,22 @@ Review.belongsTo(User, {
 // Book と Review の関連付け
 Book.hasMany(Review, { foreignKey: 'bookId' });
 Review.belongsTo(Book, { foreignKey: 'bookId' });
+
+// Review と ReviewVote の関連付け
+Review.hasMany(ReviewVote, {
+  foreignKey: 'reviewId',
+  onDelete: 'CASCADE',
+  constraints: true,
+});
+ReviewVote.belongsTo(Review, { foreignKey: 'reviewId' });
+
+// User と ReviewVote の関連付け
+User.hasMany(ReviewVote, {
+  foreignKey: 'userId',
+  onDelete: 'SET NULL',
+  constraints: true,
+});
+ReviewVote.belongsTo(User, { foreignKey: 'userId' });
 
 // User と Favorite の関連付け
 User.hasMany(Favorite, {
@@ -59,3 +77,11 @@ Comment.belongsTo(Comment, {
   foreignKey: 'parentId',
   as: 'parent',
 });
+
+// User と Notification の関連付け
+User.hasMany(Notification, {
+  foreignKey: 'userId',
+  onDelete: 'CASCADE',
+  constraints: true,
+});
+Notification.belongsTo(User, { foreignKey: 'userId' });
