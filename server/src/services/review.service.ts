@@ -27,7 +27,7 @@ export class ApiError extends Error {
 }
 
 /**
- * Model → DTO への変換ヘルパー
+ * Model → DTO への変換
  */
 function reviewModelToDto(model: unknown): ReviewDto {
   const json = (
@@ -48,6 +48,8 @@ function reviewModelToDto(model: unknown): ReviewDto {
 
 /**
  * GET /api/reviews - レビュー一覧取得
+ * @param queryDto - クエリパラメータ (page, limit, bookId?, userId?)
+ * @returns レビューとページング情報
  */
 export async function listReviews(queryDto: ListReviewsQueryDto): Promise<{
   reviews: ReviewDto[];
@@ -90,6 +92,9 @@ export async function listReviews(queryDto: ListReviewsQueryDto): Promise<{
 
 /**
  * GET /api/reviews/:reviewId - レビュー詳細取得
+ * @param reviewId - レビューID
+ * @returns レビュー詳細（本のタイトル、ユーザー名を含む）
+ * @throws {ApiError} 404 REVIEW_NOT_FOUND
  */
 export async function getReviewDetail(reviewId: number): Promise<ReviewDetailDto> {
   const found = await Review.findByPk(reviewId, {
@@ -130,6 +135,9 @@ export async function getReviewDetail(reviewId: number): Promise<ReviewDetailDto
 
 /**
  * POST /api/reviews - レビュー作成
+ * @param serviceDto - レビュー作成情報 (bookId, userId, content, rating)
+ * @returns 作成されたレビュー
+ * @throws {ApiError} 404 BOOK_NOT_FOUND
  */
 export async function createReview(serviceDto: CreateReviewServiceDto): Promise<ReviewDto> {
   const { bookId, content, rating, userId } = serviceDto;
@@ -155,7 +163,10 @@ export async function createReview(serviceDto: CreateReviewServiceDto): Promise<
 
 /**
  * PUT /api/reviews/:reviewId - レビュー更新
- * - ユーザーが所有者であることを確認
+ * 所有者のみ更新可能
+ * @param serviceDto - 更新情報 (reviewId, userId, content)
+ * @returns 更新後のレビュー
+ * @throws {ApiError} 404 REVIEW_NOT_FOUND / 403 FORBIDDEN
  */
 export async function updateReview(serviceDto: UpdateReviewServiceDto): Promise<ReviewDto> {
   const { reviewId, content, userId } = serviceDto;
@@ -181,8 +192,9 @@ export async function updateReview(serviceDto: UpdateReviewServiceDto): Promise<
 
 /**
  * DELETE /api/reviews/:reviewId - レビュー削除
- * - ユーザーが所有者であることを確認
- * - 関連コメントがあれば削除不可
+ * 所有者のみ削除可能。関連コメント存在時は削除不可
+ * @param serviceDto - 削除情報 (reviewId, userId)
+ * @throws {ApiError} 404 REVIEW_NOT_FOUND / 403 FORBIDDEN / 409 RELATED_DATA_EXISTS
  */
 export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<void> {
   const { reviewId, userId } = serviceDto;
