@@ -5,11 +5,24 @@ import jwt from 'jsonwebtoken';
 import User from '../models/Users';
 import { authenticateToken } from '../middleware/auth';
 
-// POST /api/auth/register - ユーザー登録
-// パスワードをハッシュ化して DB に保存し、JWT トークンを返す
-
 const router = express.Router();
 
+/**
+ * POST /api/auth/register - ユーザー登録
+ *
+ * パスワードをハッシュ化して DB に保存し、JWT トークンを返す
+ *
+ * Request body: {
+ *   username: string (required, 3-150 chars)
+ *   email: string (required, valid email format)
+ *   password: string (required, minimum 8 chars)
+ * }
+ * Responses:
+ * 201 Created: user registered successfully
+ * 400 Bad Request: validation error
+ * 409 Conflict: username or email already exists
+ * 500 Internal Server Error
+ */
 router.post('/register', async (req: Request, res: Response) => {
   try {
     const { username, email, password } = req.body;
@@ -122,8 +135,21 @@ router.post('/register', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/auth/login - ログイン認証
-// email とパスワードで認証し、JWT トークンを返す（失敗時は 401）
+/**
+ * POST /api/auth/login - ログイン認証
+ *
+ * email とパスワードで認証し、JWT トークンを返す（失敗時は 401）
+ *
+ * Request body: {
+ *   email: string (required, valid email format)
+ *   password: string (required, minimum 8 chars)
+ * }
+ * Responses:
+ * 200 OK: authentication successful
+ * 400 Bad Request: validation error
+ * 401 Unauthorized: authentication failed
+ * 500 Internal Server Error
+ */
 router.post('/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -215,7 +241,17 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 });
 
-// 認証ミドルウェアの作成
+/**
+ * GET /api/auth/me - 現在のユーザー情報取得
+ *
+ * 認証ミドルウェアで取得した userId を使ってユーザー情報を取得
+ *
+ * Headers: Authorization: Bearer <token> (required)
+ * Responses:
+ * 200 OK: user info retrieved
+ * 404 Not Found: user not found
+ * 401 Unauthorized: authentication required
+ */
 router.get('/me', authenticateToken, async (req: Request, res: Response) => {
   // ミドルウェアで取得した userId を使ってユーザー情報を取得
   const user = await User.findByPk(req.userId);

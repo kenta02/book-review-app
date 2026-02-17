@@ -7,7 +7,18 @@ import Favorite from '../models/Favorite';
 
 const router = express.Router();
 
-// GET /api/books - 書籍一覧取得（ページネーション対応）
+/**
+ * GET /api/books - 書籍一覧取得
+ *
+ * ページネーション対応（N+1 クエリ回避）
+ *
+ * Query parameters:
+ *   page?: number (default 1)
+ *   limit?: number (default 20)
+ * Responses:
+ * 200 OK: books list with pagination
+ * 500 Internal Server Error
+ */
 router.get('/', async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -48,7 +59,17 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/books/:id - 書籍詳細取得
+/**
+ * GET /api/books/:id - 書籍詳細取得
+ *
+ * Path parameters:
+ *   id: number (required, must be positive integer)
+ * Responses:
+ * 200 OK: book details
+ * 400 Bad Request: invalid id
+ * 404 Not Found: book not found
+ * 500 Internal Server Error
+ */
 router.get('/:id', async (req: Request<BookParams>, res: Response) => {
   try {
     const bookId = Number(req.params.id);
@@ -99,7 +120,22 @@ router.get('/:id', async (req: Request<BookParams>, res: Response) => {
   }
 });
 
-// POST /api/books - 新規書籍登録
+/**
+ * POST /api/books - 新規書籍登録
+ *
+ * Request body: {
+ *   title: string (required, non-empty)
+ *   author: string (required, non-empty)
+ *   publicationYear?: number
+ *   ISBN?: string (must be unique if provided)
+ *   summary?: string
+ * }
+ * Responses:
+ * 201 Created: book created
+ * 400 Bad Request: validation error
+ * 409 Conflict: ISBN already exists
+ * 500 Internal Server Error
+ */
 router.post('/', async (req: Request, res: Response) => {
   try {
     const { title, author, publicationYear, ISBN, summary } = req.body;
@@ -162,7 +198,27 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-// PUT /api/books/:id - 書籍情報更新（部分更新対応）
+/**
+ * PUT /api/books/:id - 書籍情報更新
+ *
+ * 部分更新対応（送られたフィールドのみを更新）
+ *
+ * Path parameters:
+ *   id: number (required, must be positive integer)
+ * Request body: {
+ *   title?: string (non-empty if provided)
+ *   author?: string (non-empty if provided)
+ *   publicationYear?: number
+ *   ISBN?: string (must be unique across other books if provided)
+ *   summary?: string
+ * }
+ * Responses:
+ * 200 OK: book updated
+ * 400 Bad Request: invalid id or validation error
+ * 404 Not Found: book not found
+ * 409 Conflict: ISBN already exists
+ * 500 Internal Server Error
+ */
 router.put('/:id', async (req: Request<BookParams>, res: Response) => {
   try {
     const bookId = Number(req.params.id);
@@ -267,7 +323,20 @@ router.put('/:id', async (req: Request<BookParams>, res: Response) => {
   }
 });
 
-// DELETE /api/books/:id - 書籍削除
+/**
+ * DELETE /api/books/:id - 書籍削除
+ *
+ * 関連するレビューやお気に入りが存在する場合は削除できません
+ *
+ * Path parameters:
+ *   id: number (required, must be positive integer)
+ * Responses:
+ * 204 No Content: book deleted
+ * 400 Bad Request: invalid id
+ * 404 Not Found: book not found
+ * 409 Conflict: related reviews or favorites exist
+ * 500 Internal Server Error
+ */
 router.delete('/:id', async (req: Request<BookParams>, res: Response) => {
   try {
     // パスパラメータ id の形式チェック（整数かつ 1 以上）
