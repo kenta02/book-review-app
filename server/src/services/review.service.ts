@@ -14,7 +14,9 @@ import {
 import { logger } from '../utils/logger';
 
 /**
- * API エラー（service から route へ）
+ * Service 層のエラー表現クラス
+ * @property {number} statusCode - HTTP ステータスコード
+ * @property {string} code - エラーコード（REVIEW_NOT_FOUND 等）
  */
 export class ApiError extends Error {
   constructor(
@@ -27,14 +29,18 @@ export class ApiError extends Error {
 }
 
 /**
- * Model → DTO への変換
+ * Review Model → DTO 型変換
+ * @returns {ReviewDto} 型安全な DTO
  */
 function reviewModelToDto(model: unknown): ReviewDto {
+  // toJSON() を呼び出して JSON 形式を取得
   const json = (
     typeof (model as { toJSON?: unknown }).toJSON === 'function'
       ? (model as { toJSON: () => Record<string, unknown> }).toJSON()
       : model
   ) as Record<string, unknown>;
+
+  // 型を安全に変換（undefined/null チェック付き）
   return {
     id: Number(json.id),
     bookId: Number(json.bookId),
@@ -47,9 +53,9 @@ function reviewModelToDto(model: unknown): ReviewDto {
 }
 
 /**
- * GET /api/reviews - レビュー一覧取得
- * @param queryDto - クエリパラメータ (page, limit, bookId?, userId?)
- * @returns レビューとページング情報
+ * レビュー一覧取得（ページング・フィルタリング）
+ * @param {ListReviewsQueryDto} queryDto - page, limit, bookId?, userId?
+ * @returns {Promise<{reviews, pagination}>}
  */
 export async function listReviews(queryDto: ListReviewsQueryDto): Promise<{
   reviews: ReviewDto[];
@@ -63,12 +69,14 @@ export async function listReviews(queryDto: ListReviewsQueryDto): Promise<{
   const { page, limit, bookId, userId } = queryDto;
   const offset = (page - 1) * limit;
 
+  // フィルタ条件構築
   const where: Record<string, unknown> = {};
   if (bookId !== undefined) where.bookId = bookId;
   if (userId !== undefined) where.userId = userId;
 
   logger.info('[REVIEWS SERVICE] executing DB query', { where, page, limit, offset });
 
+  // DB からレビューを取得（総件数も同時に取得）
   const { rows, count } = await Review.findAndCountAll({
     where,
     attributes: ['id', 'bookId', 'userId', 'content', 'rating', 'createdAt', 'updatedAt'],
@@ -79,6 +87,7 @@ export async function listReviews(queryDto: ListReviewsQueryDto): Promise<{
 
   logger.info('[REVIEWS SERVICE] db returned rows=', rows.length, 'count=', count);
 
+  // DTO に変換してページング情報と共に返却
   return {
     reviews: rows.map(reviewModelToDto),
     pagination: {
@@ -91,12 +100,13 @@ export async function listReviews(queryDto: ListReviewsQueryDto): Promise<{
 }
 
 /**
- * GET /api/reviews/:reviewId - レビュー詳細取得
- * @param reviewId - レビューID
- * @returns レビュー詳細（本のタイトル、ユーザー名を含む）
+ * レビュー詳細取得（関連リソース含む）
+ * @param {number} reviewId
+ * @returns {Promise<ReviewDetailDto>} ユーザー名・本のタイトル含む
  * @throws {ApiError} 404 REVIEW_NOT_FOUND
  */
 export async function getReviewDetail(reviewId: number): Promise<ReviewDetailDto> {
+  // レビュー取得（ユーザーと本の関連情報も一緒に取得）
   const found = await Review.findByPk(reviewId, {
     include: [
       { model: User, attributes: ['id', 'username'] },
@@ -104,6 +114,7 @@ export async function getReviewDetail(reviewId: number): Promise<ReviewDetailDto
     ],
   });
 
+  // レビューが存在しない場合は 404 エラーをスロー
   if (!found) {
     throw new ApiError(404, 'REVIEW_NOT_FOUND', '指定されたレビューが存在しません。');
   }
@@ -120,6 +131,7 @@ export async function getReviewDetail(reviewId: number): Promise<ReviewDetailDto
     updatedAt: Date;
   };
 
+  // 関連リソース情報を含めてレスポンス構築
   return {
     id: foundJson.id,
     bookId: foundJson.bookId,
@@ -134,21 +146,21 @@ export async function getReviewDetail(reviewId: number): Promise<ReviewDetailDto
 }
 
 /**
- * POST /api/reviews - レビュー作成
- * @param serviceDto - レビュー作成情報 (bookId, userId, content, rating)
- * @returns 作成されたレビュー
+ * レビュー作成（本の存在確認付き）
+ * @param {CreateReviewServiceDto} serviceDto
+ * @returns {Promise<ReviewDto>}
  * @throws {ApiError} 404 BOOK_NOT_FOUND
  */
 export async function createReview(serviceDto: CreateReviewServiceDto): Promise<ReviewDto> {
   const { bookId, content, rating, userId } = serviceDto;
 
-  // Book が存在するか確認
+  // 本が存在するか確認（ビジネス検証）
   const book = await Book.findByPk(bookId);
   if (!book) {
     throw new ApiError(404, 'BOOK_NOT_FOUND', '指定された本が存在しません。');
   }
 
-  // レビュー作成
+  // レビュー新規作成
   const newReview = await Review.create({
     bookId,
     userId,
@@ -162,10 +174,9 @@ export async function createReview(serviceDto: CreateReviewServiceDto): Promise<
 }
 
 /**
- * PUT /api/reviews/:reviewId - レビュー更新
- * 所有者のみ更新可能
- * @param serviceDto - 更新情報 (reviewId, userId, content)
- * @returns 更新後のレビュー
+ * レビュー更新（所有者のみ）
+ * @param {UpdateReviewServiceDto} serviceDto
+ * @returns {Promise<ReviewDto>}
  * @throws {ApiError} 404 REVIEW_NOT_FOUND / 403 FORBIDDEN
  */
 export async function updateReview(serviceDto: UpdateReviewServiceDto): Promise<ReviewDto> {
@@ -177,12 +188,12 @@ export async function updateReview(serviceDto: UpdateReviewServiceDto): Promise<
     throw new ApiError(404, 'REVIEW_NOT_FOUND', '指定されたレビューが存在しません。');
   }
 
-  // 権限チェック（所有者確認）
+  // 権限チェック：所有者（userId）が一致するか確認
   if (Number(review.get('userId')) !== Number(userId)) {
     throw new ApiError(403, 'FORBIDDEN', 'このレビューを更新する権限がありません。');
   }
 
-  // 更新
+  // 内容を更新
   const updated = await review.update({ content });
 
   logger.info('[REVIEWS SERVICE] review updated', { reviewId, userId });
@@ -191,9 +202,9 @@ export async function updateReview(serviceDto: UpdateReviewServiceDto): Promise<
 }
 
 /**
- * DELETE /api/reviews/:reviewId - レビュー削除
- * 所有者のみ削除可能。関連コメント存在時は削除不可
- * @param serviceDto - 削除情報 (reviewId, userId)
+ * レビュー削除（所有者のみ・コメント存在確認）
+ * @param {DeleteReviewServiceDto} serviceDto
+ * @returns {Promise<void>}
  * @throws {ApiError} 404 REVIEW_NOT_FOUND / 403 FORBIDDEN / 409 RELATED_DATA_EXISTS
  */
 export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<void> {
@@ -205,21 +216,22 @@ export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<
     throw new ApiError(404, 'REVIEW_NOT_FOUND', '指定されたレビューが存在しません。');
   }
 
-  // 権限チェック（所有者確認）
+  // 権限チェック：所有者（userId）が一致するか確認
   if (Number(review.get('userId')) !== Number(userId)) {
     throw new ApiError(403, 'FORBIDDEN', 'このレビューを削除する権限がありません。');
   }
 
-  // トランザクション開始
+  // トランザクション開始（削除が確実に行われることを保証）
   const transaction = await sequelize.transaction();
   try {
-    // 関連コメントがある場合は削除不可
+    // 関連コメントの有無確認
     const hasComments = await Comment.findOne({
       where: { reviewId },
       attributes: ['id'],
       transaction,
     });
 
+    // コメントが存在する場合は削除を中止
     if (hasComments) {
       await transaction.rollback();
       throw new ApiError(
@@ -229,7 +241,7 @@ export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<
       );
     }
 
-    // レビュー削除
+    // レビューを削除
     await review.destroy({ transaction });
     await transaction.commit();
 
