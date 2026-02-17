@@ -5,12 +5,12 @@ import { ReviewParams } from '../types/route-params';
 import { authenticateToken } from '../middleware/auth';
 import * as reviewService from '../services/review.service';
 import {
-  parseCreateReview,
-  parseUpdateReview,
-  parseDeleteReview,
-  parseGetReviewDetail,
-  parseListReviewsQuery,
-} from '../parsers/review.parsers';
+  validateCreateReview,
+  validateUpdateReview,
+  validateDeleteReview,
+  validateGetReviewDetail,
+  validateListReviewsQuery,
+} from '../validators/review.validator';
 
 const router = express.Router();
 
@@ -21,7 +21,7 @@ const router = express.Router();
  */
 router.get('/reviews', async (req: Request, res: Response) => {
   try {
-    const parseResult = parseListReviewsQuery(req);
+    const parseResult = validateListReviewsQuery(req);
 
     if (!parseResult.success) {
       return res.status(400).json({
@@ -54,7 +54,7 @@ router.get('/reviews', async (req: Request, res: Response) => {
  */
 router.get('/reviews/:reviewId', async (req: Request, res: Response) => {
   try {
-    const parseResult = parseGetReviewDetail(req);
+    const parseResult = validateGetReviewDetail(req);
 
     if (!parseResult.success) {
       const firstErrorCode = parseResult.errors?.[0]?.code || 'VALIDATION_ERROR';
@@ -113,7 +113,7 @@ router.delete<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req,
       });
     }
 
-    const parseResult = parseDeleteReview(req);
+    const parseResult = validateDeleteReview(req);
 
     if (!parseResult.success) {
       const firstErrorCode = parseResult.errors?.[0]?.code || 'VALIDATION_ERROR';
@@ -180,7 +180,7 @@ router.put<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req, re
       });
     }
 
-    const parseResult = parseUpdateReview(req);
+    const parseResult = validateUpdateReview(req);
 
     if (!parseResult.success) {
       const firstErrorCode = parseResult.errors?.[0]?.code || 'VALIDATION_ERROR';
@@ -248,7 +248,7 @@ router.post<ReviewParams>('/reviews', authenticateToken, async (req, res) => {
       });
     }
 
-    const parseResult = parseCreateReview(req);
+    const parseResult = validateCreateReview(req);
 
     if (!parseResult.success) {
       return res.status(400).json({
