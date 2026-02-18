@@ -658,7 +658,6 @@ paths:
               required:
                 - bookId
                 - content
-                - rating
               properties:
                 bookId:
                   type: integer
