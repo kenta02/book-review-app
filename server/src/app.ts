@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 
 import bookRouter from './routes/books';
 import authRouter from './routes/auth';
@@ -8,8 +9,29 @@ import reviewRouter from './routes/reviews';
 import { logger } from './utils/logger';
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+
+// security: set common HTTP headers
+app.use(helmet());
+
+// CORS: whitelist origins via CORS_ORIGINS (comma-separated).
+// - Allow requests without Origin (server-to-server / tests)
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin) return callback(null, true);
+    return callback(null, allowedOrigins.includes(origin));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  credentials: true,
+  optionsSuccessStatus: 200,
+};
+app.use(cors(corsOptions));
+
+// limit JSON body size to mitigate large payload attacks
+app.use(express.json({ limit: '10kb' }));
 
 app.get('/health', (_req: Request, res: Response) => res.json({ ok: true }));
 
