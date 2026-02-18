@@ -7,9 +7,15 @@ import jwt from 'jsonwebtoken';
 import authRouter from '../src/routes/auth';
 import User from '../src/models/Users';
 
+// このファイルの目的：認証関連ルートの正常系／異常系を確認するテスト
+// - /auth/register, /auth/login, /auth/me の仕様（ステータス・エラーコード）を検証
+// - DB や bcrypt/jwt はモックして副作用を排除する
+
 type UserInstance = InstanceType<typeof User>;
 
 type TestRequest = express.Request & { userId?: number };
+// テスト用の簡易アプリを作成するユーティリティ
+// req.userId をセットすることで「認証済み」状態を模擬できます
 function makeApp(setUserId?: number) {
   const app = express();
   app.use(express.json());
@@ -32,6 +38,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+// POST /api/auth/register のテスト
 describe('POST /api/auth/register', () => {
   it('returns 400 when validation fails', async () => {
     const res = await request(app).post('/api/auth/register').send({
@@ -45,6 +52,7 @@ describe('POST /api/auth/register', () => {
   });
 
   it('returns 409 when username already exists', async () => {
+    // User.findOne をモックして「既存ユーザーあり」の挙動を再現
     vi.spyOn(User, 'findOne').mockResolvedValueOnce({ id: 1 } as unknown as UserInstance);
 
     const res = await request(app).post('/api/auth/register').send({
@@ -58,6 +66,7 @@ describe('POST /api/auth/register', () => {
   });
 
   it('returns 201 and token when registration succeeds', async () => {
+    // bcrypt/hash, User.create, jwt.sign をモックして正常系を検証
     vi.spyOn(User, 'findOne').mockResolvedValue(null);
     vi.spyOn(bcrypt, 'hash').mockImplementation((async () => 'hashed') as typeof bcrypt.hash);
     vi.spyOn(User, 'create').mockResolvedValue({
@@ -78,6 +87,7 @@ describe('POST /api/auth/register', () => {
   });
 });
 
+// POST /api/auth/login のテスト
 describe('POST /api/auth/login', () => {
   it('returns 400 when validation fails', async () => {
     const res = await request(app).post('/api/auth/login').send({
@@ -102,6 +112,7 @@ describe('POST /api/auth/login', () => {
   });
 
   it('returns 401 when password is invalid', async () => {
+    // findOne, bcrypt.compare をモックしてパスワード不一致を再現
     vi.spyOn(User, 'findOne').mockResolvedValue({
       toJSON: () => ({ id: 1, username: 'u', email: 'u@example.com', password: 'hashed' }),
     } as unknown as UserInstance);
@@ -117,6 +128,7 @@ describe('POST /api/auth/login', () => {
   });
 
   it('returns 200 and token when login succeeds', async () => {
+    // 正常系：findOne, bcrypt.compare, jwt.sign をモック
     vi.spyOn(User, 'findOne').mockResolvedValue({
       toJSON: () => ({ id: 1, username: 'u', email: 'u@example.com', password: 'hashed' }),
     } as unknown as UserInstance);
@@ -134,6 +146,7 @@ describe('POST /api/auth/login', () => {
   });
 });
 
+// GET /api/auth/me のテスト
 describe('GET /api/auth/me', () => {
   it('returns 401 when unauthenticated', async () => {
     const res = await request(app).get('/api/auth/me');

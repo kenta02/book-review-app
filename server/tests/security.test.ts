@@ -1,6 +1,9 @@
 import request from 'supertest';
 import { describe, it, expect } from 'vitest';
 
+// このテストはセキュリティ関連ミドルウェアの基本動作を確認します。
+// - Helmet のヘッダー、CORS の許可/不許可、ボディサイズ制限などを検証
+
 // Import app AFTER any env setup if needed (app reads CORS_ORIGINS at module load time)
 import app from '../src/app';
 
@@ -8,7 +11,7 @@ describe('Security middleware', () => {
   it('sets common Helmet headers on responses', async () => {
     const res = await request(app).get('/health');
     expect(res.status).toBe(200);
-    // Helmet should set several headers; assert a couple of them
+    // Helmet が設定する主要ヘッダーをチェック
     expect(res.headers['x-content-type-options']).toBe('nosniff');
     expect(res.headers['x-frame-options']).toBeDefined();
   });
@@ -30,7 +33,7 @@ describe('Security middleware', () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'u@example.com', password: long });
-    // body-parser should reject with 413 Payload Too Large (or 400 depending on parser)
+    // body-parser による制限で 413 または 400 が返ることを想定
     expect([413, 400]).toContain(res.status);
   });
 });

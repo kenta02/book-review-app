@@ -5,6 +5,9 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import reviewRouter from '../src/routes/reviews';
 import Review from '../src/models/Review';
 
+// テスト目的：レビュー更新（PUT）のバリデーション、権限、更新処理を検証します
+// - 無効な入力・未認証・存在チェック・所有者チェック・更新失敗を網羅
+
 // Type aliases for cleaner code
 type ReviewInstance = InstanceType<typeof Review>;
 

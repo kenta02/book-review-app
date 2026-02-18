@@ -5,6 +5,9 @@ import type { SpyInstance } from 'vitest';
 import { ApiError } from '../src/errors/ApiError';
 import { ERROR_MESSAGES } from '../src/constants/error-messages';
 
+// テスト概要：コメント機能のルートを検証します。
+// - GET/POST の正常系とバリデーション、サービス層の例外伝播を確認
+
 // モジュールをモックしてから app を import
 vi.mock('../src/services/comment.service', () => {
   return {
@@ -29,6 +32,7 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
+// コメント一覧取得と投稿の振る舞いを確認
 describe('Comments routes', () => {
   it('GET /api/reviews/:reviewId/comments - returns comments from service', async () => {
     const fake = [
@@ -96,7 +100,9 @@ describe('Comments routes', () => {
   });
 
   it('POST /api/reviews/:reviewId/comments - service validation error (parent not found) is forwarded', async () => {
-    const ApiErrorClass = commentService.ApiError;
+    // ApiError は services モジュールのエクスポートではないため、
+    // テスト内では errors モジュールから直接参照する（型エラー回避）
+    const ApiErrorClass = ApiError;
     const createCommentMock = commentService.createComment as unknown as SpyInstance<
       [unknown],
       Promise<unknown>

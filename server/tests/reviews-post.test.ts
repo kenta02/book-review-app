@@ -6,6 +6,9 @@ import reviewRouter from '../src/routes/reviews';
 import Review from '../src/models/Review';
 import Book from '../src/models/Book';
 
+// テスト目的：POST /api/reviews の認証・バリデーション・DB エラー処理を確認
+// - req.userId をセットすることで認証済み状態を模擬
+
 type ReviewInstance = InstanceType<typeof Review>;
 type BookInstance = InstanceType<typeof Book>;
 
@@ -43,6 +46,7 @@ describe('POST /api/reviews', () => {
   });
 
   it('returns 400 when validation fails', async () => {
+    // バリデーションエラー時は details に該当フィールドが含まれることを確認
     const res = await request(app)
       .post('/api/reviews')
       .send({ bookId: 0, content: '', rating: 7 });
@@ -64,6 +68,7 @@ describe('POST /api/reviews', () => {
   });
 
   it('returns 201 and created review when ok (rating optional)', async () => {
+    // 正常系：Book 存在確認 -> Review.create の流れをモック
     vi.spyOn(Book, 'findByPk').mockResolvedValue({ id: 1 } as unknown as BookInstance);
     vi.spyOn(Review, 'create').mockResolvedValue({
       toJSON: () => ({

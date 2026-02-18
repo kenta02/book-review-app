@@ -9,6 +9,9 @@ import Book from '../src/models/Book';
 import Review from '../src/models/Review';
 import Favorite from '../src/models/Favorite';
 
+// このファイルの目的：書籍 API の CRUD とページネーションを検証するテスト
+// - findAndCountAll のモックを用いてページング動作を確認
+
 type BookInstance = InstanceType<typeof Book>;
 
 function makeApp() {
@@ -29,6 +32,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+// GET /api/books のページネーション動作を確認
 describe('GET /api/books', () => {
   it('returns paginated books', async () => {
     const book1 = { id: 1 } as unknown as BookInstance;
@@ -51,6 +55,7 @@ describe('GET /api/books', () => {
   });
 });
 
+// GET /api/books/:id の入力チェック・存在チェック
 describe('GET /api/books/:id', () => {
   it('returns 400 for invalid id', async () => {
     const spyFind = vi.spyOn(Book, 'findByPk');
@@ -77,6 +82,7 @@ describe('GET /api/books/:id', () => {
   });
 });
 
+// POST /api/books のバリデーションと重複チェック
 describe('POST /api/books', () => {
   it('returns 400 when validation fails', async () => {
     const res = await request(app).post('/api/books').send({ title: '', author: '' });
@@ -109,6 +115,7 @@ describe('POST /api/books', () => {
   });
 });
 
+// PUT /api/books/:id の検証と更新動作
 describe('PUT /api/books/:id', () => {
   it('returns 400 for invalid id', async () => {
     const res = await request(app).put('/api/books/0').send({ title: 't' });
@@ -153,6 +160,7 @@ describe('PUT /api/books/:id', () => {
   });
 });
 
+// DELETE /api/books/:id の関連データチェック
 describe('DELETE /api/books/:id', () => {
   it('returns 400 for invalid id', async () => {
     const res = await request(app).delete('/api/books/0');

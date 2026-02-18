@@ -6,9 +6,14 @@ import jwt from 'jsonwebtoken';
 import { authenticateToken } from '../src/middleware/auth';
 import User from '../src/models/Users';
 
+// このファイルの目的：authenticateToken ミドルウェアの挙動を検証
+// - req.userId が既にある場合は処理をスキップすること
+// - Authorization ヘッダー、JWT 検証、ユーザー存在チェックの各ケースを確認
+
 type UserInstance = InstanceType<typeof User>;
 type TestRequest = express.Request & { userId?: number };
 
+// テスト用ルート /protected を用意してミドルウェアの動作を直接確認する
 function makeApp(setUserId?: number) {
   const app = express();
   app.use(express.json());

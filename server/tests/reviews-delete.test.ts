@@ -1,13 +1,16 @@
 import express from 'express';
 import request from 'supertest';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-
 // modules under test
+import { Transaction } from 'sequelize';
+
 import reviewRouter from '../src/routes/reviews';
 import Review from '../src/models/Review';
 import Comment from '../src/models/Comment';
 import { sequelize } from '../src/sequelize';
-import { Transaction } from 'sequelize';
+
+// このファイルの目的：DELETE /api/reviews/:reviewId の挙動を検証
+// - トランザクション処理、関連コメントチェック、権限チェックを網羅
 
 // Type aliases for cleaner code
 type ReviewInstance = InstanceType<typeof Review>;
@@ -18,7 +21,7 @@ type TestRequest = express.Request & { userId?: number };
 function makeApp(setUserId?: number) {
   const app = express();
   app.use(express.json());
-  // simple middleware to set req.userId when needed
+  // テスト用ミドルウェア：req.userId を設定して認証状態を模擬
   app.use((req: TestRequest, _res: express.Response, next: express.NextFunction) => {
     if (setUserId !== undefined) req.userId = setUserId;
     next();
