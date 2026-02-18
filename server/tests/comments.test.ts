@@ -1,19 +1,12 @@
 import request from 'supertest';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { SpyInstance } from 'vitest';
+
+import { ApiError } from '../src/errors/ApiError';
+import { ERROR_MESSAGES } from '../src/constants/error-messages';
 
 // モジュールをモックしてから app を import
 vi.mock('../src/services/comment.service', () => {
-  class ApiError extends Error {
-    constructor(
-      public statusCode: number,
-      public code: string,
-      message: string,
-      public details?: any
-    ) {
-      super(message);
-    }
-  }
-
   return {
     ApiError,
     listComments: vi.fn(),
@@ -23,7 +16,7 @@ vi.mock('../src/services/comment.service', () => {
 
 // モック認証ミドルウェア（テスト時は req.userId を直接セットする）
 vi.mock('../src/middleware/auth', () => ({
-  authenticateToken: (req: any, _res: any, next: any) => {
+  authenticateToken: (req: { userId?: number }, _res: unknown, next: () => void) => {
     req.userId = 2;
     next();
   },
@@ -51,7 +44,11 @@ describe('Comments routes', () => {
       },
     ];
 
-    (commentService.listComments as any).mockResolvedValue(fake);
+    const listCommentsMock = commentService.listComments as unknown as SpyInstance<
+      [number],
+      Promise<typeof fake>
+    >;
+    listCommentsMock.mockResolvedValue(fake);
 
     const res = await request(app).get('/api/reviews/10/comments');
 
@@ -78,13 +75,17 @@ describe('Comments routes', () => {
       updatedAt: new Date().toISOString(),
     };
 
-    (commentService.createComment as any).mockResolvedValue(created);
+    const createCommentMock = commentService.createComment as unknown as SpyInstance<
+      [unknown],
+      Promise<typeof created>
+    >;
+    createCommentMock.mockResolvedValue(created);
 
     const res = await request(app).post('/api/reviews/10/comments').send({ content: 'ok' });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data).toMatchObject({ id: 100, content: 'ok' });
-    expect((commentService.createComment as any).mock.calls.length).toBe(1);
+    expect(createCommentMock.mock.calls.length).toBe(1);
   });
 
   it('POST /api/reviews/:reviewId/comments - validation error from parser returns 400', async () => {
@@ -95,10 +96,14 @@ describe('Comments routes', () => {
   });
 
   it('POST /api/reviews/:reviewId/comments - service validation error (parent not found) is forwarded', async () => {
-    const ApiErrorClass = (commentService as any).ApiError as any;
-    (commentService.createComment as any).mockRejectedValue(
-      new ApiErrorClass(400, 'VALIDATION_ERROR', 'Validation failed', [
-        { field: 'parentId', message: '指定された親コメントが存在しません。' },
+    const ApiErrorClass = commentService.ApiError;
+    const createCommentMock = commentService.createComment as unknown as SpyInstance<
+      [unknown],
+      Promise<unknown>
+    >;
+    createCommentMock.mockRejectedValue(
+      new ApiErrorClass(400, 'VALIDATION_ERROR', ERROR_MESSAGES.VALIDATION_FAILED, [
+        { field: 'parentId', message: ERROR_MESSAGES.PARENT_COMMENT_NOT_FOUND },
       ])
     );
 

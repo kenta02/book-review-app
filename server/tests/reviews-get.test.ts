@@ -1,5 +1,7 @@
 import request from 'supertest';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { SpyInstance } from 'vitest';
+import type { FindAndCountOptions } from 'sequelize';
 
 import app from '../src/app';
 import Review from '../src/models/Review';
@@ -22,9 +24,11 @@ describe('GET /api/reviews (integration via app.ts)', () => {
       },
     ];
 
-    const spy = vi
-      .spyOn(Review, 'findAndCountAll')
-      .mockResolvedValue({ rows: fakeRows, count: 1 } as any);
+    const spy = vi.spyOn(Review, 'findAndCountAll') as unknown as SpyInstance<
+      [FindAndCountOptions?],
+      { rows: typeof fakeRows; count: number }
+    >;
+    spy.mockResolvedValue({ rows: fakeRows, count: 1 });
 
     const res = await request(app).get('/api/reviews?bookId=5&page=1&limit=20');
 
@@ -42,19 +46,21 @@ describe('GET /api/reviews (integration via app.ts)', () => {
 
     // verify the DB call received the parsed query filters / pagination
     expect(spy).toHaveBeenCalled();
-    const calledArg = spy.mock.calls[0][0] as Record<string, any>;
-    expect(calledArg.where.bookId).toBe(5);
-    expect(calledArg.limit).toBe(20);
+    const calledArg = spy.mock.calls[0][0] as Record<string, unknown>;
+    expect((calledArg.where as Record<string, number>).bookId).toBe(5);
+    expect(calledArg.limit as number).toBe(20);
   });
 
   it('applies userId filter when provided', async () => {
-    const spy = vi
-      .spyOn(Review, 'findAndCountAll')
-      .mockResolvedValue({ rows: [], count: 0 } as any);
+    const spy = vi.spyOn(Review, 'findAndCountAll') as unknown as SpyInstance<
+      [FindAndCountOptions?],
+      { rows: unknown[]; count: number }
+    >;
+    spy.mockResolvedValue({ rows: [], count: 0 });
     const res = await request(app).get('/api/reviews?userId=3');
     expect(res.status).toBe(200);
     expect(spy).toHaveBeenCalled();
-    const calledArg = spy.mock.calls[0][0] as Record<string, any>;
-    expect(calledArg.where.userId).toBe(3);
+    const calledArg = spy.mock.calls[0][0] as Record<string, unknown>;
+    expect((calledArg.where as Record<string, number>).userId).toBe(3);
   });
 });
