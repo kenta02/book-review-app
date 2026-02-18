@@ -3,11 +3,19 @@ import express, { Request, Response } from 'express';
 import { logger } from '../utils/logger';
 import { authenticateToken } from '../middleware/auth';
 import * as commentService from '../services/comment.service';
+import { ApiError } from '../errors/ApiError';
+import { ERROR_MESSAGES } from '../constants/error-messages';
 import {
   validateGetCommentsForReview,
   validateCreateComment,
 } from '../validators/comment.validator';
-import type { CreateCommentDto } from '../types/dto';
+
+// エラー応答の共通型（ルート内で再利用）
+type ErrorResponse = {
+  message: string;
+  code: string;
+  details?: { field: string; message: string }[];
+};
 
 const router = express.Router();
 
@@ -18,11 +26,12 @@ router.get('/reviews/:reviewId/comments', async (req: Request, res: Response) =>
   try {
     const parseResult = validateGetCommentsForReview(req);
     if (!parseResult.success) {
+      const firstErrorCode = parseResult.errors?.[0]?.code || 'VALIDATION_ERROR';
       return res.status(400).json({
         success: false,
         error: {
-          message: 'Validation failed',
-          code: 'VALIDATION_ERROR',
+          message: ERROR_MESSAGES.VALIDATION_FAILED,
+          code: firstErrorCode,
           details: parseResult.errors,
         },
       });
@@ -31,10 +40,13 @@ router.get('/reviews/:reviewId/comments', async (req: Request, res: Response) =>
     const comments = await commentService.listComments(parseResult.data.reviewId);
 
     return res.json({ success: true, data: { comments } });
-  } catch (error) {
-    if (error instanceof commentService.ApiError) {
+  } catch (error: unknown) {
+    if (error instanceof ApiError) {
       // サービス層のエラー（details を含む場合はそれを返す）
-      const err: any = { message: error.message, code: error.code };
+      const err: ErrorResponse = {
+        message: error.message,
+        code: error.code,
+      };
       if (error.details) err.details = error.details;
       return res.status(error.statusCode).json({ success: false, error: err });
     }
@@ -42,7 +54,7 @@ router.get('/reviews/:reviewId/comments', async (req: Request, res: Response) =>
     logger.error('[COMMENTS GET] Error fetching comments:', error);
     return res.status(500).json({
       success: false,
-      error: { message: 'Internal server error', code: 'INTERNAL_SERVER_ERROR' },
+      error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
     });
   }
 });
@@ -59,7 +71,10 @@ router.post(
       if (!userId) {
         return res.status(401).json({
           success: false,
-          error: { message: '認証が必要です。', code: 'AUTHENTICATION_REQUIRED' },
+          error: {
+            message: ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
+            code: 'AUTHENTICATION_REQUIRED',
+          },
         });
       }
 
@@ -68,7 +83,7 @@ router.post(
         return res.status(400).json({
           success: false,
           error: {
-            message: 'Validation failed',
+            message: ERROR_MESSAGES.VALIDATION_FAILED,
             code: 'VALIDATION_ERROR',
             details: parseResult.errors,
           },
@@ -77,9 +92,12 @@ router.post(
 
       const created = await commentService.createComment({ ...parseResult.data, userId });
       return res.status(201).json({ success: true, data: created });
-    } catch (error) {
-      if (error instanceof commentService.ApiError) {
-        const err: any = { message: error.message, code: error.code };
+    } catch (error: unknown) {
+      if (error instanceof ApiError) {
+        const err: ErrorResponse = {
+          message: error.message,
+          code: error.code,
+        };
         if (error.details) err.details = error.details;
         return res.status(error.statusCode).json({ success: false, error: err });
       }
@@ -87,7 +105,7 @@ router.post(
       logger.error('[COMMENTS POST] Error creating comment:', error);
       return res.status(500).json({
         success: false,
-        error: { message: 'Internal server error', code: 'INTERNAL_SERVER_ERROR' },
+        error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
       });
     }
   }

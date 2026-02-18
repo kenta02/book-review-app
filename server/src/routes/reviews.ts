@@ -4,6 +4,8 @@ import { logger } from '../utils/logger';
 import { ReviewParams } from '../types/route-params';
 import { authenticateToken } from '../middleware/auth';
 import * as reviewService from '../services/review.service';
+import { ApiError } from '../errors/ApiError';
+import { ERROR_MESSAGES } from '../constants/error-messages';
 import {
   validateCreateReview,
   validateUpdateReview,
@@ -27,7 +29,7 @@ router.get('/reviews', async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         error: {
-          message: 'Validation failed',
+          message: ERROR_MESSAGES.VALIDATION_FAILED,
           code: 'VALIDATION_ERROR',
           details: parseResult.errors,
         },
@@ -41,10 +43,16 @@ router.get('/reviews', async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: { message: error.message, code: error.code },
+      });
+    }
     logger.error('[REVIEWS GET] Error:', error);
     return res.status(500).json({
       success: false,
-      error: { message: 'Internal server error', code: 'INTERNAL_SERVER_ERROR' },
+      error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
     });
   }
 });
@@ -61,7 +69,7 @@ router.get('/reviews/:reviewId', async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         error: {
-          message: 'Validation failed',
+          message: ERROR_MESSAGES.VALIDATION_FAILED,
           code: firstErrorCode,
           details: parseResult.errors,
         },
@@ -72,7 +80,7 @@ router.get('/reviews/:reviewId', async (req: Request, res: Response) => {
 
     return res.json({ success: true, data });
   } catch (error) {
-    if (error instanceof reviewService.ApiError) {
+    if (error instanceof ApiError) {
       return res.status(error.statusCode).json({
         success: false,
         error: { message: error.message, code: error.code },
@@ -82,7 +90,7 @@ router.get('/reviews/:reviewId', async (req: Request, res: Response) => {
     logger.error('[REVIEWS GET DETAIL] Error:', error);
     return res.status(500).json({
       success: false,
-      error: { message: 'Internal server error', code: 'INTERNAL_SERVER_ERROR' },
+      error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
     });
   }
 });
@@ -107,7 +115,7 @@ router.delete<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req,
       return res.status(401).json({
         success: false,
         error: {
-          message: '認証が必要です。',
+          message: ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
           code: 'AUTHENTICATION_REQUIRED',
         },
       });
@@ -120,7 +128,7 @@ router.delete<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req,
       return res.status(400).json({
         success: false,
         error: {
-          message: 'Validation failed',
+          message: ERROR_MESSAGES.VALIDATION_FAILED,
           code: firstErrorCode,
           details: parseResult.errors,
         },
@@ -134,7 +142,7 @@ router.delete<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req,
 
     return res.sendStatus(204);
   } catch (error) {
-    if (error instanceof reviewService.ApiError) {
+    if (error instanceof ApiError) {
       return res.status(error.statusCode).json({
         success: false,
         error: { message: error.message, code: error.code },
@@ -145,7 +153,7 @@ router.delete<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req,
     res.status(500).json({
       success: false,
       error: {
-        message: 'Internal server error',
+        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
         code: 'INTERNAL_SERVER_ERROR',
       },
     });
@@ -174,7 +182,7 @@ router.put<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req, re
       return res.status(401).json({
         success: false,
         error: {
-          message: '認証が必要です。',
+          message: ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
           code: 'AUTHENTICATION_REQUIRED',
         },
       });
@@ -187,7 +195,7 @@ router.put<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req, re
       return res.status(400).json({
         success: false,
         error: {
-          message: 'Validation failed',
+          message: ERROR_MESSAGES.VALIDATION_FAILED,
           code: firstErrorCode,
           details: parseResult.errors,
         },
@@ -202,7 +210,7 @@ router.put<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req, re
 
     return res.json({ success: true, data });
   } catch (error) {
-    if (error instanceof reviewService.ApiError) {
+    if (error instanceof ApiError) {
       return res.status(error.statusCode).json({
         success: false,
         error: { message: error.message, code: error.code },
@@ -213,7 +221,7 @@ router.put<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req, re
     res.status(500).json({
       success: false,
       error: {
-        message: 'Internal server error',
+        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
         code: 'INTERNAL_SERVER_ERROR',
       },
     });
@@ -242,7 +250,7 @@ router.post<ReviewParams>('/reviews', authenticateToken, async (req, res) => {
       return res.status(401).json({
         success: false,
         error: {
-          message: '認証が必要です。',
+          message: ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
           code: 'AUTHENTICATION_REQUIRED',
         },
       });
@@ -254,7 +262,7 @@ router.post<ReviewParams>('/reviews', authenticateToken, async (req, res) => {
       return res.status(400).json({
         success: false,
         error: {
-          message: 'Validation failed',
+          message: ERROR_MESSAGES.VALIDATION_FAILED,
           code: 'VALIDATION_ERROR',
           details: parseResult.errors,
         },
@@ -268,7 +276,7 @@ router.post<ReviewParams>('/reviews', authenticateToken, async (req, res) => {
 
     return res.status(201).json({ success: true, data });
   } catch (error) {
-    if (error instanceof reviewService.ApiError) {
+    if (error instanceof ApiError) {
       return res.status(error.statusCode).json({
         success: false,
         error: { message: error.message, code: error.code },
@@ -279,7 +287,7 @@ router.post<ReviewParams>('/reviews', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       error: {
-        message: 'Internal server error',
+        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
         code: 'INTERNAL_SERVER_ERROR',
       },
     });

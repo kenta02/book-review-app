@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 
 import User from '../models/Users';
 import { authenticateToken } from '../middleware/auth';
+import { ERROR_MESSAGES } from '../constants/error-messages';
 
 const router = express.Router();
 
@@ -29,24 +30,24 @@ router.post('/register', async (req: Request, res: Response) => {
     console.debug('Received registration data:', req.body);
 
     const errors = [];
-    if (!username || typeof username !== 'string' || username.length < 3 || username.length > 150) {
+    if (!username || typeof username !== 'string' || username.length < 2 || username.length > 150) {
       errors.push({
         field: 'username',
-        message: 'ユーザー名は3~150文字で入力してください.',
+        message: ERROR_MESSAGES.USERNAME_LENGTH,
       });
     }
 
     if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.push({
         field: 'email',
-        message: 'メールアドレスは有効なメール形式で入力してください.',
+        message: ERROR_MESSAGES.EMAIL_FORMAT,
       });
     }
 
     if (!password || typeof password !== 'string' || password.length < 8) {
       errors.push({
         field: 'password',
-        message: 'パスワードは8文字以上で入力してください.',
+        message: ERROR_MESSAGES.PASSWORD_MIN_LENGTH,
       });
     }
 
@@ -54,7 +55,7 @@ router.post('/register', async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         error: {
-          message: 'Validation failed',
+          message: ERROR_MESSAGES.VALIDATION_FAILED,
           code: 'VALIDATION_ERROR',
           details: errors,
         },
@@ -68,7 +69,7 @@ router.post('/register', async (req: Request, res: Response) => {
         return res.status(409).json({
           success: false,
           error: {
-            message: '同じユーザー名が既に存在します。',
+            message: ERROR_MESSAGES.DUPLICATE_USERNAME,
             code: 'DUPLICATE_RESOURCE',
           },
         });
@@ -82,7 +83,7 @@ router.post('/register', async (req: Request, res: Response) => {
         return res.status(409).json({
           success: false,
           error: {
-            message: '同じメールアドレスが既に存在します。',
+            message: ERROR_MESSAGES.DUPLICATE_EMAIL,
             code: 'DUPLICATE_RESOURCE',
           },
         });
@@ -128,7 +129,7 @@ router.post('/register', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: {
-        message: 'サーバーエラーが発生しました。',
+        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
         code: 'INTERNAL_SERVER_ERROR',
       },
     });
@@ -159,13 +160,13 @@ router.post('/login', async (req: Request, res: Response) => {
     if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.push({
         field: 'email',
-        message: 'メールアドレスは有効なメール形式で入力してください。',
+        message: ERROR_MESSAGES.EMAIL_FORMAT,
       });
     }
     if (!password || typeof password !== 'string' || password.length < 8) {
       errors.push({
         field: 'password',
-        message: 'パスワードは8文字以上で入力してください。',
+        message: ERROR_MESSAGES.PASSWORD_MIN_LENGTH,
       });
     }
 
@@ -173,7 +174,7 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         error: {
-          message: 'Validation failed',
+          message: ERROR_MESSAGES.VALIDATION_FAILED,
           code: 'VALIDATION_ERROR',
           details: errors,
         },
@@ -185,7 +186,7 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(401).json({
         success: false,
         error: {
-          message: '認証に失敗しました。メールアドレスまたはパスワードが正しくありません。',
+          message: ERROR_MESSAGES.AUTHENTICATION_FAILED,
           code: 'AUTHENTICATION_FAILED',
         },
       });
@@ -224,7 +225,7 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(401).json({
         success: false,
         error: {
-          message: '認証に失敗しました。パスワードが一致しません。',
+          message: ERROR_MESSAGES.PASSWORD_MISMATCH,
           code: 'AUTHENTICATION_FAILED',
         },
       });
@@ -234,7 +235,7 @@ router.post('/login', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: {
-        message: 'サーバーエラーが発生しました。',
+        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
         code: 'INTERNAL_SERVER_ERROR',
       },
     });
@@ -271,7 +272,7 @@ router.get('/me', authenticateToken, async (req: Request, res: Response) => {
     return res.status(404).json({
       success: false,
       error: {
-        message: 'ユーザーが見つかりません。',
+        message: ERROR_MESSAGES.USER_NOT_FOUND,
         code: 'USER_NOT_FOUND',
       },
     });

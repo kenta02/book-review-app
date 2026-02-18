@@ -12,21 +12,8 @@ import {
   ListReviewsQueryDto,
 } from '../types/dto';
 import { logger } from '../utils/logger';
-
-/**
- * Service 層のエラー表現クラス
- * @property {number} statusCode - HTTP ステータスコード
- * @property {string} code - エラーコード（REVIEW_NOT_FOUND 等）
- */
-export class ApiError extends Error {
-  constructor(
-    public statusCode: number,
-    public code: string,
-    message: string
-  ) {
-    super(message);
-  }
-}
+import { ApiError } from '../errors/ApiError';
+import { ERROR_MESSAGES } from '../constants/error-messages';
 
 /**
  * Review Model → DTO 型変換
@@ -116,7 +103,7 @@ export async function getReviewDetail(reviewId: number): Promise<ReviewDetailDto
 
   // レビューが存在しない場合は 404 エラーをスロー
   if (!found) {
-    throw new ApiError(404, 'REVIEW_NOT_FOUND', '指定されたレビューが存在しません。');
+    throw new ApiError(404, 'REVIEW_NOT_FOUND', ERROR_MESSAGES.REVIEW_NOT_FOUND);
   }
 
   const foundJson = found.toJSON() as {
@@ -157,7 +144,7 @@ export async function createReview(serviceDto: CreateReviewServiceDto): Promise<
   // 本が存在するか確認（ビジネス検証）
   const book = await Book.findByPk(bookId);
   if (!book) {
-    throw new ApiError(404, 'BOOK_NOT_FOUND', '指定された本が存在しません。');
+    throw new ApiError(404, 'BOOK_NOT_FOUND', ERROR_MESSAGES.BOOK_NOT_FOUND);
   }
 
   // レビュー新規作成
@@ -168,7 +155,14 @@ export async function createReview(serviceDto: CreateReviewServiceDto): Promise<
     rating,
   });
 
-  logger.info('[REVIEWS SERVICE] review created', { reviewId: newReview.get('id'), userId });
+  const createdJson =
+    typeof (newReview as { toJSON?: unknown }).toJSON === 'function'
+      ? (newReview as { toJSON: () => Record<string, unknown> }).toJSON()
+      : (newReview as unknown as Record<string, unknown>);
+  logger.info('[REVIEWS SERVICE] review created', {
+    reviewId: createdJson.id,
+    userId,
+  });
 
   return reviewModelToDto(newReview);
 }
@@ -185,12 +179,12 @@ export async function updateReview(serviceDto: UpdateReviewServiceDto): Promise<
   // レビュー取得
   const review = await Review.findByPk(reviewId);
   if (!review) {
-    throw new ApiError(404, 'REVIEW_NOT_FOUND', '指定されたレビューが存在しません。');
+    throw new ApiError(404, 'REVIEW_NOT_FOUND', ERROR_MESSAGES.REVIEW_NOT_FOUND);
   }
 
   // 権限チェック：所有者（userId）が一致するか確認
   if (Number(review.get('userId')) !== Number(userId)) {
-    throw new ApiError(403, 'FORBIDDEN', 'このレビューを更新する権限がありません。');
+    throw new ApiError(403, 'FORBIDDEN', ERROR_MESSAGES.FORBIDDEN_REVIEW_UPDATE);
   }
 
   // 内容を更新
@@ -213,12 +207,12 @@ export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<
   // レビュー取得
   const review = await Review.findByPk(reviewId);
   if (!review) {
-    throw new ApiError(404, 'REVIEW_NOT_FOUND', '指定されたレビューが存在しません。');
+    throw new ApiError(404, 'REVIEW_NOT_FOUND', ERROR_MESSAGES.REVIEW_NOT_FOUND);
   }
 
   // 権限チェック：所有者（userId）が一致するか確認
   if (Number(review.get('userId')) !== Number(userId)) {
-    throw new ApiError(403, 'FORBIDDEN', 'このレビューを削除する権限がありません。');
+    throw new ApiError(403, 'FORBIDDEN', ERROR_MESSAGES.FORBIDDEN_REVIEW_DELETE);
   }
 
   // トランザクション開始（削除が確実に行われることを保証）
@@ -234,11 +228,7 @@ export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<
     // コメントが存在する場合は削除を中止
     if (hasComments) {
       await transaction.rollback();
-      throw new ApiError(
-        409,
-        'RELATED_DATA_EXISTS',
-        'このレビューには関連するコメントが存在するため、削除できません。'
-      );
+      throw new ApiError(409, 'RELATED_DATA_EXISTS', ERROR_MESSAGES.RELATED_DATA_EXISTS);
     }
 
     // レビューを削除

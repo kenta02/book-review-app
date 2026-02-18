@@ -7,6 +7,7 @@ import express, { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
 import User from '../models/Users';
+import { ERROR_MESSAGES } from '../constants/error-messages';
 
 // Express の Request 型を拡張して userId プロパティを追加
 /* eslint-disable @typescript-eslint/no-namespace -- required for Express request augmentation */
@@ -39,7 +40,7 @@ export const authenticateToken = async (
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({
       success: false,
-      error: { message: '認証が必要です。', code: 'AUTHENTICATION_REQUIRED' },
+      error: { message: ERROR_MESSAGES.AUTHENTICATION_REQUIRED, code: 'AUTHENTICATION_REQUIRED' },
     });
     return;
   }
@@ -62,7 +63,7 @@ export const authenticateToken = async (
       // ユーザーが見つからない場合
       res.status(401).json({
         success: false,
-        error: { message: 'ユーザーが見つかりません。', code: 'USER_NOT_FOUND' },
+        error: { message: ERROR_MESSAGES.USER_NOT_FOUND, code: 'USER_NOT_FOUND' },
       });
       return;
     }
@@ -70,7 +71,7 @@ export const authenticateToken = async (
     // 401: 認証失敗
     res.status(401).json({
       success: false,
-      error: { message: '認証が必要です。', code: 'AUTHENTICATION_REQUIRED' },
+      error: { message: ERROR_MESSAGES.AUTHENTICATION_REQUIRED, code: 'AUTHENTICATION_REQUIRED' },
     });
     return;
   }
