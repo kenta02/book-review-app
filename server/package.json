@@ -38,7 +38,7 @@
     "yaml": "^2.4.1"
   },
   "devDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.57.1",
+    "@rollup/rollup-darwin-arm64": "^4.57.1",
     "@types/bcrypt": "6.0.0",
     "@types/cors": "2.8.19",
     "@types/express": "^5.0.5",
@@ -55,7 +55,6 @@
     "eslint-plugin-unused-imports": "^3.1.0",
     "nodemon": "3.1.10",
     "prettier": "^3.8.0",
-    "react-doctor": "^0.0.20",
     "supertest": "^6.3.3",
     "ts-node": "10.9.2",
     "ts-node-dev": "2.0.0",
