@@ -5,6 +5,7 @@ import { BookParams } from '../types/route-params';
 import Review from '../models/Review';
 import Favorite from '../models/Favorite';
 import { ERROR_MESSAGES } from '../constants/error-messages';
+import * as reviewService from '../services/review.service';
 
 const router = express.Router();
 
@@ -315,6 +316,76 @@ router.put('/:id', async (req: Request<BookParams>, res: Response) => {
   } catch (error) {
     console.error('Error updating book:', error);
     res.status(500).json({
+      success: false,
+      error: {
+        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
+        code: 'INTERNAL_SERVER_ERROR',
+      },
+    });
+  }
+});
+
+/**
+ * GET /api/books/:bookId/reviews - 特定書籍のレビュー一覧取得
+ *
+ * パスパラメータで指定された書籍 ID のレビュー一覧を取得
+ * reviewService.listReviews を再利用するthin wrapper
+ *
+ * Path parameters:
+ *   bookId: number (required, must be positive integer)
+ * Query parameters:
+ *   page?: number (default 1)
+ *   limit?: number (default 20)
+ * Responses:
+ * 200 OK: reviews list with pagination
+ * 400 Bad Request: invalid bookId or query parameters
+ * 404 Not Found: book not found
+ * 500 Internal Server Error
+ */
+router.get('/:bookId/reviews', async (req: Request<{ bookId: string }>, res: Response) => {
+  try {
+    const bookId = Number(req.params.bookId);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    // bookId の数値チェック
+    if (!Number.isInteger(bookId) || bookId <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: ERROR_MESSAGES.INVALID_BOOK_ID,
+          code: 'INVALID_BOOK_ID',
+          details: [{ field: 'bookId', message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT }],
+        },
+      });
+    }
+
+    // 書籍の存在確認
+    const book = await Book.findByPk(bookId);
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: ERROR_MESSAGES.BOOK_NOT_FOUND,
+          code: 'BOOK_NOT_FOUND',
+        },
+      });
+    }
+
+    // reviewService.listReviews を呼び出し（既存ロジック再利用）
+    const result = await reviewService.listReviews({
+      page,
+      limit,
+      bookId,
+    });
+
+    return res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Error fetching reviews for book:', error);
+    return res.status(500).json({
       success: false,
       error: {
         message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
