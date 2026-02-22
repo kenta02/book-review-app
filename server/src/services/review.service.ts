@@ -16,8 +16,8 @@ import { ApiError } from '../errors/ApiError';
 import { ERROR_MESSAGES } from '../constants/error-messages';
 
 /**
- * Review Model → DTO 型変換
- * @returns {ReviewDto} 型安全な DTO
+ * モデルインスタンスを ReviewDto に変換するヘルパー。
+ * @returns {ReviewDto}
  */
 function reviewModelToDto(model: unknown): ReviewDto {
   // toJSON() を呼び出して JSON 形式を取得
@@ -40,9 +40,9 @@ function reviewModelToDto(model: unknown): ReviewDto {
 }
 
 /**
- * レビュー一覧取得（ページング・フィルタリング）
- * @param {ListReviewsQueryDto} queryDto - page, limit, bookId?, userId?
- * @returns {Promise<{reviews, pagination}>}
+ * レビューのページング取得。bookId/userId による絞り込み可。
+ * @param {ListReviewsQueryDto} queryDto
+ * @returns {Promise<{reviews:ReviewDto[],pagination:{currentPage:number,totalPages:number,totalItems:number,itemsPerPage:number}}>} 
  */
 export async function listReviews(queryDto: ListReviewsQueryDto): Promise<{
   reviews: ReviewDto[];
@@ -87,10 +87,10 @@ export async function listReviews(queryDto: ListReviewsQueryDto): Promise<{
 }
 
 /**
- * レビュー詳細取得（関連リソース含む）
+ * レビューID から詳細を取得（ユーザー名・本タイトル含む）。
  * @param {number} reviewId
- * @returns {Promise<ReviewDetailDto>} ユーザー名・本のタイトル含む
- * @throws {ApiError} 404 REVIEW_NOT_FOUND
+ * @returns {Promise<ReviewDetailDto>}
+ * @throws {ApiError} REVIEW_NOT_FOUND
  */
 export async function getReviewDetail(reviewId: number): Promise<ReviewDetailDto> {
   // レビュー取得（ユーザーと本の関連情報も一緒に取得）
@@ -133,10 +133,10 @@ export async function getReviewDetail(reviewId: number): Promise<ReviewDetailDto
 }
 
 /**
- * レビュー作成（本の存在確認付き）
+ * レビューを新規作成する。本の存在を検証。
  * @param {CreateReviewServiceDto} serviceDto
  * @returns {Promise<ReviewDto>}
- * @throws {ApiError} 404 BOOK_NOT_FOUND
+ * @throws {ApiError} BOOK_NOT_FOUND
  */
 export async function createReview(serviceDto: CreateReviewServiceDto): Promise<ReviewDto> {
   const { bookId, content, rating, userId } = serviceDto;
@@ -168,10 +168,10 @@ export async function createReview(serviceDto: CreateReviewServiceDto): Promise<
 }
 
 /**
- * レビュー更新（所有者のみ）
+ * 指定レビューを所有者が更新する。
  * @param {UpdateReviewServiceDto} serviceDto
  * @returns {Promise<ReviewDto>}
- * @throws {ApiError} 404 REVIEW_NOT_FOUND / 403 FORBIDDEN
+ * @throws {ApiError} REVIEW_NOT_FOUND / FORBIDDEN
  */
 export async function updateReview(serviceDto: UpdateReviewServiceDto): Promise<ReviewDto> {
   const { reviewId, content, userId } = serviceDto;
@@ -196,10 +196,10 @@ export async function updateReview(serviceDto: UpdateReviewServiceDto): Promise<
 }
 
 /**
- * レビュー削除（所有者のみ・コメント存在確認）
+ * レビューを所有者が削除する。関連コメントがあると 409。
  * @param {DeleteReviewServiceDto} serviceDto
  * @returns {Promise<void>}
- * @throws {ApiError} 404 REVIEW_NOT_FOUND / 403 FORBIDDEN / 409 RELATED_DATA_EXISTS
+ * @throws {ApiError} REVIEW_NOT_FOUND / FORBIDDEN / RELATED_DATA_EXISTS
  */
 export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<void> {
   const { reviewId, userId } = serviceDto;

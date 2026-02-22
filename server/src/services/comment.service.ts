@@ -7,9 +7,9 @@ import { ApiError } from '../errors/ApiError';
 import { ERROR_MESSAGES } from '../constants/error-messages';
 
 /**
- * コメント一覧取得（ツリー構造化）
- * @param {number} reviewId
- * @returns {Promise<CommentDto[]>} トップレベルコメント（replies を含む）
+ * reviewId に紐づくコメントを取得し、返信をネストした形で返す。
+ * @param {number} reviewId - レビューID
+ * @returns {Promise<CommentDto[]>} トップレベルコメント配列（replies 配列付き）
  */
 export async function listComments(reviewId: number): Promise<CommentDto[]> {
   logger.info('[COMMENTS SERVICE] listComments for reviewId=', reviewId);
@@ -33,10 +33,12 @@ export async function listComments(reviewId: number): Promise<CommentDto[]> {
 }
 
 /**
- * コメント作成（レビュー・親コメント検証付き）
+ * コメントを新規作成する。
+ * reviewId の存在を確認し、parentId があれば関連性を検証する。
+ *
  * @param {CreateCommentServiceDto} serviceDto
  * @returns {Promise<CommentDto>}
- * @throws {ApiError} 404 REVIEW_NOT_FOUND / 400 VALIDATION_ERROR
+ * @throws {ApiError} REVIEW_NOT_FOUND / VALIDATION_ERROR
  */
 export async function createComment(serviceDto: CreateCommentServiceDto): Promise<CommentDto> {
   const { reviewId, content, parentId = null, userId } = serviceDto;

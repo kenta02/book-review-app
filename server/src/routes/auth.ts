@@ -11,18 +11,30 @@ const router = express.Router();
 /**
  * POST /api/auth/register - ユーザー登録
  *
- * パスワードをハッシュ化して DB に保存し、JWT トークンを返す
+ * パスワードをハッシュ化して保存し、JWT を発行する。
  *
- * Request body: {
- *   username: string (required, 3-150 chars)
- *   email: string (required, valid email format)
- *   password: string (required, minimum 8 chars)
- * }
- * Responses:
- * 201 Created: user registered successfully
- * 400 Bad Request: validation error
- * 409 Conflict: username or email already exists
- * 500 Internal Server Error
+ * @route {POST} /api/auth/register
+ * @access Public
+ * @body {string} username
+ * @body {string} email
+ * @body {string} password
+ *
+ * @returns {201} 登録成功 + token
+ * @returns {400} VALIDATION_ERROR
+ * @returns {409} DUPLICATE_RESOURCE
+ * @returns {500} Internal Server Error
+ *
+ * @example Request/Response
+ * POST /api/auth/register
+ * { "username":"new","email":"new@example.com","password":"password123" }
+ * 201 Created
+ * { "success":true, "data":{ "user":{ "id":10,"username":"new","email":"new@example.com" },"token":"..." } }
+ * ---
+ * POST /api/auth/register
+ * { "username":"ab","email":"bad","password":"123" }
+ * 400 Bad Request
+ * { "success":false,"error":{ "message":"Validation failed","code":"VALIDATION_ERROR","details":[{ "path":"username","message":"..."}] } }
+
  */
 router.post('/register', async (req: Request, res: Response) => {
   try {
@@ -137,19 +149,30 @@ router.post('/register', async (req: Request, res: Response) => {
 });
 
 /**
- * POST /api/auth/login - ログイン認証
+ * POST /api/auth/login - ログイン
  *
- * email とパスワードで認証し、JWT トークンを返す（失敗時は 401）
+ * メール/パスワードで認証し JWT を返す。
  *
- * Request body: {
- *   email: string (required, valid email format)
- *   password: string (required, minimum 8 chars)
- * }
- * Responses:
- * 200 OK: authentication successful
- * 400 Bad Request: validation error
- * 401 Unauthorized: authentication failed
- * 500 Internal Server Error
+ * @route {POST} /api/auth/login
+ * @access Public
+ * @body {string} email
+ * @body {string} password
+ *
+ * @returns {200} 成功 + token
+ * @returns {400} VALIDATION_ERROR
+ * @returns {401} AUTHENTICATION_FAILED
+ * @returns {500} Internal Server Error
+ *
+ * @example Request/Response
+ * POST /api/auth/login
+ * { "email":"u@example.com","password":"password123" }
+ * 200 OK
+ * { "success":true, "data":{ "user":{ "id":1,"username":"u","email":"u@example.com" },"token":"..." } }
+ * ---
+ * POST /api/auth/login
+ * { "email":"u@example.com","password":"wrong" }
+ * 401 Unauthorized
+ * { "success":false, "error":{ "message":"Authentication failed","code":"AUTHENTICATION_FAILED" } }
  */
 router.post('/login', async (req: Request, res: Response) => {
   try {
@@ -243,15 +266,25 @@ router.post('/login', async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/auth/me - 現在のユーザー情報取得
+ * GET /api/auth/me - 自分のユーザー情報取得
  *
- * 認証ミドルウェアで取得した userId を使ってユーザー情報を取得
+ * 認証トークン必須。userId で DB 参照。
  *
- * Headers: Authorization: Bearer <token> (required)
- * Responses:
- * 200 OK: user info retrieved
- * 404 Not Found: user not found
- * 401 Unauthorized: authentication required
+ * @route {GET} /api/auth/me
+ * @access Private (user)
+ *
+ * @returns {200} ユーザー情報
+ * @returns {401} AUTHENTICATION_REQUIRED
+ * @returns {404} USER_NOT_FOUND
+ *
+ * @example Request/Response
+ * GET /api/auth/me  (ヘッダにトークン)
+ * 200 OK
+ * { "success":true, "data":{ "user":{ "id":5,"username":"me","email":"me@example.com" } } }
+ * ---
+ * GET /api/auth/me  (トークンなし)
+ * 401 Unauthorized
+ * { "success":false, "error":{ "message":"Authentication required","code":"AUTHENTICATION_REQUIRED" } }
  */
 router.get('/me', authenticateToken, async (req: Request, res: Response) => {
   // ミドルウェアで取得した userId を使ってユーザー情報を取得

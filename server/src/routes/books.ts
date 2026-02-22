@@ -10,16 +10,17 @@ import * as reviewService from '../services/review.service';
 const router = express.Router();
 
 /**
- * GET /api/books - 書籍一覧取得
+ * GET /api/books - 書籍一覧をページングで取得
  *
- * ページネーション対応（N+1 クエリ回避）
+ * @route {GET} /api/books
+ * @access Public
+ * @query {string} [page] ページ番号（整数、>=1）
+ * @query {string} [limit] 件数（整数、>=1）
  *
- * Query parameters:
- *   page?: number (default 1)
- *   limit?: number (default 20)
- * Responses:
- * 200 OK: books list with pagination
- * 500 Internal Server Error
+ * @returns {200} {success:true,data:{books:Book[],pagination:Pagination}}
+ * @returns {500} 内部エラー
+ *
+ * @example GET /api/books?page=1&limit=20 → 200
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -62,15 +63,18 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/books/:id - 書籍詳細取得
+ * GET /api/books/:id - 指定書籍の詳細取得
  *
- * Path parameters:
- *   id: number (required, must be positive integer)
- * Responses:
- * 200 OK: book details
- * 400 Bad Request: invalid id
- * 404 Not Found: book not found
- * 500 Internal Server Error
+ * @route {GET} /api/books/:id
+ * @access Public
+ * @param {string} id.path.required - 書籍ID
+ *
+ * @returns {200} {success:true,data:Book}
+ * @returns {400} INVALID_BOOK_ID
+ * @returns {404} BOOK_NOT_FOUND
+ * @returns {500} 内部エラー
+ *
+ * @example GET /api/books/1 → 200
  */
 router.get('/:id', async (req: Request<BookParams>, res: Response) => {
   try {
@@ -123,20 +127,22 @@ router.get('/:id', async (req: Request<BookParams>, res: Response) => {
 });
 
 /**
- * POST /api/books - 新規書籍登録
+ * POST /api/books - 書籍登録
  *
- * Request body: {
- *   title: string (required, non-empty)
- *   author: string (required, non-empty)
- *   publicationYear?: number
- *   ISBN?: string (must be unique if provided)
- *   summary?: string
- * }
- * Responses:
- * 201 Created: book created
- * 400 Bad Request: validation error
- * 409 Conflict: ISBN already exists
- * 500 Internal Server Error
+ * @route {POST} /api/books
+ * @access Public
+ * @body {string} title
+ * @body {string} author
+ * @body {number} [publicationYear]
+ * @body {string} [ISBN]
+ * @body {string} [summary]
+ *
+ * @returns {201} 作成した書籍
+ * @returns {400} VALIDATION_ERROR
+ * @returns {409} DUPLICATE_RESOURCE
+ * @returns {500} 内部エラー
+ *
+ * @example POST /api/books {title:'t',author:'a'} → 201
  */
 router.post('/', async (req: Request, res: Response) => {
   try {
@@ -201,25 +207,24 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 /**
- * PUT /api/books/:id - 書籍情報更新
+ * PUT /api/books/:id - 書籍部分更新
  *
- * 部分更新対応（送られたフィールドのみを更新）
+ * @route {PUT} /api/books/:id
+ * @access Public
+ * @param {string} id.path.required - 書籍ID
+ * @body {string} [title]
+ * @body {string} [author]
+ * @body {number} [publicationYear]
+ * @body {string} [ISBN]
+ * @body {string} [summary]
  *
- * Path parameters:
- *   id: number (required, must be positive integer)
- * Request body: {
- *   title?: string (non-empty if provided)
- *   author?: string (non-empty if provided)
- *   publicationYear?: number
- *   ISBN?: string (must be unique across other books if provided)
- *   summary?: string
- * }
- * Responses:
- * 200 OK: book updated
- * 400 Bad Request: invalid id or validation error
- * 404 Not Found: book not found
- * 409 Conflict: ISBN already exists
- * 500 Internal Server Error
+ * @returns {200} 更新後の書籍
+ * @returns {400} VALIDATION_ERROR / INVALID_BOOK_ID
+ * @returns {404} BOOK_NOT_FOUND
+ * @returns {409} DUPLICATE_RESOURCE
+ * @returns {500} 内部エラー
+ *
+ * @example PUT /api/books/1 {title:'new'} → 200
  */
 router.put('/:id', async (req: Request<BookParams>, res: Response) => {
   try {
@@ -326,21 +331,20 @@ router.put('/:id', async (req: Request<BookParams>, res: Response) => {
 });
 
 /**
- * GET /api/books/:bookId/reviews - 特定書籍のレビュー一覧取得
+ * GET /api/books/:bookId/reviews - 書籍のレビュー一覧
  *
- * パスパラメータで指定された書籍 ID のレビュー一覧を取得
- * reviewService.listReviews を再利用するthin wrapper
+ * @route {GET} /api/books/:bookId/reviews
+ * @access Public
+ * @param {string} bookId.path.required
+ * @query {string} [page]
+ * @query {string} [limit]
  *
- * Path parameters:
- *   bookId: number (required, must be positive integer)
- * Query parameters:
- *   page?: number (default 1)
- *   limit?: number (default 20)
- * Responses:
- * 200 OK: reviews list with pagination
- * 400 Bad Request: invalid bookId or query parameters
- * 404 Not Found: book not found
- * 500 Internal Server Error
+ * @returns {200} {success:true,data:{reviews:Review[],pagination:Pagination}}
+ * @returns {400} INVALID_BOOK_ID / VALIDATION_ERROR
+ * @returns {404} BOOK_NOT_FOUND
+ * @returns {500} 内部エラー
+ *
+ * @example GET /api/books/1/reviews → 200
  */
 router.get('/:bookId/reviews', async (req: Request<{ bookId: string }>, res: Response) => {
   try {
@@ -398,16 +402,17 @@ router.get('/:bookId/reviews', async (req: Request<{ bookId: string }>, res: Res
 /**
  * DELETE /api/books/:id - 書籍削除
  *
- * 関連するレビューやお気に入りが存在する場合は削除できません
+ * @route {DELETE} /api/books/:id
+ * @access Public
+ * @param {string} id.path.required
  *
- * Path parameters:
- *   id: number (required, must be positive integer)
- * Responses:
- * 204 No Content: book deleted
- * 400 Bad Request: invalid id
- * 404 Not Found: book not found
- * 409 Conflict: related reviews or favorites exist
- * 500 Internal Server Error
+ * @returns {204} No Content
+ * @returns {400} INVALID_BOOK_ID
+ * @returns {404} BOOK_NOT_FOUND
+ * @returns {409} RELATED_DATA_EXISTS
+ * @returns {500} 内部エラー
+ *
+ * @example DELETE /api/books/1 → 204
  */
 router.delete('/:id', async (req: Request<BookParams>, res: Response) => {
   try {
