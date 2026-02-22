@@ -82,7 +82,7 @@ temp/
 .cache/
 kadai.txt
 .gitignore
-現状整理.md
+
 
 # ドキュメント類
 docs/
@@ -90,10 +90,5 @@ docs/
 book-review-app.code-workspace
 CODING_GUIDELINES.md
 .github/agents/copilot-instructions.md
-.github/agents/Coding Buddy.agent.md
-.github/agents/coding-buddy.md
-.github/agents/custom-buddy-agent.md
-.github/agents/coding-buddy copy.md
 .github/agents/agents.md
 server/docs.code-workspace
-.github/agents/SKILL.md
