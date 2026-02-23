@@ -92,3 +92,4 @@ CODING_GUIDELINES.md
 .github/agents/copilot-instructions.md
 .github/agents/agents.md
 server/docs.code-workspace
+.github/agents/custom-buddy-agent.md
