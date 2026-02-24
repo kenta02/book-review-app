@@ -3,7 +3,7 @@ import { sequelize } from './sequelize';
 // ensure model definitions & associations are registered
 import './models';
 
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 3000;
 
 (async () => {
   try {
@@ -14,7 +14,7 @@ const port = process.env.PORT || 3001;
     // テーブル作成(開発環境のみ)
     // alter: true を指定すると、既存テーブルの変更点を反映する
     // 注意：本番環境では使用しないこと
-    await sequelize.sync({ force: true });
+    await sequelize.sync({ force: false });
     console.info('✅ DB synced');
 
     // サーバー起動
