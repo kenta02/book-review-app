@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ProfileCard } from "../components/user/ProfileCard";
-import type { User } from "../types";
+import type { ApiResponse, User } from "../types";
 import { apiClient } from "../api/apiClient";
 
 export function ProfilePage() {
@@ -14,7 +14,8 @@ export function ProfilePage() {
     // APIクライアントを呼び出してユーザーデータを取得
     apiClient
       .getUserById(1)
-      .then((response: { data: User }) => {
+      // .then((response: { data: User }) => {
+      .then((response: ApiResponse<User>) => {
         // 成功したら：user をセット、loading を false に
         setUser(response.data);
         setLoading(false);

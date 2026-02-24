@@ -1,5 +1,4 @@
 // ユーザープロフィール用に型を定義する
-
 export interface User {
   id: number;
   username: string;
@@ -15,4 +14,14 @@ export interface User {
 export interface ApiResponse<T> {
   data: T;
   message?: string;
+}
+
+// レビューの型を定義する
+export interface Review {
+  id: number;
+  bookId: number;
+  userId: number;
+  rating: number; // 評価（例: 1-5）
+  comment?: string; // コメント（オプション）
+  createdAt: string; // レビュー作成日時
 }
