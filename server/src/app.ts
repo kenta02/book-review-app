@@ -6,6 +6,7 @@ import bookRouter from './routes/books';
 import authRouter from './routes/auth';
 import commentRouter from './routes/comments';
 import reviewRouter from './routes/reviews';
+import usersRouter from './routes/users';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -37,6 +38,9 @@ app.get('/health', (_req: Request, res: Response) => res.json({ ok: true }));
 
 // ルートのインポート
 app.use('/api/books', bookRouter);
+
+// ユーザールートのインポート
+app.use('/api/users', usersRouter);
 
 // 認証ルートのインポート
 app.use('/api/auth', authRouter);

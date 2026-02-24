@@ -25,3 +25,8 @@ export interface ReviewParams {
   reviewId: string;
   [key: string]: string;
 }
+
+export interface UserParams {
+  id: string;
+  [key: string]: string;
+}

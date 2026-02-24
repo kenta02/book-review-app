@@ -13,6 +13,7 @@ export const ERROR_MESSAGES = {
 
   // Validation / field messages
   INVALID_BOOK_ID: 'Invalid book id',
+  INVALID_USER_ID: 'Invalid user id',
   ID_MUST_BE_POSITIVE_INT: 'IDは1以上の整数である必要があります。',
   REQUIRED_TITLE: 'タイトルは必須項目です。',
   REQUIRED_AUTHOR: '著者は必須項目です。',
