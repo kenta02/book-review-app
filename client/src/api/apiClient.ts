@@ -1,4 +1,5 @@
-import type { ApiResponse, User } from "../types";
+import type { ApiResponse, Review, User } from "../types";
+import { mockReviewApi } from "./mockReviewApi";
 import { mockUserApi } from "./mockUserApi";
 
 // VITE_USE_MOCK=true でモック API、false で実 API を使用
@@ -24,6 +25,53 @@ export const apiClient = {
       const user = payload?.data ?? payload;
 
       return { data: user as User };
+    }
+  },
+
+  /**
+   * レビュー情報を ID から取得
+   */
+  getReviewById: async (reviewId: number): Promise<ApiResponse<Review>> => {
+    if (VITE_USE_MOCK) {
+      return await mockReviewApi.getReviewById(reviewId);
+    } else {
+      const response = await fetch(`/api/reviews/${reviewId}`);
+      if (!response.ok) {
+        throw new Error(`レビュー${reviewId}の情報の取得に失敗しました。`);
+      }
+
+      const payload = await response.json();
+      const review = payload?.data ?? payload;
+
+      return { data: review as Review };
+    }
+  },
+  /**
+   * レビュー一覧を取得
+   * @param bookId - 書籍 ID
+   * @returns レビューの配列
+   */
+  /**
+   * レビュー一覧を取得
+   * @param bookId - 書籍 ID (省略可)
+   */
+  getReviews: async (bookId?: number): Promise<ApiResponse<Review[]>> => {
+    if (VITE_USE_MOCK) {
+      // モック側に同じシグネチャがある
+      return await mockReviewApi.getReviews(bookId);
+    } else {
+      // クエリパラメータで絞り込み
+      const url =
+        bookId != null ? `/api/reviews?bookId=${bookId}` : `/api/reviews`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`レビュー一覧の取得に失敗しました。`);
+      }
+
+      const payload = await response.json();
+      const reviews = payload?.data ?? payload;
+
+      return { data: reviews as Review[] };
     }
   },
 };
