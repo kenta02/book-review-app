@@ -3,7 +3,12 @@
 // components/common/Sidebar.tsx
 import { Link, useLocation } from "react-router-dom";
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const location = useLocation();
 
   const navItems = [
@@ -13,23 +18,27 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="sidebar">
-      <nav className="sidebar-nav">
-        {navItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`nav-item ${location.pathname === item.path ? "active" : ""}`}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
-          </Link>
-        ))}
-      </nav>
+    <>
+      {isOpen && <div className="sidebar-overlay" onClick={onClose} />}
+      <aside className={`sidebar ${isOpen ? "open" : ""}`}>
+        <nav className="sidebar-nav">
+          {navItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`nav-item ${location.pathname === item.path ? "active" : ""}`}
+              onClick={onClose}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
+            </Link>
+          ))}
+        </nav>
 
-      <div className="sidebar-footer">
-        <button className="btn-logout">🚪 ログアウト</button>
-      </div>
-    </aside>
+        <div className="sidebar-footer">
+          <button className="btn-logout">🚪 ログアウト</button>
+        </div>
+      </aside>
+    </>
   );
 }

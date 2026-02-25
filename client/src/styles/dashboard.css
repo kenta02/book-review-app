@@ -10,6 +10,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  width: 100%;
   overflow: hidden;
   background: #ffffff;
 }
@@ -24,6 +25,7 @@
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   height: 70px;
+  width: 100%;
   flex-shrink: 0;
 }
 
@@ -31,6 +33,21 @@
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 8px 4px;
+  color: #1f2937;
+  transition: color 0.2s;
+}
+
+.hamburger-btn:hover {
+  color: #7c3aed;
 }
 
 .logo {
@@ -96,6 +113,10 @@
   cursor: pointer;
   font-size: 20px;
   transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .user-avatar:hover {
@@ -109,6 +130,7 @@
   grid-template-columns: 250px 1fr;
   gap: 0;
   flex: 1;
+  width: 100%;
   overflow: hidden;
 }
 
@@ -124,6 +146,17 @@
   padding: 20px 0;
   overflow-y: auto;
   flex-shrink: 0;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 70px;
+  left: 0;
+  width: 100%;
+  height: calc(100vh - 70px);
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
 }
 
 .sidebar-nav {
@@ -235,6 +268,7 @@
 .search-input {
   flex: 1;
   min-width: 250px;
+  max-width: 450px;
   padding: 10px 16px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -320,66 +354,84 @@
 }
 
 @media (max-width: 768px) {
+  .hamburger-btn {
+    display: block;
+  }
+
   .dashboard-container {
     grid-template-columns: 1fr;
   }
 
   .sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid #e5e7eb;
-    padding: 10px 0;
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
-    height: auto;
-    min-height: 48px;
-    flex-shrink: 0;
+    position: fixed;
+    left: -250px;
+    top: 70px;
+    width: 250px;
+    height: calc(100vh - 70px);
+    border-right: 1px solid #e5e7eb;
+    border-bottom: none;
+    padding: 20px 0;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 100;
+    transition: left 0.3s ease-in-out;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+
+  .sidebar-overlay {
+    display: block;
+  }
+
+  .sidebar-overlay.open {
+    display: block;
   }
 
   .sidebar-nav {
-    flex-direction: row;
+    flex-direction: column;
     width: 100%;
-    overflow-x: auto;
-    padding: 0 10px;
+    overflow: visible;
+    padding: 0;
   }
 
   .nav-item {
-    border-left: none;
-    border-bottom: 3px solid transparent;
-    padding: 12px 16px;
+    border-left: 3px solid transparent;
+    border-bottom: none;
+    padding: 14px 20px;
     white-space: nowrap;
     flex-shrink: 0;
   }
 
   .nav-item.active {
-    border-bottom-color: #7c3aed;
-    border-left: none;
-    background: transparent;
+    border-bottom-color: transparent;
+    border-left-color: #7c3aed;
+    background: #f0f4ff;
   }
 
   .sidebar-footer {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: auto;
-    padding: 0;
-    margin: 0;
+    position: static;
+    transform: none;
+    width: 100%;
+    padding: 0 20px;
+    margin: 16px 0 0 0;
+    border-top: 1px solid #e5e7eb;
     border: none;
+    padding-top: 16px;
   }
 
   .btn-logout {
-    width: auto;
-    padding: 6px 10px;
-    font-size: 12px;
-    background: transparent;
+    width: 100%;
+    padding: 10px 16px;
+    font-size: 14px;
+    background: #fecaca;
     color: #991b1b;
   }
 
   .btn-logout:hover {
-    background: transparent;
-    text-decoration: underline;
+    background: #fca5a5;
   }
 
   .dashboard-controls {
@@ -418,6 +470,11 @@
   .header {
     padding: 12px 16px;
     height: 60px;
+  }
+
+  .hamburger-btn {
+    font-size: 20px;
+    padding: 6px 4px;
   }
 
   .logo {
@@ -478,6 +535,157 @@
 .dashboard-main::-webkit-scrollbar-thumb:hover,
 .books-grid::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
+}
+
+/* === Dark Mode Styles === */
+
+:root.dark-mode {
+  color-scheme: dark;
+}
+
+:root.dark-mode .dashboard-layout {
+  background: #1f2937;
+}
+
+:root.dark-mode .header {
+  background: #111827;
+  border-bottom-color: #374151;
+}
+
+:root.dark-mode .logo-text {
+  color: #f3f4f6;
+}
+
+:root.dark-mode .subtitle {
+  color: #6b7280;
+}
+
+:root.dark-mode .icon-btn {
+  color: #f3f4f6;
+}
+
+:root.dark-mode .icon-btn:hover {
+  background: #374151;
+}
+
+:root.dark-mode .user-name {
+  color: #e5e7eb;
+}
+
+:root.dark-mode .user-avatar {
+  background: #374151;
+}
+
+:root.dark-mode .user-avatar:hover {
+  background: #4b5563;
+}
+
+:root.dark-mode .sidebar {
+  background: #111827;
+  border-right-color: #374151;
+}
+
+:root.dark-mode .nav-item {
+  color: #9ca3af;
+}
+
+:root.dark-mode .nav-item:hover {
+  background: #1f2937;
+  color: #e5e7eb;
+}
+
+:root.dark-mode .nav-item.active {
+  background: #1e1b4b;
+  color: #a78bfa;
+  border-left-color: #a78bfa;
+}
+
+:root.dark-mode .sidebar-footer {
+  border-top-color: #374151;
+}
+
+:root.dark-mode .btn-logout {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
+:root.dark-mode .btn-logout:hover {
+  background: #b91c1c;
+}
+
+:root.dark-mode .dashboard-main {
+  background: #1f2937;
+}
+
+:root.dark-mode .dashboard-header h1 {
+  color: #f3f4f6;
+}
+
+:root.dark-mode .dashboard-header p {
+  color: #9ca3af;
+}
+
+:root.dark-mode .search-input {
+  background: #374151;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
+:root.dark-mode .search-input::placeholder {
+  color: #9ca3af;
+}
+
+:root.dark-mode .search-input:focus {
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
+}
+
+:root.dark-mode .filter-select {
+  background: #374151;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
+:root.dark-mode .filter-select:focus {
+  border-color: #a78bfa;
+}
+
+:root.dark-mode .btn-primary {
+  background: #a78bfa;
+  color: #1f2937;
+}
+
+:root.dark-mode .btn-primary:hover {
+  background: #c4b5fd;
+}
+
+:root.dark-mode .placeholder {
+  background: #374151;
+  color: #9ca3af;
+}
+
+:root.dark-mode .sidebar::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+:root.dark-mode .sidebar::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+:root.dark-mode .dashboard-main::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+:root.dark-mode .dashboard-main::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+:root.dark-mode .books-grid::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+:root.dark-mode .books-grid::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
 }
 
 /* === Dark Mode Styles === */

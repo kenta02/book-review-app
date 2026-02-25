@@ -1,13 +1,24 @@
+import { useState } from "react";
 import { Header } from "../components/common/Header";
 import { Sidebar } from "../components/common/Sidebar";
-import "../styles/dashboard.css"; // 後で作成
+import "../styles/dashboard.css";
 
 export function DashboardPage() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+  };
+
   return (
     <div className="dashboard-layout">
-      <Header />
+      <Header onMenuClick={toggleSidebar} />
       <div className="dashboard-container">
-        <Sidebar />
+        <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
         <main className="dashboard-main">
           <div className="dashboard-header">
             <h1>書籍ダッシュボード</h1>
