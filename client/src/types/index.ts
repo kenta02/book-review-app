@@ -16,6 +16,14 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+// ページネーション情報の型を定義する
+export interface Pagination {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  itemsPerPage: number;
+}
+
 // レビューの型を定義する
 export interface Review {
   id: number;
