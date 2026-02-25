@@ -10,9 +10,10 @@ export function ReviewPage() {
   const [loading, setLoading] = useState<boolean>(true);
   useEffect(() => {
     setLoading(true);
-    apiClient.getReviews()
-      .then((response: ApiResponse<Review[]>) => {
-        setReviews(response.data);
+    apiClient
+      .getReviews()
+      .then((response) => {
+        setReviews(response.data.reviews);
         setLoading(false);
       })
       .catch((err: { message: string }) => {

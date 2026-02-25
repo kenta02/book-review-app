@@ -18,7 +18,7 @@ const mockReviews = [
     bookId: 1,
     userId: 1,
     rating: 5,
-    comment: "a",
+    content: "a",
     createdAt: "2023-01-01",
   },
 ];
@@ -30,19 +30,35 @@ describe("ReviewPage", () => {
 
   it("renders loading then list", async () => {
     (apiClient.getReviews as unknown as vi.Mock).mockResolvedValue({
-      data: mockReviews,
+      data: {
+        reviews: mockReviews,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 1,
+          itemsPerPage: 20,
+        },
+      },
     });
     render(<ReviewPage />);
     expect(screen.getByText(/読み込み中/)).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByText(/投稿したレビュー/)).toBeInTheDocument(),
     );
-    expect(screen.getByText("Comment: a")).toBeInTheDocument();
+    expect(screen.getByText("Content: a")).toBeInTheDocument();
   });
 
   it("shows empty message when api returns []", async () => {
     (apiClient.getReviews as unknown as vi.Mock).mockResolvedValue({
-      data: [],
+      data: {
+        reviews: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalItems: 0,
+          itemsPerPage: 20,
+        },
+      },
     });
     render(<ReviewPage />);
     await waitFor(() =>
