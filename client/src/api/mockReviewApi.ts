@@ -1,4 +1,10 @@
-import type { ApiResponse, Review } from "../types";
+import type {
+  ApiResponse,
+  CreateReviewRequest,
+  Pagination,
+  Review,
+  UpdateReviewRequest,
+} from "../types";
 
 // レビューのモックデータ
 const mockReviews: Record<number, Review> = {
@@ -54,19 +60,12 @@ export const mockReviewApi = {
    * 全レビュー一覧を取得（bookIdで絞り込み可能）
    * バックエンド仕様に合わせて、{ reviews: [], pagination?: {...} } 形式でレスポンス
    * @param bookId - 書籍ID（オプション）
-   * @returns { reviews: Review[], pagination?: { currentPage, totalPages, totalItems, itemsPerPage } }
+   * @returns { reviews: Review[], pagination?: Pagination } レビューの配列とページネーション情報
    */
-  async getReviews(
-    bookId?: number,
-  ): Promise<
+  async getReviews(bookId?: number): Promise<
     ApiResponse<{
       reviews: Review[];
-      pagination?: {
-        currentPage: number;
-        totalPages: number;
-        totalItems: number;
-        itemsPerPage: number;
-      };
+      pagination?: Pagination;
     }>
   > {
     await new Promise((resolve) => setTimeout(resolve, 500)); // 遅延をシミュレート
@@ -90,6 +89,89 @@ export const mockReviewApi = {
           itemsPerPage: 20,
         },
       },
+    };
+  },
+
+  /**
+   * レビューの作成
+   * @param body  - レビュー作成リクエストの内容
+   * bookId: 書籍ID
+   * userId: ユーザーID（nullも許容）
+   * rating: 評価（例: 1-5）
+   * content: レビュー本文
+   * @returns { data: Review } 作成されたレビュー情報
+   */
+  async createReview(body: CreateReviewRequest): Promise<ApiResponse<Review>> {
+    await new Promise((resolve) => setTimeout(resolve, 500)); // 遅延をシミュレート
+
+    // 新しいレビューIDを生成（mockReviewsの最大ID + 1）
+    const newId = Math.max(...Object.keys(mockReviews).map(Number)) + 1;
+
+    const newReview: Review = {
+      id: newId,
+      bookId: body.bookId,
+      userId: 1, // モックなので固定のユーザーIDを使用（例: 1）
+      rating: body.rating,
+      content: body.content,
+      createdAt: new Date().toISOString(),
+    };
+
+    // mockReviewsに新しいレビューを追加
+    mockReviews[newId] = newReview;
+
+    return {
+      data: newReview,
+    };
+  },
+
+  /**
+   * レビューの更新
+   * @param body - レビュー更新リクエストの内容
+   * reviewId: 更新するレビューのID
+   * rating: 更新後の評価（例: 1-5、オプション）
+   * content: 更新後のレビュー本文（オプション）
+   * @returns { data: Review } 更新されたレビュー情報
+   */
+  async updateReview(body: UpdateReviewRequest): Promise<ApiResponse<Review>> {
+    await new Promise((resolve) => setTimeout(resolve, 500)); // 遅延をシミュレート
+
+    const review = mockReviews[body.reviewId];
+    if (!review) {
+      throw new Error(`レビュー${body.reviewId}が見つかりません`);
+    }
+
+    // 更新内容を反映
+    if (body.rating !== undefined) {
+      review.rating = body.rating;
+    }
+    if (body.content !== undefined) {
+      review.content = body.content;
+    }
+    review.updatedAt = new Date().toISOString();
+
+    return {
+      data: review,
+    };
+  },
+
+  /**
+   * レビューの削除
+   * @param reviewId - 削除するレビューのID
+   * @returns { data: null } 削除成功のレスポンス
+   */
+  async deleteReview(reviewId: number): Promise<ApiResponse<null>> {
+    await new Promise((resolve) => setTimeout(resolve, 500)); // 遅延をシミュレート
+
+    const review = mockReviews[reviewId];
+    if (!review) {
+      throw new Error(`レビュー${reviewId}が見つかりません`);
+    }
+
+    // mockReviewsから該当レビューを削除
+    delete mockReviews[reviewId];
+
+    return {
+      data: null,
     };
   },
 };

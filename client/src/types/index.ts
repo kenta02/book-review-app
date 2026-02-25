@@ -34,3 +34,22 @@ export interface Review {
   createdAt: string; // レビュー作成日時
   updatedAt?: string; // レビュー更新日時
 }
+
+// レビュー作成リクエストの型
+export interface CreateReviewRequest {
+  bookId: number;
+  rating: number;
+  content: string;
+}
+
+// レビュー更新リクエストの型
+export interface UpdateReviewRequest {
+  reviewId: number;
+  rating?: number;
+  content?: string;
+}
+
+// レビュー削除リクエストの型
+export interface DeleteReviewRequest {
+  reviewId: number;
+}

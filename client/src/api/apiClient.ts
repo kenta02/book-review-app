@@ -1,4 +1,12 @@
-import type { ApiResponse, Pagination, Review, User } from "../types";
+import type {
+  ApiResponse,
+  CreateReviewRequest,
+  DeleteReviewRequest,
+  Pagination,
+  Review,
+  UpdateReviewRequest,
+  User,
+} from "../types";
 import { mockReviewApi } from "./mockReviewApi";
 import { mockUserApi } from "./mockUserApi";
 
@@ -9,7 +17,7 @@ export const apiClient = {
   /**
    * ユーザー情報を ID から取得
    * @param userId - ユーザー ID
-   * @returns ユーザー情報
+   * @returns {data: User} ユーザー情報
    */
   getUserById: async (userId: number): Promise<ApiResponse<User>> => {
     if (VITE_USE_MOCK) {
@@ -30,6 +38,9 @@ export const apiClient = {
 
   /**
    * レビュー情報を ID から取得
+   * @param reviewId - レビュー ID
+   * @returns {data: Review} レビュー情報
+   *
    */
   getReviewById: async (reviewId: number): Promise<ApiResponse<Review>> => {
     if (VITE_USE_MOCK) {
@@ -49,7 +60,7 @@ export const apiClient = {
   /**
    * レビュー一覧を取得
    * @param bookId - 書籍 ID
-   * @returns レビューの配列
+   * @returns {data: { reviews: Review[]; pagination?: Pagination }} レビューの配列
    */
   /**
    * レビュー一覧を取得
@@ -89,8 +100,63 @@ export const apiClient = {
 
   // TODO: 以下のAPIも必要に応じて実装する
   // レビューの作成
+  createReview: async (
+    body: CreateReviewRequest,
+  ): Promise<ApiResponse<Review>> => {
+    if (VITE_USE_MOCK) {
+      // モックのAPIを呼び出す
+      return await mockReviewApi.createReview(body);
+    } else {
+      // 実APIを呼び出す
+      const response = await fetch(`/api/reviews`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        throw new Error(`レビューの作成に失敗しました。`);
+      }
+      const payload = await response.json();
+      const review = payload?.data ?? payload;
+      return { data: review as Review };
+    }
+  },
 
   // レビューの更新
-
+  updateReview: async (
+    body: UpdateReviewRequest,
+  ): Promise<ApiResponse<Review>> => {
+    if (VITE_USE_MOCK) {
+      return await mockReviewApi.updateReview(body);
+    } else {
+      const response = await fetch(`/api/reviews/${body.reviewId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        throw new Error(`レビューの更新に失敗しました。`);
+      }
+      const payload = await response.json();
+      const review = payload?.data ?? payload;
+      return { data: review as Review };
+    }
+  },
   // レビューの削除
+  deleteReview: async (body: DeleteReviewRequest): Promise<void> => {
+    if (VITE_USE_MOCK) {
+      await mockReviewApi.deleteReview(body.reviewId);
+    } else {
+      const response = await fetch(`/api/reviews/${body.reviewId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error(`レビューの削除に失敗しました。`);
+      }
+    }
+  },
 };
