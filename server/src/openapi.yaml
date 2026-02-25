@@ -101,6 +101,7 @@ components:
           type: integer
         userId:
           type: integer
+          nullable: true
         content:
           type: string
         rating:
@@ -480,6 +481,67 @@ paths:
         '409':
           description: 関連データが存在するため削除不可
 
+  /books/{bookId}/reviews:
+    get:
+      summary: 特定書籍のレビュー一覧取得
+      tags: [Reviews]
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 書籍ID
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: ページ番号（1以上）
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: 1ページあたり件数（1〜100）
+      responses:
+        '200':
+          description: レビュー一覧取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      reviews:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Review'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '400':
+          description: バリデーションエラー（無効な bookId）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 書籍が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: サーバー内部エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /reviews:
     get:
       summary: レビュー一覧取得
@@ -579,12 +641,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /reviews/{id}:
+  /reviews/{reviewId}:
     get:
       summary: レビュー詳細取得
       tags: [Reviews]
       parameters:
-        - name: id
+        - name: reviewId
           in: path
           required: true
           schema:
@@ -629,7 +691,7 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - name: id
+        - name: reviewId
           in: path
           required: true
           schema:
@@ -703,7 +765,7 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - name: id
+        - name: reviewId
           in: path
           required: true
           schema:
