@@ -1,4 +1,4 @@
-import type { ApiResponse, Review, User } from "../types";
+import type { ApiResponse, Pagination, Review, User } from "../types";
 import { mockReviewApi } from "./mockReviewApi";
 import { mockUserApi } from "./mockUserApi";
 
@@ -60,12 +60,7 @@ export const apiClient = {
   ): Promise<
     ApiResponse<{
       reviews: Review[];
-      pagination?: {
-        currentPage: number;
-        totalPages: number;
-        totalItems: number;
-        itemsPerPage: number;
-      };
+      pagination?: Pagination;
     }>
   > => {
     if (VITE_USE_MOCK) {
@@ -86,12 +81,7 @@ export const apiClient = {
       return {
         data: data as {
           reviews: Review[];
-          pagination?: {
-            currentPage: number;
-            totalPages: number;
-            totalItems: number;
-            itemsPerPage: number;
-          };
+          pagination?: Pagination;
         },
       };
     }
