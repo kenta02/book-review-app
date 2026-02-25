@@ -8,7 +8,7 @@ const mockReviews: Record<number, Review> = {
     userId: 1,
     rating: 5,
     comment: "この本は最高でした！",
-    createdAt: "2023-01-01T00:00:00.000Z",
+    createdAt: "2026-01-01T00:00:00.000Z",
   },
   2: {
     id: 2,
@@ -16,7 +16,7 @@ const mockReviews: Record<number, Review> = {
     userId: 2,
     rating: 4,
     comment: "面白かったけど、少し長すぎました。",
-    createdAt: "2023-02-01T00:00:00.000Z",
+    createdAt: "2026-02-01T00:00:00.000Z",
   },
   3: {
     id: 3,
@@ -24,23 +24,7 @@ const mockReviews: Record<number, Review> = {
     userId: 2,
     rating: 3,
     comment: "まあまあでした。",
-    createdAt: "2023-03-01T00:00:00.000Z",
-  },
-  4: {
-    id: 4,
-    bookId: 103,
-    userId: 1,
-    rating: 2,
-    comment: "あまり好きではありませんでした。",
-    createdAt: "2023-04-01T00:00:00.000Z",
-  },
-  5: {
-    id: 5,
-    bookId: 102,
-    userId: 1,
-    rating: 4,
-    comment: "良い本でしたが、結末が予想できました。",
-    createdAt: "2023-05-01T00:00:00.000Z",
+    createdAt: "2026-03-01T00:00:00.000Z",
   },
 };
 
