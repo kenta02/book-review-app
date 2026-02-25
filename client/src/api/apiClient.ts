@@ -55,7 +55,19 @@ export const apiClient = {
    * レビュー一覧を取得
    * @param bookId - 書籍 ID (省略可)
    */
-  getReviews: async (bookId?: number): Promise<ApiResponse<Review[]>> => {
+  getReviews: async (
+    bookId?: number,
+  ): Promise<
+    ApiResponse<{
+      reviews: Review[];
+      pagination?: {
+        currentPage: number;
+        totalPages: number;
+        totalItems: number;
+        itemsPerPage: number;
+      };
+    }>
+  > => {
     if (VITE_USE_MOCK) {
       // モック側に同じシグネチャがある
       return await mockReviewApi.getReviews(bookId);
@@ -69,9 +81,19 @@ export const apiClient = {
       }
 
       const payload = await response.json();
-      const reviews = payload?.data ?? payload;
-
-      return { data: reviews as Review[] };
+      // バックエンドレスポンス：{ success: true, data: { reviews: [...], pagination: {...} } }
+      const data = payload?.data ?? payload;
+      return {
+        data: data as {
+          reviews: Review[];
+          pagination?: {
+            currentPage: number;
+            totalPages: number;
+            totalItems: number;
+            itemsPerPage: number;
+          };
+        },
+      };
     }
   },
 };

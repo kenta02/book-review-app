@@ -7,7 +7,7 @@ const mockReviews: Record<number, Review> = {
     bookId: 101,
     userId: 1,
     rating: 5,
-    comment: "この本は最高でした！",
+    content: "この本は最高でした！",
     createdAt: "2026-01-01T00:00:00.000Z",
   },
   2: {
@@ -15,7 +15,7 @@ const mockReviews: Record<number, Review> = {
     bookId: 102,
     userId: 2,
     rating: 4,
-    comment: "面白かったけど、少し長すぎました。",
+    content: "面白かったけど、少し長すぎました。",
     createdAt: "2026-02-01T00:00:00.000Z",
   },
   3: {
@@ -23,7 +23,7 @@ const mockReviews: Record<number, Review> = {
     bookId: 101,
     userId: 2,
     rating: 3,
-    comment: "まあまあでした。",
+    content: "まあまあでした。",
     createdAt: "2026-03-01T00:00:00.000Z",
   },
 };
@@ -52,10 +52,23 @@ export const mockReviewApi = {
 
   /**
    * 全レビュー一覧を取得（bookIdで絞り込み可能）
+   * バックエンド仕様に合わせて、{ reviews: [], pagination?: {...} } 形式でレスポンス
    * @param bookId - 書籍ID（オプション）
-   * @returns レビューの配列
+   * @returns { reviews: Review[], pagination?: { currentPage, totalPages, totalItems, itemsPerPage } }
    */
-  async getReviews(bookId?: number): Promise<ApiResponse<Review[]>> {
+  async getReviews(
+    bookId?: number,
+  ): Promise<
+    ApiResponse<{
+      reviews: Review[];
+      pagination?: {
+        currentPage: number;
+        totalPages: number;
+        totalItems: number;
+        itemsPerPage: number;
+      };
+    }>
+  > {
     await new Promise((resolve) => setTimeout(resolve, 500)); // 遅延をシミュレート
 
     // 値だけ取り出して配列に変換する
@@ -66,8 +79,17 @@ export const mockReviewApi = {
       reviews = reviews.filter((r) => r.bookId === bookId);
     }
 
+    // バックエンド仕様に合わせて、reviews と pagination を返す
     return {
-      data: reviews,
+      data: {
+        reviews,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: reviews.length,
+          itemsPerPage: 20,
+        },
+      },
     };
   },
 };

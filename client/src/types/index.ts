@@ -20,8 +20,9 @@ export interface ApiResponse<T> {
 export interface Review {
   id: number;
   bookId: number;
-  userId: number;
+  userId: number | null; // ユーザーが削除された場合は null
   rating: number; // 評価（例: 1-5）
-  comment?: string; // コメント（オプション）
+  content: string; // レビュー本文（バックエンド仕様に合わせて comment から content に統一）
   createdAt: string; // レビュー作成日時
+  updatedAt?: string; // レビュー更新日時
 }
