@@ -1,5 +1,7 @@
 import type {
   ApiResponse,
+  Book,
+  CreateBookRequest,
   CreateReviewRequest,
   DeleteReviewRequest,
   Pagination,
@@ -7,6 +9,7 @@ import type {
   UpdateReviewRequest,
   User,
 } from "../types";
+import { mockBookApi } from "./mockBookApi";
 import { mockReviewApi } from "./mockReviewApi";
 import { mockUserApi } from "./mockUserApi";
 
@@ -156,6 +159,113 @@ export const apiClient = {
       });
       if (!response.ok) {
         throw new Error(`レビューの削除に失敗しました。`);
+      }
+    }
+  },
+
+  /**
+   * 全書籍一覧を取得する
+   * @returns {Promise<ApiResponse<{ books: Book[] }>>} 書籍の配列
+   */
+  getAllBooks: async (): Promise<ApiResponse<{ books: Book[] }>> => {
+    if (VITE_USE_MOCK) {
+      // モックのAPIを呼び出す
+      return await mockBookApi.getAllBooks();
+    } else {
+      // 実APIを呼び出す
+      const response = await fetch(`/api/books`);
+      if (!response.ok) {
+        throw new Error(`書籍一覧の取得に失敗しました。`);
+      }
+      const payload = await response.json();
+      const data = payload?.data ?? payload;
+      return { data: data as { books: Book[] } };
+    }
+  },
+
+  // 書籍情報を取得する
+  getBookById: async (bookId: number): Promise<ApiResponse<Book>> => {
+    if (VITE_USE_MOCK) {
+      // モックのAPIを呼び出す
+      return await mockBookApi.getBookById(bookId);
+    } else {
+      // 実APIを呼び出す
+      const response = await fetch(`/api/books/${bookId}`);
+      if (!response.ok) {
+        throw new Error(`書籍${bookId}の情報の取得に失敗しました。`);
+      }
+      const payload = await response.json();
+      const book = payload?.data ?? payload;
+      return { data: book as Book };
+    }
+  },
+  // 書籍を作成する
+  createBook: async (
+    bookData: CreateBookRequest,
+  ): Promise<ApiResponse<Book>> => {
+    if (VITE_USE_MOCK) {
+      // モックのAPIを呼び出す
+      return await mockBookApi.createBook(bookData);
+    } else {
+      // 実APIを呼び出す
+      const response = await fetch(`/api/books`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(bookData),
+      });
+      if (!response.ok) {
+        throw new Error(`書籍の作成に失敗しました。`);
+      }
+      const payload = await response.json();
+      const book = payload?.data ?? payload;
+      return { data: book as Book };
+    }
+  },
+  /**
+   *  書籍を更新する
+   * @param bookId - 更新する書籍のID
+   * @param updatedData - 更新する書籍のデータ（部分的な更新も可能）
+   * @returns {Promise<ApiResponse<Book>>} 更新された書籍情報
+   */
+  updateBook: async (
+    bookId: number,
+    updatedData: Partial<Book>,
+  ): Promise<ApiResponse<Book>> => {
+    if (VITE_USE_MOCK) {
+      return await mockBookApi.updateBook(bookId, updatedData);
+    } else {
+      const response = await fetch(`/api/books/${bookId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedData),
+      });
+      if (!response.ok) {
+        throw new Error(`書籍${bookId}の更新に失敗しました。`);
+      }
+      const payload = await response.json();
+      const book = payload?.data ?? payload;
+      return { data: book as Book };
+    }
+  },
+
+  /**
+   * 書籍を削除する
+   * @param bookId - 削除する書籍のID
+   * @returns {Promise<void>} 削除成功のレスポンス
+   */
+  deleteBook: async (bookId: number): Promise<void> => {
+    if (VITE_USE_MOCK) {
+      await mockBookApi.deleteBook(bookId);
+    } else {
+      const response = await fetch(`/api/books/${bookId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error(`書籍${bookId}の削除に失敗しました。`);
       }
     }
   },
