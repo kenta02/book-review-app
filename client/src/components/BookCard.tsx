@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+
 interface BookCardProps {
   title: string;
   author: string;
@@ -5,6 +7,7 @@ interface BookCardProps {
   description: string;
   isbn: string;
   publishYear: string;
+  bookId?: number;
   liked?: boolean;
 }
 
@@ -15,10 +18,20 @@ export function BookCard({
   description,
   isbn,
   publishYear,
+  bookId = 1,
   liked = false,
 }: BookCardProps) {
+  const navigate = useNavigate();
+
+  const handleCardClick = () => {
+    navigate(`/books/${bookId}`);
+  };
+
   return (
-    <div className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-white dark:bg-gray-800">
+    <div
+      onClick={handleCardClick}
+      className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 cursor-pointer"
+    >
       {/* グラデーション背景のヘッダー部分 */}
       <div className="relative bg-gradient-to-br from-violet-600 to-purple-600 h-48 flex items-center justify-center">
         <h3 className="text-white text-center text-lg font-bold px-4 line-clamp-3">
@@ -28,6 +41,7 @@ export function BookCard({
         <button
           className="absolute top-3 right-3 w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform"
           aria-label="いいね"
+          onClick={(e) => e.stopPropagation()}
         >
           🤍
         </button>
