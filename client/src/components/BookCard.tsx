@@ -1,24 +1,22 @@
 interface BookCardProps {
-  // title: string;
-  // author: string;
-  // ratingDisplay: string;
-  // description: string;
-  // isbn: string;
-  // publishYear: string;
-  // liked?: boolean;
+  title: string;
+  author: string;
+  ratingDisplay: string;
+  description: string;
+  isbn: string;
+  publishYear: string;
+  liked?: boolean;
 }
 
-export function BookCard(
-  {
-    // title,
-    // author,
-    // ratingDisplay,
-    // description,
-    // isbn,
-    // publishYear,
-    // liked = false,
-  }: BookCardProps,
-) {
+export function BookCard({
+  title,
+  author,
+  ratingDisplay,
+  description,
+  isbn,
+  publishYear,
+  liked = false,
+}: BookCardProps) {
   return (
     <div className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-white dark:bg-gray-800">
       {/* グラデーション背景のヘッダー部分 */}

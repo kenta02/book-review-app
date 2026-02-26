@@ -26,19 +26,24 @@ export function DashboardPage() {
         <div className="flex flex-1 max-w-7xl w-full overflow-hidden">
           <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
           <main className="flex flex-col flex-1 p-6 bg-gray-100 dark:bg-gray-950 overflow-y-auto">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                書籍ダッシュボード
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">xxxxxx</p>
+            <div className="mb-6 flex justify-between items-start">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  書籍ダッシュボード
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">xxxxxx</p>
+              </div>
+              <button className="py-2 px-5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded font-semibold text-sm hover:from-purple-600 hover:to-pink-600 active:scale-95 transition whitespace-nowrap">
+                + 書籍を追加
+              </button>
             </div>
 
-            <div className="bg-gray-50 dark:bg-slate-900 rounded-xl p-6 mb-6">
-              <div className="flex flex-wrap gap-3 items-center">
+            <div className="bg-gray-50 dark:bg-slate-900 rounded-xl p-4 sm:p-6 mb-6">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-center flex-wrap">
                 <input
                   type="text"
                   placeholder="書籍名、著者名、ISBNで検索..."
-                  className="flex-1 min-w-[250px] max-w-[450px] py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 border border-gray-300 dark:border-slate-700 rounded focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
+                  className="flex-1 min-w-[250px] py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 border border-gray-300 dark:border-slate-700 rounded focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
                 />
                 <select className="py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded cursor-pointer focus:border-purple-600 focus:ring-2 focus:ring-purple-400">
                   <option>評価順</option>
@@ -47,12 +52,9 @@ export function DashboardPage() {
                 </select>
                 <button
                   onClick={toggleFilter}
-                  className="py-2 px-5 border-2 border-purple-500 text-purple-600 dark:text-purple-400 rounded font-semibold text-sm hover:bg-purple-500 hover:text-white active:scale-95 transition"
+                  className="py-2 px-5 border-2 border-purple-500 text-purple-600 dark:text-purple-400 rounded font-semibold text-sm hover:bg-purple-500 hover:text-white active:scale-95 transition whitespace-nowrap"
                 >
                   ⚙️ フィルター
-                </button>
-                <button className="py-2 px-5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded font-semibold text-sm hover:from-purple-600 hover:to-pink-600 active:scale-95 transition">
-                  + 書籍を追加
                 </button>
               </div>
 
@@ -68,7 +70,7 @@ export function DashboardPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-5 flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 flex-1 overflow-y-auto">
               <BookCard
                 title="人を動かす"
                 author="デール・カーネギー"
