@@ -53,3 +53,44 @@ export interface UpdateReviewRequest {
 export interface DeleteReviewRequest {
   reviewId: number;
 }
+
+// 書籍の型
+export interface Book {
+  id: number;
+  title: string;
+  author: string;
+  publishYear: string;
+  isbn: string;
+  summary: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 書籍の取得リクエストの型
+export interface GetBookRequest {
+  bookId: number;
+}
+
+// 書籍の作成リクエストの型
+export interface CreateBookRequest {
+  title: string;
+  author: string;
+  publishYear: string;
+  isbn: string;
+  summary: string;
+}
+
+// 書籍の更新リクエストの型
+export interface UpdateBookRequest {
+  bookId: number;
+  title?: string;
+  author?: string;
+  publishYear?: string;
+  isbn?: string;
+  summary?: string;
+}
+
+// 書籍の削除リクエストの型
+export interface DeleteBookRequest {
+  bookId: number;
+}
