@@ -59,8 +59,8 @@ export interface Book {
   id: number;
   title: string;
   author: string;
-  publishYear: string;
-  isbn: string;
+  publicationYear: number;
+  ISBN: string;
   summary: string;
   createdAt: string;
   updatedAt: string;
@@ -75,8 +75,8 @@ export interface GetBookRequest {
 export interface CreateBookRequest {
   title: string;
   author: string;
-  publishYear: string;
-  isbn: string;
+  publicationYear: number;
+  ISBN: string;
   summary: string;
 }
 
@@ -85,8 +85,8 @@ export interface UpdateBookRequest {
   bookId: number;
   title?: string;
   author?: string;
-  publishYear?: string;
-  isbn?: string;
+  publicationYear?: number;
+  ISBN?: string;
   summary?: string;
 }
 

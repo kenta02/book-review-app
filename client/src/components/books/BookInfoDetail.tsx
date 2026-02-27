@@ -88,7 +88,9 @@ export function BookInfoDetail() {
                   出版年
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {book?.publishYear ? `${book.publishYear}年` : "出版年不明"}
+                  {book?.publicationYear
+                    ? `${book?.publicationYear}年`
+                    : "出版年不明"}
                 </p>
               </div>
               <div>
@@ -96,7 +98,7 @@ export function BookInfoDetail() {
                   ISBN
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {book?.isbn || "ISBN不明"}
+                  {book?.ISBN || "ISBN不明"}
                 </p>
               </div>
             </div>
