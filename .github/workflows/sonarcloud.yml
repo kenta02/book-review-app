@@ -31,7 +31,7 @@ jobs:
       # バックエンド分析
       - name: Install server dependencies
         working-directory: ./server
-        run: rm -f package-lock.json && npm install  # cross-platform対応
+        run: npm ci
       
       - name: Build server
         working-directory: ./server
@@ -45,9 +45,12 @@ jobs:
       # フロントエンド分析
       - name: Install client dependencies
         working-directory: ./client
-        # package-lock.jsonはmacOS/Windows環境で生成されplatform固有パッケージが含まれる場合があるため
-        # CI（Linux）では削除してからnpm installでクリーンインストールする
-        run: rm -f package-lock.json && npm install
+        # npm_config_os/cpu でCI環境（linux/x64）向けパッケージのみをインストール
+        # Vite7のrollupがplatform-specificなoptionalパッケージを宣言するためdarwin-arm64が混入しないよう制御
+        env:
+          npm_config_os: linux
+          npm_config_cpu: x64
+        run: npm install
       
       - name: Build client
         working-directory: ./client
