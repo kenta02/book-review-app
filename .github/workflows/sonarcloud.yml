@@ -31,7 +31,7 @@ jobs:
       # バックエンド分析
       - name: Install server dependencies
         working-directory: ./server
-        run: npm install  # cross-platform対応
+        run: rm -f package-lock.json && npm install  # cross-platform対応
       
       - name: Build server
         working-directory: ./server
@@ -45,7 +45,9 @@ jobs:
       # フロントエンド分析
       - name: Install client dependencies
         working-directory: ./client
-        run: npm install  # cross-platform（Windows/Mac/Linux）対応のためnpm ciではなくnpm install
+        # package-lock.jsonはmacOS/Windows環境で生成されplatform固有パッケージが含まれる場合があるため
+        # CI（Linux）では削除してからnpm installでクリーンインストールする
+        run: rm -f package-lock.json && npm install
       
       - name: Build client
         working-directory: ./client
