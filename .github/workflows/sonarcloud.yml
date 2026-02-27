@@ -31,7 +31,7 @@ jobs:
       # バックエンド分析
       - name: Install server dependencies
         working-directory: ./server
-        run: npm ci
+        run: npm install  # cross-platform対応
       
       - name: Build server
         working-directory: ./server
@@ -45,7 +45,7 @@ jobs:
       # フロントエンド分析
       - name: Install client dependencies
         working-directory: ./client
-        run: npm ci
+        run: npm install  # cross-platform（Windows/Mac/Linux）対応のためnpm ciではなくnpm install
       
       - name: Build client
         working-directory: ./client
