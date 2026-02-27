@@ -42,7 +42,8 @@ module.exports = {
     '@typescript-eslint/ban-ts-comment': ['error', { 'ts-ignore': 'allow-with-description' }],
 
     // Useful strictness but not blocking developer flow
-    '@typescript-eslint/explicit-module-boundary-types': 'warn'
+    '@typescript-eslint/explicit-module-boundary-types': 'warn',
+    '@typescript-eslint/no-unsupported-ts-version': 'off'
   },
   settings: {
     'import/resolver': {

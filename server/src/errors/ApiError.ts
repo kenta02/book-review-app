@@ -15,11 +15,11 @@ export class ApiError extends Error {
     if (Error.captureStackTrace) Error.captureStackTrace(this, this.constructor);
   }
 
-  static validation(details: ErrorDetail[]) {
+  static validation(details: ErrorDetail[]): ApiError {
     return new ApiError(400, 'VALIDATION_ERROR', ERROR_MESSAGES.VALIDATION_FAILED, details);
   }
 
-  static notFound(code = 'NOT_FOUND', message = ERROR_MESSAGES.NOT_FOUND) {
+  static notFound(code = 'NOT_FOUND', message = ERROR_MESSAGES.NOT_FOUND): ApiError {
     return new ApiError(404, code, message);
   }
 }

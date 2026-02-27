@@ -9,12 +9,12 @@ export const ValidationMessages = {
   INVALID_COMMENT_ID: '無効なコメントIDです。',
 
   // 必須・型チェック
-  REQUIRED_POSITIVE_INTEGER: (field: string) => `${field}は1以上の整数で必須項目です。`,
-  POSITIVE_INTEGER_REQUIRED: (field: string) => `${field}は正の整数で指定してください。`,
-  REQUIRED_STRING: (field: string) => `${field}は文字列で必須項目です。`,
+  REQUIRED_POSITIVE_INTEGER: (field: string): string => `${field}は1以上の整数で必須項目です。`,
+  POSITIVE_INTEGER_REQUIRED: (field: string): string => `${field}は正の整数で指定してください。`,
+  REQUIRED_STRING: (field: string): string => `${field}は文字列で必須項目です。`,
 
   // 文字列長チェック
-  STRING_LENGTH_EXCEEDED: (field: string, max: number) =>
+  STRING_LENGTH_EXCEEDED: (field: string, max: number): string =>
     `${field}は${max}文字以内で入力してください。`,
 
   // コメント関連
