@@ -3,19 +3,19 @@ module.exports = {
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 'latest',
-    sourceType: 'module'
+    sourceType: 'module',
   },
   env: {
     node: true,
     es2021: true,
-    jest: true
+    jest: true,
   },
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:import/recommended',
     'plugin:import/typescript',
-    'prettier'
+    'prettier',
   ],
   plugins: ['@typescript-eslint', 'import', 'unused-imports'],
   rules: {
@@ -34,8 +34,8 @@ module.exports = {
       'warn',
       {
         groups: ['builtin', 'external', 'internal', ['parent', 'sibling', 'index']],
-        'newlines-between': 'always'
-      }
+        'newlines-between': 'always',
+      },
     ],
 
     // Prevent dangerous comments / bypasses
@@ -43,12 +43,12 @@ module.exports = {
 
     // Useful strictness but not blocking developer flow
     '@typescript-eslint/explicit-module-boundary-types': 'warn',
-    '@typescript-eslint/no-unsupported-ts-version': 'off'
+    '@typescript-eslint/no-unsupported-ts-version': 'off',
   },
   settings: {
     'import/resolver': {
       node: { extensions: ['.js', '.ts'] },
-      typescript: {}
-    }
-  }
+      typescript: {},
+    },
+  },
 };
