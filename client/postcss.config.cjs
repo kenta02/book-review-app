@@ -1,5 +1,4 @@
-/* eslint-disable no-undef */
-/* eslint-env node */
+/* global module */
 module.exports = {
   plugins: {
     tailwindcss: {},
