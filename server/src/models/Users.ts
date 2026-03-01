@@ -1,10 +1,27 @@
 // サンプル
 
-import { DataTypes } from "sequelize";
+import { DataTypes, Model, Optional } from 'sequelize';
 
-import { sequelize } from "../sequelize";
+import { sequelize } from '../sequelize';
 
-const User = sequelize.define("User", {
+// attribute interface helps TypeScript know what fields exist on instances
+export interface UserAttributes {
+  id: number;
+  username: string;
+  email: string;
+  password: string;
+  role: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// when creating a new user we don't provide id/role/timestamps
+export interface UserCreationAttributes extends Optional<
+  UserAttributes,
+  'id' | 'role' | 'createdAt' | 'updatedAt'
+> {}
+
+const User = sequelize.define<Model<UserAttributes, UserCreationAttributes>>('User', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -27,7 +44,7 @@ const User = sequelize.define("User", {
   role: {
     type: DataTypes.STRING(50),
     allowNull: false,
-    defaultValue: "user",
+    defaultValue: 'user',
   },
   createdAt: {
     type: DataTypes.DATE,

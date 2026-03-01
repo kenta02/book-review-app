@@ -11,10 +11,10 @@ async function main() {
     await sequelize.authenticate();
     console.log('DB connected');
 
-    // clear related tables in a safe order
-    for (const m of [Favorite, Comment, Review, Book, User]) {
-      await m.destroy({ where: {} });
-    }
+    // --- previously we wiped all tables which risked data loss.
+    // Instead perform key-based insert-or-ignore (findOrCreate) so existing
+    // rows remain untouched and only missing records are added.
+    // the rest of the script relies on the returned instances below.
 
     const pw = await bcrypt.hash('password', 10);
 
@@ -98,43 +98,91 @@ async function main() {
     // concrete instance types allow us to avoid `any`
     type UserInstance = InstanceType<typeof User>;
     type BookInstance = InstanceType<typeof Book>;
+    type ReviewInstance = InstanceType<typeof Review>;
 
-    const users: UserInstance[] = await Promise.all(
-      userInfos.map((u) => User.create({ ...u, password: pw }))
-    );
+    // declare containers outside transaction so they are available for the
+    // final log statement below
+    let users: UserInstance[] = [];
+    let books: BookInstance[] = [];
+    let reviews: ReviewInstance[] = [];
 
-    const books: BookInstance[] = await Promise.all(bookInfos.map((b) => Book.create(b)));
+    // perform all insert/find operations within a single transaction
+    await sequelize.transaction(async (tx) => {
+      // upsert users by email (unique key)
+      users = [];
+      for (const u of userInfos) {
+        const [user] = await User.findOrCreate({
+          where: { email: u.email },
+          defaults: { ...u, password: pw },
+          transaction: tx,
+        });
+        // if password might need update each run: use getter/setter to avoid
+        // TypeScript complaining about `password` property on Model<any,any>
+        const currentPw = user.get('password') as string;
+        if (currentPw !== pw) {
+          user.set('password', pw);
+          await user.save({ transaction: tx });
+        }
+        users.push(user);
+      }
 
-    const uid = (i: number) => users[i].get('id') as number;
-    const bid = (i: number) => books[i].get('id') as number;
+      // upsert books by ISBN
+      books = [];
+      for (const b of bookInfos) {
+        const [book] = await Book.findOrCreate({
+          where: { ISBN: b.ISBN },
+          defaults: b,
+          transaction: tx,
+        });
+        books.push(book);
+      }
 
-    const reviews = await Promise.all(
-      reviewInfos.map((r) =>
-        Review.create({
-          bookId: bid(r.bookIndex),
-          userId: uid(r.userIndex),
-          content: r.content,
-          rating: r.rating,
-        })
-      )
-    );
+      const uid = (i: number) => users[i].get('id') as number;
+      const bid = (i: number) => books[i].get('id') as number;
 
-    await Promise.all(
-      commentInfos.map((c) =>
-        Comment.create({
-          reviewId: reviews[c.reviewIndex].get('id') as number,
-          userId: uid(c.userIndex),
-          content: c.content,
-          parentId: null,
-        })
-      )
-    );
+      reviews = await Promise.all(
+        reviewInfos.map(
+          (r) =>
+            Review.create(
+              {
+                bookId: bid(r.bookIndex),
+                userId: uid(r.userIndex),
+                content: r.content,
+                rating: r.rating,
+              },
+              { transaction: tx }
+            ) as Promise<ReviewInstance>
+        )
+      );
 
-    await Promise.all(
-      favoriteInfos.map((f) =>
-        Favorite.create({ userId: uid(f.userIndex), bookId: bid(f.bookIndex) })
-      )
-    );
+      await Promise.all(
+        commentInfos.map((c) =>
+          Comment.create(
+            {
+              reviewId: reviews[c.reviewIndex].get('id') as number,
+              userId: uid(c.userIndex),
+              content: c.content,
+              parentId: null,
+            },
+            { transaction: tx }
+          )
+        )
+      );
+
+      // upsert favorites so rerunning script is safe
+      await Promise.all(
+        favoriteInfos.map((f) =>
+          Favorite.findOrCreate({
+            where: {
+              userId: uid(f.userIndex),
+              bookId: bid(f.bookIndex),
+            },
+            defaults: { userId: uid(f.userIndex), bookId: bid(f.bookIndex) },
+            transaction: tx,
+          })
+        )
+      );
+    });
 
     console.log(
       `Seed completed: users=${users.length}, books=${books.length}, reviews=${
