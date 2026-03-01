@@ -11,115 +11,136 @@ async function main() {
     await sequelize.authenticate();
     console.log('DB connected');
 
-    // WARNING: this clears related tables in a safe dev order
-    await Favorite.destroy({ where: {} });
-    await Comment.destroy({ where: {} });
-    await Review.destroy({ where: {} });
-    await Book.destroy({ where: {} });
-    await User.destroy({ where: {} });
+    // clear related tables in a safe order
+    for (const m of [Favorite, Comment, Review, Book, User]) {
+      await m.destroy({ where: {} });
+    }
 
     const pw = await bcrypt.hash('password', 10);
 
-    const [alice, bob, charlie] = await Promise.all([
-      User.create({ username: 'alice', email: 'alice@example.com', password: pw }),
-      User.create({ username: 'bob', email: 'bob@example.com', password: pw }),
-      User.create({ username: 'charlie', email: 'charlie@example.com', password: pw }),
-    ]);
+    // --- seed data definitions ------------------------------------------------
+    const userInfos = [
+      { username: 'alice', email: 'alice@example.com' },
+      { username: 'bob', email: 'bob@example.com' },
+      { username: 'charlie', email: 'charlie@example.com' },
+    ];
 
-    const [book1, book2] = await Promise.all([
-      Book.create({
-        title: 'Clean Code',
-        author: 'Robert C. Martin',
-        publicationYear: 2008,
-        ISBN: '9780132350884',
-        summary: 'A handbook of agile software craftsmanship',
-      }),
-      Book.create({
-        title: 'Design Patterns',
-        author: 'Erich Gamma et al.',
-        publicationYear: 1994,
-        ISBN: '9780201633610',
-        summary: 'Elements of Reusable Object-Oriented Software',
-      }),
-    ]);
+    const bookInfos = [
+      {
+        title: '吾輩は猫である',
+        author: '夏目漱石',
+        publicationYear: 1905,
+        ISBN: '9784101010014',
+        summary: '猫の視点で描かれる人間社会の風刺。',
+      },
+      {
+        title: '雪国',
+        author: '川端康成',
+        publicationYear: 1947,
+        ISBN: '9784101010137',
+        summary: '雪深い地方で交錯する男女の恋と孤独。',
+      },
+      {
+        title: '羅生門',
+        author: '芥川龍之介',
+        publicationYear: 1915,
+        ISBN: '9784101010151',
+        summary: '道徳と人間の本性を問う短編。',
+      },
+      {
+        title: '風の歌を聴け',
+        author: '村上春樹',
+        publicationYear: 1979,
+        ISBN: '9784101010212',
+        summary: '都市に生きる若者たちの日常と悩み。',
+      },
+      {
+        title: '火花',
+        author: '又吉直樹',
+        publicationYear: 2015,
+        ISBN: '9784101010304',
+        summary: '漫才師の葛藤と友情を描いた小説。',
+      },
+      {
+        title: 'コンビニ人間',
+        author: '村田沙耶香',
+        publicationYear: 2016,
+        ISBN: '9784101010373',
+        summary: 'コンビニで働く女性の視点から社会を問う。',
+      },
+    ];
 
-    const [review1, review2] = await Promise.all([
-      Review.create({
-        bookId: book1.get('id') as number,
-        userId: bob.get('id') as number,
-        content: 'とても役立ちました',
-        rating: 5,
-      }),
-      Review.create({
-        bookId: book2.get('id') as number,
-        userId: alice.get('id') as number,
-        content: '良い概観ですが古い部分もあり',
-        rating: 4,
-      }),
-    ]);
+    const reviewInfos = [
+      { bookIndex: 0, userIndex: 1, content: 'とても役立ちました', rating: 5 },
+      { bookIndex: 1, userIndex: 0, content: '良い概観ですが古い部分もあり', rating: 4 },
 
-    // 追加のダミーレビュー（フロント開発用に複数）
-    await Promise.all([
-      Review.create({
-        bookId: book1.get('id') as number,
-        userId: alice.get('id') as number,
-        content: '導入部分が良かった',
-        rating: 4,
-      }),
-      Review.create({
-        bookId: book1.get('id') as number,
-        userId: charlie.get('id') as number,
-        content: '具体例がもっと欲しい',
-        rating: 3,
-      }),
-      Review.create({
-        bookId: book1.get('id') as number,
-        userId: bob.get('id') as number,
-        content: 'リファクタの章が素晴らしい',
-        rating: 5,
-      }),
-      Review.create({
-        bookId: book1.get('id') as number,
-        userId: alice.get('id') as number,
-        content: 'サンプルコードが有用でした',
-        rating: 4,
-      }),
-      Review.create({
-        bookId: book1.get('id') as number,
-        userId: charlie.get('id') as number,
-        content: '章ごとのまとめが分かりやすい',
-        rating: 4,
-      }),
+      // 追加のダミーレビュー（フロント開発用）
+      { bookIndex: 0, userIndex: 0, content: '導入部分が良かった', rating: 4 },
+      { bookIndex: 0, userIndex: 2, content: '具体例がもっと欲しい', rating: 3 },
+      { bookIndex: 0, userIndex: 1, content: 'リファクタの章が素晴らしい', rating: 5 },
+      { bookIndex: 0, userIndex: 0, content: 'サンプルコードが有用でした', rating: 4 },
+      { bookIndex: 0, userIndex: 2, content: '章ごとのまとめが分かりやすい', rating: 4 },
       // 長文レビュー（トランケーション確認用）
-      Review.create({
-        bookId: book1.get('id') as number,
-        userId: bob.get('id') as number,
-        content: '長文レビュー: '.repeat(80),
-        rating: 4,
-      }),
-    ]);
+      { bookIndex: 0, userIndex: 1, content: '長文レビュー: '.repeat(80), rating: 4 },
+    ];
 
-    await Promise.all([
-      Comment.create({
-        reviewId: review1.get('id') as number,
-        userId: charlie.get('id') as number,
-        content: '同感です！',
-        parentId: null,
-      }),
-      Comment.create({
-        reviewId: review2.get('id') as number,
-        userId: bob.get('id') as number,
-        content: '補足: 具体例が良い',
-        parentId: null,
-      }),
-    ]);
+    const commentInfos = [
+      { reviewIndex: 0, userIndex: 2, content: '同感です！' },
+      { reviewIndex: 1, userIndex: 1, content: '補足: 具体例が良い' },
+    ];
 
-    await Promise.all([
-      Favorite.create({ userId: alice.get('id') as number, bookId: book1.get('id') as number }),
-      Favorite.create({ userId: bob.get('id') as number, bookId: book2.get('id') as number }),
-    ]);
+    const favoriteInfos = [
+      { userIndex: 0, bookIndex: 0 },
+      { userIndex: 1, bookIndex: 1 },
+    ];
+    // --------------------------------------------------------------------------
 
-    console.log('Seed completed: users=3, books=2, reviews=2, comments=2, favorites=2');
+    // concrete instance types allow us to avoid `any`
+    type UserInstance = InstanceType<typeof User>;
+    type BookInstance = InstanceType<typeof Book>;
+
+    const users: UserInstance[] = await Promise.all(
+      userInfos.map((u) => User.create({ ...u, password: pw }))
+    );
+
+    const books: BookInstance[] = await Promise.all(bookInfos.map((b) => Book.create(b)));
+
+    const uid = (i: number) => users[i].get('id') as number;
+    const bid = (i: number) => books[i].get('id') as number;
+
+    const reviews = await Promise.all(
+      reviewInfos.map((r) =>
+        Review.create({
+          bookId: bid(r.bookIndex),
+          userId: uid(r.userIndex),
+          content: r.content,
+          rating: r.rating,
+        })
+      )
+    );
+
+    await Promise.all(
+      commentInfos.map((c) =>
+        Comment.create({
+          reviewId: reviews[c.reviewIndex].get('id') as number,
+          userId: uid(c.userIndex),
+          content: c.content,
+          parentId: null,
+        })
+      )
+    );
+
+    await Promise.all(
+      favoriteInfos.map((f) =>
+        Favorite.create({ userId: uid(f.userIndex), bookId: bid(f.bookIndex) })
+      )
+    );
+
+    console.log(
+      `Seed completed: users=${users.length}, books=${books.length}, reviews=${
+        reviews.length
+      }, comments=${commentInfos.length}, favorites=${favoriteInfos.length}`
+    );
     console.log(
       'Logins: email/password = alice@example.com/password, bob@example.com/password, charlie@example.com/password'
     );

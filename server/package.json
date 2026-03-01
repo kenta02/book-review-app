@@ -20,7 +20,8 @@
     "lint": "eslint 'src/**/*.{ts,tsx}' --ext .ts",
     "lint:fix": "eslint 'src/**/*.{ts,tsx}' --ext .ts --fix",
     "format": "prettier --write .",
-    "check-types": "tsc -p tsconfig.json --noEmit"
+    "check-types": "tsc -p tsconfig.json --noEmit",
+    "seed-demo": "ts-node ./scripts/seed-demo.ts"
   },
   "keywords": [],
   "author": "",
