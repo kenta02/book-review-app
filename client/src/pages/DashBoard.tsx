@@ -65,6 +65,7 @@ export function DashboardPage() {
           summary="人間関係の古典的名著。人に好かれ、人を説得し、人を変える原則をわかりやすく説いています。"
           ISBN="9784422210517"
           publicationYear={1936}
+          bookId={1}
         />
         <BookCard
           title="リーダブルコード"
@@ -73,6 +74,7 @@ export function DashboardPage() {
           summary="より良いコードを書くための実践的テクニック。読みやすく、保守しやすいコードの書き方を学べます。"
           ISBN="9784873115658"
           publicationYear={2012}
+          bookId={2}
         />
         <BookCard
           title="三体"
@@ -81,6 +83,7 @@ export function DashboardPage() {
           summary="宇宙SFの傑作。壮大なスケールで描かれた、人類と異星人の運命が交差する壮大な物語です。"
           ISBN="9784161206535"
           publicationYear={2008}
+          bookId={3}
         />
         <BookCard
           title="クリーンアーキテクチャ"
@@ -89,6 +92,7 @@ export function DashboardPage() {
           summary="ソフトウェア設計の第一人者による、アーキテクチャの原則。テスト駆動設計とアーキテクチャの関係。"
           ISBN="9784647196936"
           publicationYear={2018}
+          bookId={4}
         />
         <BookCard
           title="リーン・スタートアップ"
@@ -97,6 +101,7 @@ export function DashboardPage() {
           summary="新規事業の立ち上げ方法を革新的に解説。MVP、反復学習、ピボットなどの重要な戦略を紹介。"
           ISBN="9784862760974"
           publicationYear={2011}
+          bookId={5}
         />
         <BookCard
           title="ノルウェイの森"
@@ -105,6 +110,7 @@ export function DashboardPage() {
           summary="1969年の秋から翌年初頭にかけての青年時代を描いた恋愛小説。村上春樹の代表作の一つです。"
           ISBN="9784844764803"
           publicationYear={1987}
+          bookId={6}
         />
       </div>
     </MainLayout>
