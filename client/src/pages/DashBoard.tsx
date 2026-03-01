@@ -10,8 +10,6 @@ export function DashboardPage() {
     setIsFilterOpen(!isFilterOpen);
   };
 
-  // hooksからAPIを呼び出して書籍データを取得するコードはここに追加します。
-  // 例: const { books, loading, error } = useBooks();
   const { books, loading, error } = useBooks();
 
   // ローディング中、エラー中は早期リターンする
