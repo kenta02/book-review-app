@@ -72,8 +72,6 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 flex-1 overflow-y-auto">
         {/* <BookCard/> */}
 
-        {/* map形式でデータ分取得したデータを表示する */}
-
         {books.map((book) => (
           <BookCard
             key={book.id}
