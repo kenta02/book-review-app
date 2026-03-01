@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MainLayout } from "../components/layouts/MainLayout";
 import { BookCard } from "../components/BookCard";
+import { apiClient } from "../api/apiClient";
+import { useBooks } from "../hooks/useBooks";
 
 export function DashboardPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -8,6 +10,19 @@ export function DashboardPage() {
   const toggleFilter = () => {
     setIsFilterOpen(!isFilterOpen);
   };
+
+  // hooksからAPIを呼び出して書籍データを取得するコードはここに追加します。
+  // 例: const { books, loading, error } = useBooks();
+  const { books, loading, error } = useBooks();
+
+  // ローディング中、エラー中は早期リターンする
+  if (loading) {
+    return <MainLayout>Loading...</MainLayout>;
+  }
+
+  if (error) {
+    return <MainLayout>Error: {error}</MainLayout>;
+  }
 
   return (
     <MainLayout>
@@ -58,60 +73,22 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 flex-1 overflow-y-auto">
-        <BookCard
-          title="人を動かす"
-          author="デール・カーネギー"
-          ratingDisplay="5.0 (15件のレビュー)"
-          summary="人間関係の古典的名著。人に好かれ、人を説得し、人を変える原則をわかりやすく説いています。"
-          ISBN="9784422210517"
-          publicationYear={1936}
-          bookId={1}
-        />
-        <BookCard
-          title="リーダブルコード"
-          author="Dustin Boswell, Trevor Foucher"
-          ratingDisplay="4.8 (12件のレビュー)"
-          summary="より良いコードを書くための実践的テクニック。読みやすく、保守しやすいコードの書き方を学べます。"
-          ISBN="9784873115658"
-          publicationYear={2012}
-          bookId={2}
-        />
-        <BookCard
-          title="三体"
-          author="劉慈欣"
-          ratingDisplay="4.7 (18件のレビュー)"
-          summary="宇宙SFの傑作。壮大なスケールで描かれた、人類と異星人の運命が交差する壮大な物語です。"
-          ISBN="9784161206535"
-          publicationYear={2008}
-          bookId={3}
-        />
-        <BookCard
-          title="クリーンアーキテクチャ"
-          author="Robert C. Martin"
-          ratingDisplay="4.5 (9件のレビュー)"
-          summary="ソフトウェア設計の第一人者による、アーキテクチャの原則。テスト駆動設計とアーキテクチャの関係。"
-          ISBN="9784647196936"
-          publicationYear={2018}
-          bookId={4}
-        />
-        <BookCard
-          title="リーン・スタートアップ"
-          author="エリック・リース"
-          ratingDisplay="4.4 (11件のレビュー)"
-          summary="新規事業の立ち上げ方法を革新的に解説。MVP、反復学習、ピボットなどの重要な戦略を紹介。"
-          ISBN="9784862760974"
-          publicationYear={2011}
-          bookId={5}
-        />
-        <BookCard
-          title="ノルウェイの森"
-          author="村上春樹"
-          ratingDisplay="4.3 (20件のレビュー)"
-          summary="1969年の秋から翌年初頭にかけての青年時代を描いた恋愛小説。村上春樹の代表作の一つです。"
-          ISBN="9784844764803"
-          publicationYear={1987}
-          bookId={6}
-        />
+        {/* <BookCard/> */}
+
+        {/* map形式でデータ分取得したデータを表示する */}
+
+        {books.map((book) => (
+          <BookCard
+            key={book.id}
+            title={book.title}
+            author={book.author}
+            ratingDisplay={"4.5"} // ここは仮の値です。実際にはAPIから取得した評価を表示してください。
+            summary={book.summary}
+            ISBN={book.ISBN}
+            publicationYear={book.publicationYear}
+            bookId={book.id}
+          />
+        ))}
       </div>
     </MainLayout>
   );
