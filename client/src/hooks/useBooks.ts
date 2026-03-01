@@ -19,7 +19,10 @@ export function useBooks() {
         // APIクライアントから書籍一覧を取得する
         const res = await apiClient.getAllBooks();
         if (res?.data?.books) {
-          setBooks(res.data.books);
+          // 書籍データが正常に取得できた場合、状態を更新する
+          if (mounted) {
+            setBooks(res.data.books);
+          }
         } else {
           throw new Error("不正なレスポンス形式です。");
         }
