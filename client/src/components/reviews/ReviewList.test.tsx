@@ -10,7 +10,7 @@ const reviews: Review[] = [
     bookId: 10,
     userId: 2,
     rating: 3,
-    comment: "ok",
+    content: "ok",
     createdAt: "2023-01-01",
   },
   {
@@ -18,7 +18,7 @@ const reviews: Review[] = [
     bookId: 11,
     userId: 3,
     rating: 4,
-    comment: "good",
+    content: "good",
     createdAt: "2023-01-02",
   },
 ];
@@ -33,8 +33,8 @@ describe("ReviewList", () => {
     render(<ReviewList reviews={reviews} />);
     const items = screen.getAllByRole("listitem");
     expect(items).toHaveLength(2);
-    // match comment content specifically
-    expect(screen.getByText("Comment: ok")).toBeInTheDocument();
-    expect(screen.getByText("Comment: good")).toBeInTheDocument();
+    // match content specifically
+    expect(screen.getByText("Content: ok")).toBeInTheDocument();
+    expect(screen.getByText("Content: good")).toBeInTheDocument();
   });
 });

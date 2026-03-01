@@ -70,14 +70,12 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 flex-1 overflow-y-auto">
-        {/* <BookCard/> */}
-
         {books.map((book) => (
           <BookCard
             key={book.id}
             title={book.title}
             author={book.author}
-            ratingDisplay={"4.5"} // ここは仮の値です。実際にはAPIから取得した評価を表示してください。
+            ratingDisplay={"4.5"} // ここは仮の値です。実際にはAPIから取得した評価を表示します。
             summary={book.summary}
             ISBN={book.ISBN}
             publicationYear={book.publicationYear}
