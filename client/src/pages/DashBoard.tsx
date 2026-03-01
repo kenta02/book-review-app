@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { MainLayout } from "../components/layouts/MainLayout";
 import { BookCard } from "../components/BookCard";
-import { apiClient } from "../api/apiClient";
 import { useBooks } from "../hooks/useBooks";
 
 export function DashboardPage() {
