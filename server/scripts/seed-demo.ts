@@ -112,13 +112,7 @@ async function main() {
           defaults: { ...u, password: pw },
           transaction: tx,
         });
-        // ハッシュが毎回変わるので、bcrypt.compare で比較して更新
-        const currentPw = user.get('password') as string;
-        const isSame = await bcrypt.compare('password', currentPw);
-        if (!isSame) {
-          user.set('password', pw);
-          await user.save({ transaction: tx });
-        }
+        // 既存ユーザーのパスワードは変更しない（非上書き要件）
         users.push(user);
       }
 

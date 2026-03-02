@@ -51,7 +51,7 @@ npm run seed-demo
 # ts-node が未インストールなら npx を利用
 npx ts-node server/scripts/seed-demo.ts
 
-# 実行後：users=3, books=2, reviews=?., comments=?, favorites=? が投入されます
+# 実行後：users=3, books=6, reviews=8, comments=2, favorites=2 のデモデータ定義が適用されます
 # （既にレコードがある場合は重複せずにスキップされます）
 ```
 
