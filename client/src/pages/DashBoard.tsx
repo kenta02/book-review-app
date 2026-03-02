@@ -39,13 +39,17 @@ export function DashboardPage() {
 
       <div className="bg-gray-50 dark:bg-slate-900 rounded-xl p-4 sm:p-6 mb-6">
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-center flex-wrap">
-          <label>
-            <input
-              type="text"
-              placeholder="書籍名、著者名、ISBNで検索..."
-              className="flex-1 min-w-[250px] py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 border border-gray-300 dark:border-slate-700 rounded focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
-            />
+          {/* hidden label for accessibility */}
+          <label htmlFor="search-input" className="sr-only">
+            検索
           </label>
+          <input
+            id="search-input"
+            type="text"
+            aria-label="書籍名、著者名、ISBNで検索"
+            placeholder="書籍名、著者名、ISBNで検索..."
+            className="flex-1 min-w-[250px] py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 border border-gray-300 dark:border-slate-700 rounded focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
+          />
           <select className="py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded cursor-pointer focus:border-purple-600 focus:ring-2 focus:ring-purple-400">
             <option>評価順</option>
             <option>最新順</option>
@@ -61,10 +65,16 @@ export function DashboardPage() {
 
         {isFilterOpen && (
           <div className="mt-4 pt-4 border-t border-gray-300 dark:border-slate-700">
-            <label className="text-gray-700 dark:text-gray-400 mr-2">
+            <label
+              htmlFor="filter-year"
+              className="text-gray-700 dark:text-gray-400 mr-2"
+            >
               出版年
             </label>
-            <select className="py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded cursor-pointer focus:border-purple-600 focus:ring-2 focus:ring-purple-400">
+            <select
+              id="filter-year"
+              className="py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded cursor-pointer focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
+            >
               <option>全ての年</option>
             </select>
           </div>

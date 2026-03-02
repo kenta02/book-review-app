@@ -51,11 +51,11 @@ describe("DashboardPage", () => {
   beforeEach(() => {
     // reset api mock and localStorage stub
     (apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>).mockReset();
-    Object.defineProperty(window, "localStorage", {
+    Object.defineProperty(globalThis, "localStorage", {
       value: localStorageMock,
       writable: true,
     });
-    window.localStorage.clear();
+    globalThis.localStorage.clear();
   });
 
   it("renders loading and then book cards", async () => {
