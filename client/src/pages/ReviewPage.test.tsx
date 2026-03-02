@@ -25,11 +25,13 @@ const mockReviews = [
 
 describe("ReviewPage", () => {
   beforeEach(() => {
-    (apiClient.getReviews as unknown as vi.Mock).mockReset();
+    (apiClient.getReviews as unknown as ReturnType<typeof vi.fn>).mockReset();
   });
 
   it("renders loading then list", async () => {
-    (apiClient.getReviews as unknown as vi.Mock).mockResolvedValue({
+    (
+      apiClient.getReviews as unknown as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({
       data: {
         reviews: mockReviews,
         pagination: {
@@ -49,7 +51,9 @@ describe("ReviewPage", () => {
   });
 
   it("shows empty message when api returns []", async () => {
-    (apiClient.getReviews as unknown as vi.Mock).mockResolvedValue({
+    (
+      apiClient.getReviews as unknown as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({
       data: {
         reviews: [],
         pagination: {
@@ -67,9 +71,9 @@ describe("ReviewPage", () => {
   });
 
   it("shows error on failure", async () => {
-    (apiClient.getReviews as unknown as vi.Mock).mockRejectedValue(
-      new Error("fail"),
-    );
+    (
+      apiClient.getReviews as unknown as ReturnType<typeof vi.fn>
+    ).mockRejectedValue(new Error("fail"));
     render(<ReviewPage />);
     await waitFor(() => expect(screen.getByText(/エラー/)).toBeInTheDocument());
   });

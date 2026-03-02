@@ -36,11 +36,13 @@ function TestComponent() {
 
 describe("useBooks hook", () => {
   beforeEach(() => {
-    (apiClient.getAllBooks as unknown as vi.Mock).mockReset();
+    (apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>).mockReset();
   });
 
   it("starts in loading state then renders data", async () => {
-    (apiClient.getAllBooks as unknown as vi.Mock).mockResolvedValue({
+    (
+      apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({
       data: { books: dummyBooks },
     });
 
@@ -53,9 +55,9 @@ describe("useBooks hook", () => {
   });
 
   it("shows error when api fails", async () => {
-    (apiClient.getAllBooks as unknown as vi.Mock).mockRejectedValue(
-      new Error("fail"),
-    );
+    (
+      apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
+    ).mockRejectedValue(new Error("fail"));
 
     render(<TestComponent />);
     await waitFor(() => expect(screen.getByText(/error:/)).toBeInTheDocument());
