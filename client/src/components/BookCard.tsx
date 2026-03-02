@@ -7,7 +7,7 @@ interface BookCardProps {
   summary: string;
   ISBN: string;
   publicationYear: number;
-  bookId?: number;
+  bookId: number;
   liked?: boolean;
 }
 
@@ -18,7 +18,7 @@ export function BookCard({
   summary,
   ISBN,
   publicationYear,
-  bookId = 1,
+  bookId,
   liked = false,
 }: BookCardProps) {
   const navigate = useNavigate();
@@ -29,6 +29,7 @@ export function BookCard({
 
   return (
     <div
+      data-testid="book-card"
       onClick={handleCardClick}
       className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 cursor-pointer"
     >

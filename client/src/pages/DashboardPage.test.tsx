@@ -1,30 +1,109 @@
 import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { apiClient } from "../api/apiClient";
 import { DashboardPage } from "./DashBoard";
 import { MemoryRouter } from "react-router-dom";
+import type { Book } from "../types";
 
-// no need to mock apiClient because current implementation is static
+vi.mock("../api/apiClient", () => {
+  return {
+    apiClient: {
+      getAllBooks: vi.fn(),
+    },
+  };
+});
+
+// Vitest runs in a node-like environment; the Header component reads from
+// localStorage which isn't provided by default.  Provide a simple in-memory
+// stub so that rendering pages containing <Header> does not throw a
+// SecurityError.
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => (key in store ? store[key] : null),
+    setItem: (key: string, value: string) => {
+      store[key] = value.toString();
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+  };
+})();
+
+const sample: Book[] = [
+  {
+    id: 100,
+    title: "Sample",
+    author: "X",
+    publicationYear: 2000,
+    ISBN: "123",
+    summary: "s",
+    createdAt: "",
+    updatedAt: "",
+  },
+];
 
 describe("DashboardPage", () => {
-  it("renders main heading and sample cards", () => {
+  beforeEach(() => {
+    // reset api mock and localStorage stub
+    (apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>).mockReset();
+    Object.defineProperty(globalThis, "localStorage", {
+      value: localStorageMock,
+      writable: true,
+    });
+    globalThis.localStorage.clear();
+  });
+
+  it("renders loading and then book cards", async () => {
+    (
+      apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({
+      data: { books: sample },
+    });
     render(
       <MemoryRouter>
         <DashboardPage />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText(/書籍ダッシュボード/)).toBeInTheDocument();
-    // at least one of the hard-coded book titles should appear
-    const titles = screen.getAllByText(/人を動かす/);
-    expect(titles.length).toBeGreaterThan(0);
+    expect(screen.getByText(/Loading/)).toBeInTheDocument();
+    await waitFor(() => {
+      const items = screen.getAllByText(/Sample/);
+      expect(items.length).toBeGreaterThan(0);
+    });
   });
 
-  it("toggles filter panel when filter button is clicked", () => {
+  it("shows error message when request fails", async () => {
+    (
+      apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
+    ).mockRejectedValue(new Error("err"));
     render(
       <MemoryRouter>
         <DashboardPage />
       </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByText(/Error:/)).toBeInTheDocument());
+  });
+
+  it("toggles filter panel when filter button is clicked", async () => {
+    // resolve empty list so we don't need cards
+    (
+      apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({ data: { books: [] } });
+
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    // wait for loading to finish
+    await waitFor(() =>
+      expect(screen.queryByText(/Loading/)).not.toBeInTheDocument(),
     );
 
     const filterBtn = screen.getByRole("button", { name: /フィルター/ });

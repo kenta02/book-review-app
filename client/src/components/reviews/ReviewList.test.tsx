@@ -33,7 +33,7 @@ describe("ReviewList", () => {
     render(<ReviewList reviews={reviews} />);
     const items = screen.getAllByRole("listitem");
     expect(items).toHaveLength(2);
-    // match content field specifically
+    // match content specifically
     expect(screen.getByText("Content: ok")).toBeInTheDocument();
     expect(screen.getByText("Content: good")).toBeInTheDocument();
   });

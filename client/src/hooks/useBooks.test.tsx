@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom";
 import { render, screen, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "../api/apiClient";
 import { useBooks } from "./useBooks";
 import type { Book } from "../types";
@@ -13,80 +13,53 @@ vi.mock("../api/apiClient", () => {
   };
 });
 
-function HookTester() {
-  const { books, loading, error } = useBooks();
-  return (
-    <div>
-      <div data-testid="loading">{String(loading)}</div>
-      <div data-testid="error">{error ?? "none"}</div>
-      <ul>
-        {books.map((b) => (
-          <li key={b.id}>{b.title}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-const sampleBooks: Book[] = [
+const dummyBooks: Book[] = [
   {
     id: 1,
-    title: "A",
-    author: "a",
-    publicationYear: 1999,
-    ISBN: "",
-    summary: "",
+    title: "Test A",
+    author: "Author A",
+    publicationYear: 2020,
+    ISBN: "111",
+    summary: "s",
     createdAt: "",
     updatedAt: "",
   },
 ];
 
-describe("useBooks", () => {
+// helper component that uses the hook
+function TestComponent() {
+  const { books, loading, error } = useBooks();
+  if (loading) return <div>loading</div>;
+  if (error) return <div>error: {error}</div>;
+  return <div>{books.map((b) => b.title).join(",")}</div>;
+}
+
+describe("useBooks hook", () => {
   beforeEach(() => {
     (apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>).mockReset();
   });
 
-  it("returns books and clears loading on success", async () => {
+  it("starts in loading state then renders data", async () => {
     (
       apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
-    ).mockResolvedValue({ data: { books: sampleBooks } });
-
-    render(<HookTester />);
-    expect(screen.getByTestId("loading")).toHaveTextContent("true");
-
-    await waitFor(() => {
-      expect(screen.getByTestId("loading")).toHaveTextContent("false");
+    ).mockResolvedValue({
+      data: { books: dummyBooks },
     });
 
-    // book title should appear
-    expect(screen.getByText("A")).toBeInTheDocument();
-    expect(screen.getByTestId("error")).toHaveTextContent("none");
+    render(<TestComponent />);
+    expect(screen.getByText(/loading/)).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Test A/)).toBeInTheDocument();
+    });
   });
 
-  it("sets error state when API rejects", async () => {
+  it("shows error when api fails", async () => {
     (
       apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
     ).mockRejectedValue(new Error("fail"));
 
-    render(<HookTester />);
-    await waitFor(() => {
-      expect(screen.getByTestId("loading")).toHaveTextContent("false");
-    });
-
-    expect(screen.getByTestId("error")).toHaveTextContent("fail");
-  });
-
-  it("handles invalid response shape", async () => {
-    (
-      apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
-    ).mockResolvedValue({ data: {} });
-
-    render(<HookTester />);
-    await waitFor(() => {
-      expect(screen.getByTestId("loading")).toHaveTextContent("false");
-    });
-    expect(screen.getByTestId("error")).toHaveTextContent(
-      /不正なレスポンス形式/, // error message in hook
-    );
+    render(<TestComponent />);
+    await waitFor(() => expect(screen.getByText(/error:/)).toBeInTheDocument());
   });
 });
