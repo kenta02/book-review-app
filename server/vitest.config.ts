@@ -6,7 +6,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html'],
       reportsDirectory: './coverage',
-      exclude: ['migrations/**', 'scripts/**']
+      exclude: [
+        'migrations/**',
+        'scripts/**',
+        'src/validators/messages.ts',  // バリデーションメッセージ定数（テスト不要）
+        'src/constants/**',              // 定数ファイル一般（テスト不要）
+      ]
     }
   }
 })
