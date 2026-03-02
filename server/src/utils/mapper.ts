@@ -18,6 +18,16 @@ function asNumberOrNull(value: unknown): number | null {
   return Number.isNaN(n) ? null : n;
 }
 
+// 日付文字列を ISO 8601 に変換し、無効な日時なら空文字を返す
+function formatDate(value: unknown): string {
+  const s = asString(value);
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) {
+    return '';
+  }
+  return d.toISOString();
+}
+
 /**
  * Comment Model → DTO 型変換
  * @returns {CommentDto} 型安全な DTO
@@ -32,8 +42,8 @@ export function commentModelToDto(m: SerializableModel): CommentDto {
   const reviewId = Number(js['reviewId']);
   const userId = asNumberOrNull(js['userId']);
   // 日時を ISO 8601 形式文字列に変換
-  const createdAt = new Date(asString(js['createdAt'])).toISOString();
-  const updatedAt = new Date(asString(js['updatedAt'])).toISOString();
+  const createdAt = formatDate(js['createdAt']);
+  const updatedAt = formatDate(js['updatedAt']);
 
   // DTO を構築して返却
   return {
