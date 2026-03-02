@@ -18,10 +18,7 @@ async function main() {
     await sequelize.authenticate();
     console.log('DB connected');
 
-    // clear related tables in a safe order
-    for (const m of [Favorite, Comment, Review, Book, User]) {
-      await m.destroy({ where: {} });
-    }
+    // --- 全消去は危険なので、キー付きの挿入で既存データは残す
 
     const pw = await bcrypt.hash('password', 10);
 
@@ -102,46 +99,96 @@ async function main() {
     ];
     // --------------------------------------------------------------------------
 
-    // concrete instance types allow us to avoid `any`
+    // 型安全のため具体型を定義
     type UserInstance = InstanceType<typeof User>;
     type BookInstance = InstanceType<typeof Book>;
+    type ReviewInstance = InstanceType<typeof Review>;
 
-    const users: UserInstance[] = await Promise.all(
-      userInfos.map((u) => User.create({ ...u, password: pw }))
-    );
+    // ログで使うので外側で変数宣言
+    let users: UserInstance[] = [];
+    let books: BookInstance[] = [];
+    let reviews: ReviewInstance[] = [];
 
-    const books: BookInstance[] = await Promise.all(bookInfos.map((b) => Book.create(b)));
+    // 全操作を1つのトランザクションでまとめる
+    await sequelize.transaction(async (tx) => {
+      // upsert users by email (unique key)
+      users = [];
+      for (const u of userInfos) {
+        const [user] = await User.findOrCreate({
+          where: { email: u.email },
+          defaults: { ...u, password: pw },
+          transaction: tx,
+        });
+        // 既存ユーザーのパスワードは変更しない（非上書き要件）
+        users.push(user);
+      }
 
-    const uid = (i: number) => users[i].get('id') as number;
-    const bid = (i: number) => books[i].get('id') as number;
+      // upsert books by ISBN
+      books = [];
+      for (const b of bookInfos) {
+        const [book] = await Book.findOrCreate({
+          where: { ISBN: b.ISBN },
+          defaults: b,
+          transaction: tx,
+        });
+        books.push(book);
+      }
 
-    const reviews = await Promise.all(
-      reviewInfos.map((r) =>
-        Review.create({
-          bookId: bid(r.bookIndex),
-          userId: uid(r.userIndex),
-          content: r.content,
-          rating: r.rating,
-        })
-      )
-    );
+      const uid = (i: number) => users[i].get('id') as number;
+      const bid = (i: number) => books[i].get('id') as number;
 
-    await Promise.all(
-      commentInfos.map((c) =>
-        Comment.create({
-          reviewId: reviews[c.reviewIndex].get('id') as number,
-          userId: uid(c.userIndex),
-          content: c.content,
-          parentId: null,
-        })
-      )
-    );
+      // レビューの重複登録を防ぐため findOrCreate
+      reviews = [];
+      for (const r of reviewInfos) {
+        const [review] = await Review.findOrCreate({
+          where: {
+            bookId: bid(r.bookIndex),
+            userId: uid(r.userIndex),
+            content: r.content,
+          },
+          defaults: {
+            bookId: bid(r.bookIndex),
+            userId: uid(r.userIndex),
+            content: r.content,
+            rating: r.rating,
+          },
+          transaction: tx,
+        });
+        reviews.push(review as ReviewInstance);
+      }
 
-    await Promise.all(
-      favoriteInfos.map((f) =>
-        Favorite.create({ userId: uid(f.userIndex), bookId: bid(f.bookIndex) })
-      )
-    );
+      // コメントも同じく重複を防ぐ
+      for (const c of commentInfos) {
+        await Comment.findOrCreate({
+          where: {
+            reviewId: reviews[c.reviewIndex].get('id') as number,
+            userId: uid(c.userIndex),
+            content: c.content,
+          },
+          defaults: {
+            reviewId: reviews[c.reviewIndex].get('id') as number,
+            userId: uid(c.userIndex),
+            content: c.content,
+            parentId: null,
+          },
+          transaction: tx,
+        });
+      }
+
+      // favorites は findOrCreate で安全に追加
+      await Promise.all(
+        favoriteInfos.map((f) =>
+          Favorite.findOrCreate({
+            where: {
+              userId: uid(f.userIndex),
+              bookId: bid(f.bookIndex),
+            },
+            defaults: { userId: uid(f.userIndex), bookId: bid(f.bookIndex) },
+            transaction: tx,
+          })
+        )
+      );
+    });
 
     console.log(
       `Seed completed: users=${users.length}, books=${books.length}, reviews=${
