@@ -6,6 +6,13 @@ import Review from '../src/models/Review';
 import Comment from '../src/models/Comment';
 import Favorite from '../src/models/Favorite';
 
+/**
+ * データベースに接続して初期データを投入するシード処理を実行する。
+ *
+ * データベース接続を検証し、関連テーブルの既存レコードを削除した上で、
+ * サンプルのユーザー・書籍・レビュー・コメント・お気に入りを作成してログ出力し、処理終了コードでプロセスを終了します。
+ * シードでは全ユーザーに対してパスワード文字列 "password" をハッシュ化して設定します。
+ */
 async function main() {
   try {
     await sequelize.authenticate();
