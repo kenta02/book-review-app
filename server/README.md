@@ -40,12 +40,19 @@ DB_NAME=book_review
 ### 0. テストデータ（Seeder）
 
 開発用のテストデータを投入するスクリプトを `server/scripts/seed-demo.ts` に用意しました。
-事前に `.env` を設定した上で、以下で実行してください：
+`package.json` に npm スクリプトも追加してあるので、プロジェクトルートから実行できます。
+スクリプトは再実行しても既存データを重複作成せず、新規のみ追加するよう改善されています。
 
 ```bash
-# 例：ts-node が未インストールの場合
+# プロジェクトルートまたは server/ ディレクトリから実行
+npm run seed-demo
+
+# あるいは ts-node を直接使う場合
+# ts-node が未インストールなら npx を利用
 npx ts-node server/scripts/seed-demo.ts
-# 実行後：users=3, books=2, reviews=2, comments=2, favorites=2 が投入されます
+
+# 実行後：users=3, books=6, reviews=8, comments=2, favorites=2 のデモデータ定義が適用されます
+# （既にレコードがある場合は重複せずにスキップされます）
 ```
 
 ---
