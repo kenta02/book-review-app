@@ -29,6 +29,7 @@ export function BookCard({
 
   return (
     <div
+      data-testid="book-card"
       onClick={handleCardClick}
       className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 cursor-pointer"
     >

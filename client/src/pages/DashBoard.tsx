@@ -39,11 +39,13 @@ export function DashboardPage() {
 
       <div className="bg-gray-50 dark:bg-slate-900 rounded-xl p-4 sm:p-6 mb-6">
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-center flex-wrap">
-          <input
-            type="text"
-            placeholder="書籍名、著者名、ISBNで検索..."
-            className="flex-1 min-w-[250px] py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 border border-gray-300 dark:border-slate-700 rounded focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
-          />
+          <label>
+            <input
+              type="text"
+              placeholder="書籍名、著者名、ISBNで検索..."
+              className="flex-1 min-w-[250px] py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 border border-gray-300 dark:border-slate-700 rounded focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
+            />
+          </label>
           <select className="py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded cursor-pointer focus:border-purple-600 focus:ring-2 focus:ring-purple-400">
             <option>評価順</option>
             <option>最新順</option>
