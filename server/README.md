@@ -67,7 +67,7 @@ npm run dev
 
 **目的：**
 
-- REST APIサーバーをポート `3000` で起動
+- REST APIサーバーをポート `300` で起動
 - データベースに接続し、テーブルを自動作成・同期
 
 **出力例：**
@@ -75,13 +75,13 @@ npm run dev
 ```
 ✅ DB connected
 ✅ DB synced
-🚀 API running on http://localhost:3000
+🚀 API running on http://localhost:300
 ```
 
 **アクセス可能なエンドポイント：**
 
-- `GET http://localhost:3000/api/books` - 書籍一覧取得
-- `POST http://localhost:3000/api/auth/register` - ユーザー登録
+- `GET http://localhost:300/api/books` - 書籍一覧取得
+- `POST http://localhost:300/api/auth/register` - ユーザー登録
 - その他のAPIエンドポイント
 
 ---
@@ -104,7 +104,7 @@ npm run swagger
 📚 Swagger UI running on http://localhost:8080
 📄 OpenAPI spec: http://localhost:8080/openapi.yaml
 💾 OpenAPI JSON: http://localhost:8080/openapi.json
-🔀 API proxy: http://localhost:8080/api/* -> http://localhost:3000/api/*
+🔀 API proxy: http://localhost:8080/api/* -> http://localhost:300/api/*
 ```
 
 **アクセス方法：**
@@ -116,14 +116,18 @@ npm run swagger
 
 開発・テスト時に毎回ログインしてトークンを取得するのが手間な場合、ヘルパースクリプト `get-token` を用意しています。ログインして取得した JWT を標準出力に表示するため、Swagger の Authorize へ貼り付けたり、`curl` の検証に利用できます。
 
-- 実行例（tanaka ユーザーを使用）：
+- 実行例（seed データに含まれるユーザーでログイン）：
+
+  デフォルトで投入されるテストユーザーは `alice`/`bob`/`charlie` に加えて README 内の例に合わせて `tanaka` がいます。
+  パスワードはいずれも `password` です。必要に応じて別途 `npm run seed-demo` を実行してから試してください。
 
 ```bash
 # サーバー配下（推奨）
-cd server && npm run token -- --email tanaka@example.com --password password123
+cd server
+npm run token -- --email tanaka@example.com --password password
 
 # またはプロジェクトルートから（ディレクトリ移動したくない場合）
-npm --prefix server run token -- --email tanaka@example.com --password password123
+npm --prefix server run token -- --email tanaka@example.com --password password
 ```
 
 - 出力例：
@@ -137,6 +141,8 @@ curl example:
 curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:3000/api/auth/me
 ```
 
+(パスワードやアカウントが間違っているとログイン失敗エラーが表示されます。まず `npm run seed-demo` してユーザーを投入するか、`/api/auth/register` で自分でアカウントを作成してください。)
+
 - オプション：`--save` をつけると `server/.env` に `TEST_TOKEN=<JWT_TOKEN>` を追記します（ローカル限定の利便性向上。`.env` はコミットしないでください）。
 
 ---
@@ -149,7 +155,7 @@ curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:3000/api/auth/me
    npm run dev
    ```
 
-   待機：`🚀 API running on http://localhost:3000` が表示されるまで
+   待機：`🚀 API running on http://localhost:300` が表示されるまで
 
 2. **ターミナル2でSwagger UIを起動：**
 
@@ -192,7 +198,7 @@ mysql -u app -p -h localhost book_review -e "SELECT 1;"
 Swagger UIで以下のエラーが表示されます：
 
 ```
-Failed to fetch http://localhost:3000/api
+Failed to fetch http://localhost:300/api
 ```
 
 **解決方法：**

@@ -27,6 +27,7 @@ async function main() {
       { username: 'alice', email: 'alice@example.com' },
       { username: 'bob', email: 'bob@example.com' },
       { username: 'charlie', email: 'charlie@example.com' },
+      { username: 'tanaka', email: 'tanaka@example.com' },
     ];
 
     const bookInfos = [
