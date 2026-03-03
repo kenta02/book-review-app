@@ -3,6 +3,23 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Header } from "./Header";
 
+// simple in-memory stub for localStorage used in tests
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => (key in store ? store[key] : null),
+    setItem: (key: string, value: string) => {
+      store[key] = value.toString();
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+  };
+})();
+
 // helper to reset localStorage and html class
 const resetEnv = () => {
   localStorage.clear();
@@ -11,6 +28,11 @@ const resetEnv = () => {
 
 describe("Header", () => {
   beforeEach(() => {
+    Object.defineProperty(globalThis, "localStorage", {
+      value: localStorageMock,
+      writable: true,
+    });
+    globalThis.localStorage.clear();
     resetEnv();
   });
 

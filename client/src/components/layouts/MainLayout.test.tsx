@@ -8,6 +8,33 @@ import { BrowserRouter } from "react-router-dom";
 // but MainLayout already imports real Sidebar so we can render normally.
 
 describe("MainLayout", () => {
+  // Vitest の jsdom 環境では localStorage にアクセスすると
+  // "SecurityError: Cannot initialize local storage without a `--localstorage-file` path"
+  // という例外が投げられることがあるため、簡易モックを定義しておく。
+  const localStorageMock = (() => {
+    let store: Record<string, string> = {};
+    return {
+      getItem: (key: string) => (key in store ? store[key] : null),
+      setItem: (key: string, value: string) => {
+        store[key] = value.toString();
+      },
+      removeItem: (key: string) => {
+        delete store[key];
+      },
+      clear: () => {
+        store = {};
+      },
+    };
+  })();
+
+  beforeEach(() => {
+    Object.defineProperty(globalThis, "localStorage", {
+      value: localStorageMock,
+      writable: true,
+    });
+    globalThis.localStorage.clear();
+  });
+
   it("renders children and toggles sidebar via menu button", () => {
     render(
       <BrowserRouter>
