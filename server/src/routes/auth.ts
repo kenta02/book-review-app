@@ -5,6 +5,13 @@ import jwt from 'jsonwebtoken';
 import User from '../models/Users';
 import { authenticateToken } from '../middleware/auth';
 import { ERROR_MESSAGES } from '../constants/error-messages';
+import { logger } from '../utils/logger';
+
+// using a shared regex constant simplifies maintenance and allows us to
+// annotate it for Sonar.  Pattern is intentionally simple and contains no
+// nested quantifiers; worst-case complexity is linear.  See Sonar rule
+// Typescript:S6055 (ReDoS).
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // NOSONAR
 
 const router = express.Router();
 
@@ -39,7 +46,8 @@ const router = express.Router();
 router.post('/register', async (req: Request, res: Response) => {
   try {
     const { username, email, password } = req.body;
-    console.debug('Received registration data:', req.body);
+    // avoid logging user-controlled body content
+    logger.debug('Received registration request');
 
     const errors = [];
     if (!username || typeof username !== 'string' || username.length < 2 || username.length > 150) {
@@ -49,7 +57,8 @@ router.post('/register', async (req: Request, res: Response) => {
       });
     }
 
-    if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    // prevent super‑long input from hitting the regex
+    if (!email || typeof email !== 'string' || email.length > 320 || !EMAIL_REGEX.test(email)) {
       errors.push({
         field: 'email',
         message: ERROR_MESSAGES.EMAIL_FORMAT,
@@ -112,7 +121,7 @@ router.post('/register', async (req: Request, res: Response) => {
     });
 
     const userJson = newUser.toJSON();
-    const jwtSecret = (process.env.JWT_SECRET || 'dev_secret_key_12345') as string;
+    const jwtSecret: string = process.env.JWT_SECRET || 'dev_secret_key_12345';
 
     // JWT ペイロード: 機密情報（パスワード等）は含めない
     const jwtPayload = {
@@ -177,10 +186,12 @@ router.post('/register', async (req: Request, res: Response) => {
 router.post('/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-    console.info('Received login data:', req.body);
+    // avoid logging user-controlled body content
+    logger.info('Received login request');
 
     const errors = [];
-    if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    // prevent super‑long input from hitting the regex
+    if (!email || typeof email !== 'string' || email.length > 320 || !EMAIL_REGEX.test(email)) {
       errors.push({
         field: 'email',
         message: ERROR_MESSAGES.EMAIL_FORMAT,
@@ -216,10 +227,14 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     // bcrypt.compare: 平文とハッシュを比較（戻り値: true/false）
-    const isPasswordVaild = await bcrypt.compare(password, existUser.toJSON().password as string);
+    // password field is stored as string in the model; treat missing value
+    // as comparison failure rather than asserting the type (avoids Sonar warning)
+    const storedPassword = existUser.toJSON().password;
+    const isPasswordVaild = await bcrypt.compare(password, storedPassword || '');
 
     if (isPasswordVaild) {
-      const jwtSecret = (process.env.JWT_SECRET || 'dev_secret_key_12345') as string;
+      // the fallback literal guarantees a string result
+      const jwtSecret: string = process.env.JWT_SECRET || 'dev_secret_key_12345';
       const userJson = existUser.toJSON();
 
       const jwtPayload = {

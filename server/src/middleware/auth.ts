@@ -46,7 +46,7 @@ export const authenticateToken = async (
   }
   // トークン部分を取り出す(7文字目以降)
   const token = authHeader.substring(7);
-  const jwtSecret = (process.env.JWT_SECRET || 'dev_secret_key_12345') as string;
+  const jwtSecret: string = process.env.JWT_SECRET || 'dev_secret_key_12345';
 
   // JWTを検証
   try {

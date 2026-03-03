@@ -65,7 +65,8 @@ router.get('/reviews', async (req: Request, res: Response) => {
         error: { message: error.message, code: error.code },
       });
     }
-    logger.error('[REVIEWS GET] Error:', error);
+    // avoid logging potentially user-controlled data from the error object
+    logger.error('[REVIEWS GET] unexpected error occurred');
     return res.status(500).json({
       success: false,
       error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
@@ -119,7 +120,8 @@ router.get('/reviews/:reviewId', async (req: Request, res: Response) => {
       });
     }
 
-    logger.error('[REVIEWS GET DETAIL] Error:', error);
+    // avoid logging potentially user-controlled data from the error object
+    logger.error('[REVIEWS GET DETAIL] unexpected error occurred');
     return res.status(500).json({
       success: false,
       error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
@@ -190,7 +192,8 @@ router.delete<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req,
       });
     }
 
-    logger.error('[REVIEWS DELETE] Error:', error);
+    // avoid logging potentially user-controlled data from the error object
+    logger.error('[REVIEWS DELETE] unexpected error occurred');
     res.status(500).json({
       success: false,
       error: {
@@ -265,7 +268,8 @@ router.put<ReviewParams>('/reviews/:reviewId', authenticateToken, async (req, re
       });
     }
 
-    logger.error('[REVIEWS PUT] Error:', error);
+    // avoid logging potentially user-controlled data from the error object
+    logger.error('[REVIEWS PUT] unexpected error occurred');
     res.status(500).json({
       success: false,
       error: {
@@ -350,7 +354,8 @@ router.post<ReviewParams>('/reviews', authenticateToken, async (req, res) => {
       });
     }
 
-    logger.error('[REVIEWS POST] Error:', error);
+    // avoid logging potentially user-controlled data from the error object
+    logger.error('[REVIEWS POST] unexpected error occurred');
     res.status(500).json({
       success: false,
       error: {
