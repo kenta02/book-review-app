@@ -11,7 +11,10 @@ import Favorite from '../src/models/Favorite';
  *
  * データベース接続を検証し、関連テーブルの既存レコードを削除した上で、
  * サンプルのユーザー・書籍・レビュー・コメント・お気に入りを作成してログ出力し、処理終了コードでプロセスを終了します。
- * シードでは全ユーザーに対してパスワード文字列 "password" をハッシュ化して設定します。
+ * シードでは全ユーザーに対してパスワード文字列 "password123" をハッシュ化して設定します。
+ *
+ * 既存ユーザーが見つかった場合もパスワードを最新値に更新します（以前は上書きしない仕様でしたが、
+ * テストデータを手軽にリセットするために改めました）。
  */
 async function main() {
   try {
@@ -20,7 +23,7 @@ async function main() {
 
     // --- 全消去は危険なので、キー付きの挿入で既存データは残す
 
-    const pw = await bcrypt.hash('password', 10);
+    const pw = await bcrypt.hash('password123', 10);
 
     // --- seed data definitions ------------------------------------------------
     const userInfos = [
@@ -115,12 +118,15 @@ async function main() {
       // upsert users by email (unique key)
       users = [];
       for (const u of userInfos) {
-        const [user] = await User.findOrCreate({
+        const [user, created] = await User.findOrCreate({
           where: { email: u.email },
           defaults: { ...u, password: pw },
           transaction: tx,
         });
-        // 既存ユーザーのパスワードは変更しない（非上書き要件）
+        if (!created) {
+          // パスワードは常に最新の値に更新する
+          await user.update({ password: pw }, { transaction: tx });
+        }
         users.push(user);
       }
 
@@ -197,7 +203,7 @@ async function main() {
       }, comments=${commentInfos.length}, favorites=${favoriteInfos.length}`
     );
     console.log(
-      'Logins: email/password = alice@example.com/password, bob@example.com/password, charlie@example.com/password'
+      'Logins: email/password = alice@example.com/password123, bob@example.com/password123, charlie@example.com/password123, tanaka@example.com/password123'
     );
     process.exit(0);
   } catch (err) {

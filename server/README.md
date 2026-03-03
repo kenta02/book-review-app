@@ -119,15 +119,19 @@ npm run swagger
 - 実行例（seed データに含まれるユーザーでログイン）：
 
   デフォルトで投入されるテストユーザーは `alice`/`bob`/`charlie` に加えて README 内の例に合わせて `tanaka` がいます。
-  パスワードはいずれも `password` です。必要に応じて別途 `npm run seed-demo` を実行してから試してください。
+  パスワードはいずれも `password123` です。
+
+  `npm run seed-demo` は同じ e-mail が存在すればパスワードも上書きするように改良されているので、
+  変更があった場合は再実行するだけで OK です。
+  ただし `tanaka` のパスワードだけを個別にリセットしたいときは `npm run seed-tanaka` を使ってください。
 
 ```bash
 # サーバー配下（推奨）
 cd server
-npm run token -- --email tanaka@example.com --password password
+npm run token -- --email tanaka@example.com --password password123
 
 # またはプロジェクトルートから（ディレクトリ移動したくない場合）
-npm --prefix server run token -- --email tanaka@example.com --password password
+npm --prefix server run token -- --email tanaka@example.com --password password123
 ```
 
 - 出力例：
@@ -144,6 +148,16 @@ curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:3000/api/auth/me
 (パスワードやアカウントが間違っているとログイン失敗エラーが表示されます。まず `npm run seed-demo` してユーザーを投入するか、`/api/auth/register` で自分でアカウントを作成してください。)
 
 - オプション：`--save` をつけると `server/.env` に `TEST_TOKEN=<JWT_TOKEN>` を追記します（ローカル限定の利便性向上。`.env` はコミットしないでください）。
+
+**補足**: パスワードを変更したり、特定のユーザーのみをリセットしたりする場合は以下のコマンドが便利です。
+
+```bash
+# 全ユーザーのパスワードをデフォルト（password123）に更新する
+npm run seed-demo
+
+# tanaka@example.com のみパスワードを (再)設定する
+npm run seed-tanaka
+```
 
 ---
 

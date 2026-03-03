@@ -21,7 +21,8 @@
     "lint:fix": "eslint 'src/**/*.{ts,tsx}' --ext .ts --fix",
     "format": "prettier --write .",
     "check-types": "tsc -p tsconfig.json --noEmit",
-    "seed-demo": "ts-node ./scripts/seed-demo.ts"
+    "seed-demo": "ts-node ./scripts/seed-demo.ts",
+    "seed-tanaka": "ts-node ./scripts/seed-tanaka.ts"
   },
   "keywords": [],
   "author": "",
