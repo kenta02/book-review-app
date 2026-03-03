@@ -12,7 +12,12 @@ const app = express();
 // apply basic security headers to Swagger UI as well
 app.use(helmet());
 app.use(cors());
-app.use(express.json());
+// NOTE: we do *not* add express.json() here.  Swagger UI proxies requests
+// directly to the API server; parsing the JSON body in this server would
+// consume the request stream and leave nothing for the proxy, causing the
+// backend to hang waiting for a body (spinner that never stops).
+// The only JSON data this process handles are in the OpenAPI spec responses,
+// which are served via `res.json`/`res.type()` calls rather than middleware.
 
 // Swagger UI設定
 const swaggerFilePath = (() => {

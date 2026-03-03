@@ -1,4 +1,7 @@
+/* eslint-disable no-console */
+
 import bcrypt from 'bcrypt';
+
 import { sequelize } from '../src/sequelize';
 import User from '../src/models/Users';
 import Book from '../src/models/Book';
@@ -16,6 +19,11 @@ import Favorite from '../src/models/Favorite';
  * 既存ユーザーが見つかった場合もパスワードを最新値に更新します（以前は上書きしない仕様でしたが、
  * テストデータを手軽にリセットするために改めました）。
  */
+// エントリポイントは async 関数にまとめる。
+// eslint で "Prefer top-level await" 警告が出るが、
+// このプロジェクトは CommonJS モジュールのままなのでトップレベル await は使えない。
+// したがって eslint コメントでルールをオフにする。
+
 async function main() {
   try {
     await sequelize.authenticate();
