@@ -67,7 +67,7 @@ npm run dev
 
 **目的：**
 
-- REST APIサーバーをポート `3001` で起動
+- REST APIサーバーをポート `3000` で起動
 - データベースに接続し、テーブルを自動作成・同期
 
 **出力例：**
@@ -75,13 +75,13 @@ npm run dev
 ```
 ✅ DB connected
 ✅ DB synced
-🚀 API running on http://localhost:3001
+🚀 API running on http://localhost:3000
 ```
 
 **アクセス可能なエンドポイント：**
 
-- `GET http://localhost:3001/api/books` - 書籍一覧取得
-- `POST http://localhost:3001/api/auth/register` - ユーザー登録
+- `GET http://localhost:3000/api/books` - 書籍一覧取得
+- `POST http://localhost:3000/api/auth/register` - ユーザー登録
 - その他のAPIエンドポイント
 
 ---
@@ -104,7 +104,7 @@ npm run swagger
 📚 Swagger UI running on http://localhost:8080
 📄 OpenAPI spec: http://localhost:8080/openapi.yaml
 💾 OpenAPI JSON: http://localhost:8080/openapi.json
-🔀 API proxy: http://localhost:8080/api/* -> http://localhost:3001/api/*
+🔀 API proxy: http://localhost:8080/api/* -> http://localhost:3000/api/*
 ```
 
 **アクセス方法：**
@@ -134,7 +134,7 @@ npm --prefix server run token -- --email tanaka@example.com --password password1
 === END TOKEN ===
 
 curl example:
-curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:3001/api/auth/me
+curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:3000/api/auth/me
 ```
 
 - オプション：`--save` をつけると `server/.env` に `TEST_TOKEN=<JWT_TOKEN>` を追記します（ローカル限定の利便性向上。`.env` はコミットしないでください）。
@@ -149,7 +149,7 @@ curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:3001/api/auth/me
    npm run dev
    ```
 
-   待機：`🚀 API running on http://localhost:3001` が表示されるまで
+   待機：`🚀 API running on http://localhost:3000` が表示されるまで
 
 2. **ターミナル2でSwagger UIを起動：**
 
@@ -192,7 +192,7 @@ mysql -u app -p -h localhost book_review -e "SELECT 1;"
 Swagger UIで以下のエラーが表示されます：
 
 ```
-Failed to fetch http://localhost:3001/api
+Failed to fetch http://localhost:3000/api
 ```
 
 **解決方法：**

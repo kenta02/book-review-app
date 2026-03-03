@@ -27,7 +27,7 @@ function postJson(pathname: string, data: object): Promise<any> {
   const body = JSON.stringify(data);
   const options = {
     hostname: 'localhost',
-    port: 3001,
+    port: 3000,
     path: pathname,
     method: 'POST',
     headers: {
@@ -72,7 +72,7 @@ function postJson(pathname: string, data: object): Promise<any> {
     console.log('=== END TOKEN ===\n');
 
     console.log('curl example:');
-    console.log(`curl -H "Authorization: Bearer ${token}" http://localhost:3001/api/auth/me`);
+    console.log(`curl -H "Authorization: Bearer ${token}" http://localhost:3000/api/auth/me`);
 
     if (save) {
       const envPath = path.join(__dirname, '..', '.env');
