@@ -49,14 +49,33 @@ export function BookDetailPage() {
 
   return (
     <MainLayout>
-      {/* 戻るボタン */}
-      <button
-        onClick={handleBack}
-        className="mb-6 flex items-center text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
-      >
-        <span className="mr-2">←</span>
-        <span>戻る</span>
-      </button>
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        {/* 戻るボタン */}
+        <button
+          onClick={handleBack}
+          className="flex items-center text-purple-600 transition hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
+        >
+          <span className="mr-2">←</span>
+          <span>書籍一覧に戻る</span>
+        </button>
+
+        <div className="flex items-center gap-3 self-start md:self-auto">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2"
+          >
+            <span aria-hidden="true">✏️</span>
+            <span>編集</span>
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2"
+          >
+            <span aria-hidden="true">🗑️</span>
+            <span>削除</span>
+          </button>
+        </div>
+      </div>
 
       {/* 本の詳細セクション */}
       <BookInfoDetail book={book} />
