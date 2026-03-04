@@ -1,0 +1,44 @@
+name: SonarCloud Issues Sync
+
+on:
+  workflow_run:
+    workflows: ["SonarCloud Analysis"]
+    types: [completed]
+    branches:
+      - main
+      - develop
+
+jobs:
+  sync-issues:
+    # SonarCloud 分析が成功したときのみ実行
+    if: github.event.workflow_run.conclusion == 'success'
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Use Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+      
+      - name: Run SonarCloud Issues Sync
+        run: node scripts/sync-sonarcloud-issues.js
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+          GH_REPO: ${{ github.repository }}
+      
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ SonarCloud Issues Sync failed. Please check the workflow logs.'
+            })

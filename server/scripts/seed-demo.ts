@@ -1,4 +1,7 @@
+/* eslint-disable no-console */
+
 import bcrypt from 'bcrypt';
+
 import { sequelize } from '../src/sequelize';
 import User from '../src/models/Users';
 import Book from '../src/models/Book';
@@ -6,122 +9,209 @@ import Review from '../src/models/Review';
 import Comment from '../src/models/Comment';
 import Favorite from '../src/models/Favorite';
 
+/**
+ * データベースに接続して初期データを投入するシード処理を実行する。
+ *
+ * データベース接続を検証し、関連テーブルの既存レコードを削除した上で、
+ * サンプルのユーザー・書籍・レビュー・コメント・お気に入りを作成してログ出力し、処理終了コードでプロセスを終了します。
+ * シードでは全ユーザーに対してパスワード文字列 "password123" をハッシュ化して設定します。
+ *
+ * 既存ユーザーが見つかった場合もパスワードを最新値に更新します（以前は上書きしない仕様でしたが、
+ * テストデータを手軽にリセットするために改めました）。
+ */
+// エントリポイントは async 関数にまとめる。
+// eslint で "Prefer top-level await" 警告が出るが、
+// このプロジェクトは CommonJS モジュールのままなのでトップレベル await は使えない。
+// したがって eslint コメントでルールをオフにする。
+
 async function main() {
   try {
     await sequelize.authenticate();
     console.log('DB connected');
 
-    // WARNING: this clears related tables in a safe dev order
-    await Favorite.destroy({ where: {} });
-    await Comment.destroy({ where: {} });
-    await Review.destroy({ where: {} });
-    await Book.destroy({ where: {} });
-    await User.destroy({ where: {} });
+    // --- 全消去は危険なので、キー付きの挿入で既存データは残す
 
-    const pw = await bcrypt.hash('password', 10);
+    const pw = await bcrypt.hash('password123', 10);
 
-    const [alice, bob, charlie] = await Promise.all([
-      User.create({ username: 'alice', email: 'alice@example.com', password: pw }),
-      User.create({ username: 'bob', email: 'bob@example.com', password: pw }),
-      User.create({ username: 'charlie', email: 'charlie@example.com', password: pw }),
-    ]);
+    // --- seed data definitions ------------------------------------------------
+    const userInfos = [
+      { username: 'alice', email: 'alice@example.com' },
+      { username: 'bob', email: 'bob@example.com' },
+      { username: 'charlie', email: 'charlie@example.com' },
+      { username: 'tanaka', email: 'tanaka@example.com' },
+    ];
 
-    const [book1, book2] = await Promise.all([
-      Book.create({
-        title: 'Clean Code',
-        author: 'Robert C. Martin',
-        publicationYear: 2008,
-        ISBN: '9780132350884',
-        summary: 'A handbook of agile software craftsmanship',
-      }),
-      Book.create({
-        title: 'Design Patterns',
-        author: 'Erich Gamma et al.',
-        publicationYear: 1994,
-        ISBN: '9780201633610',
-        summary: 'Elements of Reusable Object-Oriented Software',
-      }),
-    ]);
+    const bookInfos = [
+      {
+        title: '吾輩は猫である',
+        author: '夏目漱石',
+        publicationYear: 1905,
+        ISBN: '9784101010014',
+        summary: '猫の視点で描かれる人間社会の風刺。',
+      },
+      {
+        title: '雪国',
+        author: '川端康成',
+        publicationYear: 1947,
+        ISBN: '9784101010137',
+        summary: '雪深い地方で交錯する男女の恋と孤独。',
+      },
+      {
+        title: '羅生門',
+        author: '芥川龍之介',
+        publicationYear: 1915,
+        ISBN: '9784101010151',
+        summary: '道徳と人間の本性を問う短編。',
+      },
+      {
+        title: '風の歌を聴け',
+        author: '村上春樹',
+        publicationYear: 1979,
+        ISBN: '9784101010212',
+        summary: '都市に生きる若者たちの日常と悩み。',
+      },
+      {
+        title: '火花',
+        author: '又吉直樹',
+        publicationYear: 2015,
+        ISBN: '9784101010304',
+        summary: '漫才師の葛藤と友情を描いた小説。',
+      },
+      {
+        title: 'コンビニ人間',
+        author: '村田沙耶香',
+        publicationYear: 2016,
+        ISBN: '9784101010373',
+        summary: 'コンビニで働く女性の視点から社会を問う。',
+      },
+    ];
 
-    const [review1, review2] = await Promise.all([
-      Review.create({
-        bookId: book1.get('id') as number,
-        userId: bob.get('id') as number,
-        content: 'とても役立ちました',
-        rating: 5,
-      }),
-      Review.create({
-        bookId: book2.get('id') as number,
-        userId: alice.get('id') as number,
-        content: '良い概観ですが古い部分もあり',
-        rating: 4,
-      }),
-    ]);
+    const reviewInfos = [
+      { bookIndex: 0, userIndex: 1, content: 'とても役立ちました', rating: 5 },
+      { bookIndex: 1, userIndex: 0, content: '良い概観ですが古い部分もあり', rating: 4 },
 
-    // 追加のダミーレビュー（フロント開発用に複数）
-    await Promise.all([
-      Review.create({
-        bookId: book1.get('id') as number,
-        userId: alice.get('id') as number,
-        content: '導入部分が良かった',
-        rating: 4,
-      }),
-      Review.create({
-        bookId: book1.get('id') as number,
-        userId: charlie.get('id') as number,
-        content: '具体例がもっと欲しい',
-        rating: 3,
-      }),
-      Review.create({
-        bookId: book1.get('id') as number,
-        userId: bob.get('id') as number,
-        content: 'リファクタの章が素晴らしい',
-        rating: 5,
-      }),
-      Review.create({
-        bookId: book1.get('id') as number,
-        userId: alice.get('id') as number,
-        content: 'サンプルコードが有用でした',
-        rating: 4,
-      }),
-      Review.create({
-        bookId: book1.get('id') as number,
-        userId: charlie.get('id') as number,
-        content: '章ごとのまとめが分かりやすい',
-        rating: 4,
-      }),
+      // 追加のダミーレビュー（フロント開発用）
+      { bookIndex: 0, userIndex: 0, content: '導入部分が良かった', rating: 4 },
+      { bookIndex: 0, userIndex: 2, content: '具体例がもっと欲しい', rating: 3 },
+      { bookIndex: 0, userIndex: 1, content: 'リファクタの章が素晴らしい', rating: 5 },
+      { bookIndex: 0, userIndex: 0, content: 'サンプルコードが有用でした', rating: 4 },
+      { bookIndex: 0, userIndex: 2, content: '章ごとのまとめが分かりやすい', rating: 4 },
       // 長文レビュー（トランケーション確認用）
-      Review.create({
-        bookId: book1.get('id') as number,
-        userId: bob.get('id') as number,
-        content: '長文レビュー: '.repeat(80),
-        rating: 4,
-      }),
-    ]);
+      { bookIndex: 0, userIndex: 1, content: '長文レビュー: '.repeat(80), rating: 4 },
+    ];
 
-    await Promise.all([
-      Comment.create({
-        reviewId: review1.get('id') as number,
-        userId: charlie.get('id') as number,
-        content: '同感です！',
-        parentId: null,
-      }),
-      Comment.create({
-        reviewId: review2.get('id') as number,
-        userId: bob.get('id') as number,
-        content: '補足: 具体例が良い',
-        parentId: null,
-      }),
-    ]);
+    const commentInfos = [
+      { reviewIndex: 0, userIndex: 2, content: '同感です！' },
+      { reviewIndex: 1, userIndex: 1, content: '補足: 具体例が良い' },
+    ];
 
-    await Promise.all([
-      Favorite.create({ userId: alice.get('id') as number, bookId: book1.get('id') as number }),
-      Favorite.create({ userId: bob.get('id') as number, bookId: book2.get('id') as number }),
-    ]);
+    const favoriteInfos = [
+      { userIndex: 0, bookIndex: 0 },
+      { userIndex: 1, bookIndex: 1 },
+    ];
+    // --------------------------------------------------------------------------
 
-    console.log('Seed completed: users=3, books=2, reviews=2, comments=2, favorites=2');
+    // 型安全のため具体型を定義
+    type UserInstance = InstanceType<typeof User>;
+    type BookInstance = InstanceType<typeof Book>;
+    type ReviewInstance = InstanceType<typeof Review>;
+
+    // ログで使うので外側で変数宣言
+    let users: UserInstance[] = [];
+    let books: BookInstance[] = [];
+    let reviews: ReviewInstance[] = [];
+
+    // 全操作を1つのトランザクションでまとめる
+    await sequelize.transaction(async (tx) => {
+      // upsert users by email (unique key)
+      users = [];
+      for (const u of userInfos) {
+        const [user, created] = await User.findOrCreate({
+          where: { email: u.email },
+          defaults: { ...u, password: pw },
+          transaction: tx,
+        });
+        if (!created) {
+          // パスワードは常に最新の値に更新する
+          await user.update({ password: pw }, { transaction: tx });
+        }
+        users.push(user);
+      }
+
+      // upsert books by ISBN
+      books = [];
+      for (const b of bookInfos) {
+        const [book] = await Book.findOrCreate({
+          where: { ISBN: b.ISBN },
+          defaults: b,
+          transaction: tx,
+        });
+        books.push(book);
+      }
+
+      const uid = (i: number) => users[i].get('id') as number;
+      const bid = (i: number) => books[i].get('id') as number;
+
+      // レビューの重複登録を防ぐため findOrCreate
+      reviews = [];
+      for (const r of reviewInfos) {
+        const [review] = await Review.findOrCreate({
+          where: {
+            bookId: bid(r.bookIndex),
+            userId: uid(r.userIndex),
+            content: r.content,
+          },
+          defaults: {
+            bookId: bid(r.bookIndex),
+            userId: uid(r.userIndex),
+            content: r.content,
+            rating: r.rating,
+          },
+          transaction: tx,
+        });
+        reviews.push(review as ReviewInstance);
+      }
+
+      // コメントも同じく重複を防ぐ
+      for (const c of commentInfos) {
+        await Comment.findOrCreate({
+          where: {
+            reviewId: reviews[c.reviewIndex].get('id') as number,
+            userId: uid(c.userIndex),
+            content: c.content,
+          },
+          defaults: {
+            reviewId: reviews[c.reviewIndex].get('id') as number,
+            userId: uid(c.userIndex),
+            content: c.content,
+            parentId: null,
+          },
+          transaction: tx,
+        });
+      }
+
+      // favorites は findOrCreate で安全に追加
+      await Promise.all(
+        favoriteInfos.map((f) =>
+          Favorite.findOrCreate({
+            where: {
+              userId: uid(f.userIndex),
+              bookId: bid(f.bookIndex),
+            },
+            defaults: { userId: uid(f.userIndex), bookId: bid(f.bookIndex) },
+            transaction: tx,
+          })
+        )
+      );
+    });
+
     console.log(
-      'Logins: email/password = alice@example.com/password, bob@example.com/password, charlie@example.com/password'
+      `Seed completed: users=${users.length}, books=${books.length}, reviews=${
+        reviews.length
+      }, comments=${commentInfos.length}, favorites=${favoriteInfos.length}`
+    );
+    console.log(
+      'Logins: email/password = alice@example.com/password123, bob@example.com/password123, charlie@example.com/password123, tanaka@example.com/password123'
     );
     process.exit(0);
   } catch (err) {

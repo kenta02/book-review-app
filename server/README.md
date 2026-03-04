@@ -40,12 +40,19 @@ DB_NAME=book_review
 ### 0. テストデータ（Seeder）
 
 開発用のテストデータを投入するスクリプトを `server/scripts/seed-demo.ts` に用意しました。
-事前に `.env` を設定した上で、以下で実行してください：
+`package.json` に npm スクリプトも追加してあるので、プロジェクトルートから実行できます。
+スクリプトは再実行しても既存データを重複作成せず、新規のみ追加するよう改善されています。
 
 ```bash
-# 例：ts-node が未インストールの場合
+# プロジェクトルートまたは server/ ディレクトリから実行
+npm run seed-demo
+
+# あるいは ts-node を直接使う場合
+# ts-node が未インストールなら npx を利用
 npx ts-node server/scripts/seed-demo.ts
-# 実行後：users=3, books=2, reviews=2, comments=2, favorites=2 が投入されます
+
+# 実行後：users=3, books=6, reviews=8, comments=2, favorites=2 のデモデータ定義が適用されます
+# （既にレコードがある場合は重複せずにスキップされます）
 ```
 
 ---
@@ -60,7 +67,7 @@ npm run dev
 
 **目的：**
 
-- REST APIサーバーをポート `3001` で起動
+- REST APIサーバーをポート `300` で起動
 - データベースに接続し、テーブルを自動作成・同期
 
 **出力例：**
@@ -68,13 +75,13 @@ npm run dev
 ```
 ✅ DB connected
 ✅ DB synced
-🚀 API running on http://localhost:3001
+🚀 API running on http://localhost:300
 ```
 
 **アクセス可能なエンドポイント：**
 
-- `GET http://localhost:3001/api/books` - 書籍一覧取得
-- `POST http://localhost:3001/api/auth/register` - ユーザー登録
+- `GET http://localhost:300/api/books` - 書籍一覧取得
+- `POST http://localhost:300/api/auth/register` - ユーザー登録
 - その他のAPIエンドポイント
 
 ---
@@ -97,7 +104,7 @@ npm run swagger
 📚 Swagger UI running on http://localhost:8080
 📄 OpenAPI spec: http://localhost:8080/openapi.yaml
 💾 OpenAPI JSON: http://localhost:8080/openapi.json
-🔀 API proxy: http://localhost:8080/api/* -> http://localhost:3001/api/*
+🔀 API proxy: http://localhost:8080/api/* -> http://localhost:300/api/*
 ```
 
 **アクセス方法：**
@@ -105,15 +112,26 @@ npm run swagger
 - ブラウザで [http://localhost:8080](http://localhost:8080) を開く
 - OpenAPI仕様に基づいて、APIエンドポイントの動作確認・テストが可能
 
-**開発時の認証トークンについて（便利な補助コマンド）**
+> ⚠️ **重要**: Swagger UI はバックエンドのプロキシとして動作します。
+> そのため、APIサーバー (`npm run dev`) を同時に起動しておかないと、
+> リクエストがタイムアウトし続け **Loading 中のまま** になります。
+> **開発時の認証トークンについて（便利な補助コマンド）**
 
 開発・テスト時に毎回ログインしてトークンを取得するのが手間な場合、ヘルパースクリプト `get-token` を用意しています。ログインして取得した JWT を標準出力に表示するため、Swagger の Authorize へ貼り付けたり、`curl` の検証に利用できます。
 
-- 実行例（tanaka ユーザーを使用）：
+- 実行例（seed データに含まれるユーザーでログイン）：
+
+  デフォルトで投入されるテストユーザーは `alice`/`bob`/`charlie` に加えて README 内の例に合わせて `tanaka` がいます。
+  パスワードはいずれも `password123` です。
+
+  `npm run seed-demo` は同じ e-mail が存在すればパスワードも上書きするように改良されているので、
+  変更があった場合は再実行するだけで OK です。
+  ただし `tanaka` のパスワードだけを個別にリセットしたいときは `npm run seed-tanaka` を使ってください。
 
 ```bash
 # サーバー配下（推奨）
-cd server && npm run token -- --email tanaka@example.com --password password123
+cd server
+npm run token -- --email tanaka@example.com --password password123
 
 # またはプロジェクトルートから（ディレクトリ移動したくない場合）
 npm --prefix server run token -- --email tanaka@example.com --password password123
@@ -127,10 +145,22 @@ npm --prefix server run token -- --email tanaka@example.com --password password1
 === END TOKEN ===
 
 curl example:
-curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:3001/api/auth/me
+curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:3000/api/auth/me
 ```
 
+(パスワードやアカウントが間違っているとログイン失敗エラーが表示されます。まず `npm run seed-demo` してユーザーを投入するか、`/api/auth/register` で自分でアカウントを作成してください。)
+
 - オプション：`--save` をつけると `server/.env` に `TEST_TOKEN=<JWT_TOKEN>` を追記します（ローカル限定の利便性向上。`.env` はコミットしないでください）。
+
+**補足**: パスワードを変更したり、特定のユーザーのみをリセットしたりする場合は以下のコマンドが便利です。
+
+```bash
+# 全ユーザーのパスワードをデフォルト（password123）に更新する
+npm run seed-demo
+
+# tanaka@example.com のみパスワードを (再)設定する
+npm run seed-tanaka
+```
 
 ---
 
@@ -142,7 +172,7 @@ curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:3001/api/auth/me
    npm run dev
    ```
 
-   待機：`🚀 API running on http://localhost:3001` が表示されるまで
+   待機：`🚀 API running on http://localhost:300` が表示されるまで
 
 2. **ターミナル2でSwagger UIを起動：**
 
@@ -185,7 +215,7 @@ mysql -u app -p -h localhost book_review -e "SELECT 1;"
 Swagger UIで以下のエラーが表示されます：
 
 ```
-Failed to fetch http://localhost:3001/api
+Failed to fetch http://localhost:300/api
 ```
 
 **解決方法：**

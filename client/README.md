@@ -58,3 +58,109 @@ editing `tailwind.config.js`.
 
 Switching existing component CSS to Tailwind classes can be done gradually; there is no
 need for an all‑at‑once rewrite.
+
+## 環境変数について
+
+環境変数は `.env.local` ファイルで管理されます（ローカル開発環境用）。`.env.example` を参考に設定してください。
+
+### 利用可能な環境変数一覧
+
+| 変数名          | デフォルト値                | 説明                                                                           |
+| --------------- | --------------------------- | ------------------------------------------------------------------------------ |
+| `VITE_USE_MOCK` | `true`                      | モック API を使用するか（`true`: モック使用 / `false`: 実 API 使用）           |
+| `VITE_API_URL`  | `http://localhost:3000/api` | バックエンド API のベース URL（`VITE_USE_MOCK=false` の場合に使用）            |
+| `VITE_DEBUG`    | `true`                      | ブラウザコンソールのデバッグログを表示するか（`true`: 表示 / `false`: 非表示） |
+
+### デバッグログの制御（開発環境 vs 本番環境）
+
+本プロジェクトはカスタムロガーを使用して、環境に応じてコンソール出力を自動制御しています。
+
+```typescript
+// src/utils/logger.ts
+export const logger = {
+  log: (...args) => {
+    /* 開発環境でのみ出力 */
+  },
+  error: (...args) => {
+    /* 開発環境でのみ出力 */
+  },
+  warn: (...args) => {
+    /* 開発環境でのみ出力 */
+  },
+  info: (...args) => {
+    /* 開発環境でのみ出力 */
+  },
+};
+```
+
+#### 開発環境（ローカル開発）
+
+```bash
+# .env.local
+VITE_DEBUG=true
+```
+
+`logger.log()` や `logger.error()` などの呼び出しがブラウザコンソールに出力されます。  
+**デバッグや問題の追跡に便利です。**
+
+#### 本番環境
+
+```bash
+VITE_DEBUG=false
+```
+
+すべてのログが自動的に非表示になります。  
+**本番環境で機密情報がコンソールに出力されるのを防ぎます。**
+
+### コード内での使用例
+
+```typescript
+import { logger } from "../utils/logger";
+
+// 開発環境では出力、本番環境では出力されない
+logger.log("デバッグ情報:", data);
+logger.error("エラーが発生しました:", error);
+```
+
+---
+
+## モック API から実 API への切り替え
+
+開発中、バックエンド API を実装したら、モック API から本物の API に切り替えることができます。
+
+### 切り替え手順
+
+1. **バックエンドサーバーが起動していることを確認**
+
+   ```bash
+   cd server
+   npm run dev
+   ```
+
+   `🚀 API running on http://localhost:3000` のようなログが出ていることを確認
+
+2. **`.env.local` を更新**
+
+   ```bash
+   VITE_USE_MOCK=false
+   VITE_API_URL=http://localhost:3000/api
+   ```
+
+3. **クライアント開発サーバーをリロード**
+
+   ```bash
+   cd client
+   npm run dev
+   # または Ctrl+C で停止して、もう一度起動
+   ```
+
+4. **ブラウザをリロード**  
+   これで実 API からデータが取得されるようになります。
+
+### トラブルシューティング
+
+**「500エラー」や「データが取得できない」場合：**
+
+- ブラウザの開発者ツール（F12 キー）→ **Console** タブでエラーメッセージを確認
+- **Network** タブで API 呼び出しの詳細を確認（404、500、CORS エラーなど）
+- サーバー側のコンソールログを確認して、エラーの原因を特定

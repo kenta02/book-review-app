@@ -8,5 +8,11 @@ export default defineConfig({
       dir: "node_modules/.vitest",
     },
     include: ["src/**/*.test.tsx", "src/**/*.test.ts"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html", "lcov"], // generate lcov for SonarCloud
+      reportsDirectory: "./coverage",
+      exclude: ["**/*.d.ts", "node_modules/**"],
+    },
   },
 });

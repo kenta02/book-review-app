@@ -12,7 +12,12 @@ const app = express();
 // apply basic security headers to Swagger UI as well
 app.use(helmet());
 app.use(cors());
-app.use(express.json());
+// NOTE: we do *not* add express.json() here.  Swagger UI proxies requests
+// directly to the API server; parsing the JSON body in this server would
+// consume the request stream and leave nothing for the proxy, causing the
+// backend to hang waiting for a body (spinner that never stops).
+// The only JSON data this process handles are in the OpenAPI spec responses,
+// which are served via `res.json`/`res.type()` calls rather than middleware.
 
 // Swagger UI設定
 const swaggerFilePath = (() => {
@@ -52,7 +57,7 @@ app.use('/api', (req: Request, res: Response) => {
   const apiPath = req.path.replace(/^\/api/, '');
   const options = {
     hostname: 'localhost',
-    port: 3001,
+    port: 3000,
     path: `/api${apiPath}`,
     method: req.method,
     headers: req.headers,
@@ -77,7 +82,7 @@ app.use('/api', (req: Request, res: Response) => {
     res.status(503).json({
       success: false,
       error: {
-        message: 'Could not connect to API server on http://localhost:3001',
+        message: 'Could not connect to API server on http://localhost:3000',
         code: 'API_UNAVAILABLE',
       },
     });
@@ -111,6 +116,6 @@ app.listen(port, () => {
   console.info(`📚 Swagger UI running on http://localhost:${port}`);
   console.info(`📄 OpenAPI spec: http://localhost:${port}/openapi.yaml`);
   console.info(`💾 OpenAPI JSON: http://localhost:${port}/openapi.json`);
-  console.info(`🔀 API proxy: http://localhost:${port}/api/* -> http://localhost:3001/api/*`);
-  console.info(`\n⚠️  Note: API server (npm run dev) must be running on port 3001`);
+  console.info(`🔀 API proxy: http://localhost:${port}/api/* -> http://localhost:3000/api/*`);
+  console.info(`\n⚠️  Note: API server (npm run dev) must be running on port 3000`);
 });

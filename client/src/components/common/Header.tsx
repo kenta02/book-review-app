@@ -15,9 +15,16 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // localStorage から初期状態を取得
-    const saved = localStorage.getItem("dark");
-    return saved ? JSON.parse(saved) : false;
+    // localStorage から初期状態を取得 (テスト／SSR 時は存在しない可能性があるため安全に扱う)
+    try {
+      if (typeof localStorage !== "undefined") {
+        const saved = localStorage.getItem("dark");
+        return saved ? JSON.parse(saved) : false;
+      }
+    } catch {
+      // jsdom が localStorage を初期化できない場合など
+    }
+    return false;
   });
 
   useEffect(() => {
@@ -27,8 +34,15 @@ export function Header({ onMenuClick }: HeaderProps) {
     } else {
       document.documentElement.classList.remove("dark");
     }
-    // localStorage に保存
-    localStorage.setItem("dark", JSON.stringify(isDarkMode));
+
+    // localStorage に保存 (存在しない環境では無視)
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("dark", JSON.stringify(isDarkMode));
+      }
+    } catch {
+      // テスト環境で localStorage が制限されている場合などに失敗しないようにする
+    }
   }, [isDarkMode]);
 
   const toggleDarkMode = () => {

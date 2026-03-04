@@ -80,7 +80,8 @@ router.get('/reviews/:reviewId/comments', async (req: Request, res: Response) =>
       return res.status(error.statusCode).json({ success: false, error: err });
     }
 
-    logger.error('[COMMENTS GET] Error fetching comments:', error);
+    // avoid logging potentially user-controlled data from the error object
+    logger.error('[COMMENTS GET] unexpected error occurred');
     return res.status(500).json({
       success: false,
       error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
@@ -160,7 +161,8 @@ router.post(
         return res.status(error.statusCode).json({ success: false, error: err });
       }
 
-      logger.error('[COMMENTS POST] Error creating comment:', error);
+      // avoid logging potentially user-controlled data from the error object
+      logger.error('[COMMENTS POST] unexpected error occurred');
       return res.status(500).json({
         success: false,
         error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },

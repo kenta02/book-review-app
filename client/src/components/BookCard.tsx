@@ -4,10 +4,10 @@ interface BookCardProps {
   title: string;
   author: string;
   ratingDisplay: string;
-  description: string;
-  isbn: string;
-  publishYear: string;
-  bookId?: number;
+  summary: string;
+  ISBN: string;
+  publicationYear: number;
+  bookId: number;
   liked?: boolean;
 }
 
@@ -15,13 +15,15 @@ export function BookCard({
   title,
   author,
   ratingDisplay,
-  description,
-  isbn,
-  publishYear,
-  bookId = 1,
+  summary,
+  ISBN,
+  publicationYear,
+  bookId,
   liked = false,
 }: BookCardProps) {
   const navigate = useNavigate();
+  const filledStars = Math.max(0, Math.min(5, Math.round(Number(ratingDisplay))));
+  const reviewCountLabel = "(15 reviews)";
 
   const handleCardClick = () => {
     navigate(`/books/${bookId}`);
@@ -29,53 +31,89 @@ export function BookCard({
 
   return (
     <div
+      data-testid="book-card"
       onClick={handleCardClick}
-      className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 cursor-pointer"
+      className="flex cursor-pointer flex-col rounded-lg bg-white shadow-md transition-shadow hover:shadow-lg dark:bg-gray-800"
     >
       {/* グラデーション背景のヘッダー部分 */}
-      <div className="relative bg-gradient-to-br from-violet-600 to-purple-600 h-48 flex items-center justify-center">
+      <div className="relative bg-gradient-to-br from-violet-600 to-purple-600 h-40 flex items-center justify-center flex-shrink-0 rounded-t-lg">
         <h3 className="text-white text-center text-lg font-bold px-4 line-clamp-3">
-          人を動かす
+          {title}
         </h3>
-        {/* ハートアイコン */}
-        <button
-          className="absolute top-3 right-3 w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform"
-          aria-label="いいね"
+        <details
+          className="absolute right-3 top-3"
           onClick={(e) => e.stopPropagation()}
         >
-          🤍
-        </button>
+          <summary className="flex h-10 w-10 list-none items-center justify-center rounded-2xl bg-white text-xl text-gray-600 shadow-md transition hover:bg-gray-50 hover:text-gray-900 dark:bg-gray-100 [&::-webkit-details-marker]:hidden">
+            ⋮
+          </summary>
+          <div className="absolute right-0 mt-2 w-32 overflow-hidden rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
+            <button
+              type="button"
+              className="block w-full px-4 py-2 text-left text-sm text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"
+            >
+              編集
+            </button>
+            <button
+              type="button"
+              className="block w-full px-4 py-2 text-left text-sm text-red-500 transition hover:bg-red-50 hover:text-red-600"
+            >
+              削除
+            </button>
+          </div>
+        </details>
       </div>
 
       {/* カード本体 */}
-      <div className="p-4">
+      <div className="p-4 flex flex-col flex-1">
         {/* タイトル */}
         <h4 className="text-gray-900 dark:text-white font-bold text-base mb-1 line-clamp-2">
-          人を動かす
+          {title}
         </h4>
 
         {/* 著者名 */}
         <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
-          デール・カーネギー
+          {author}
         </p>
 
         {/* 評価 */}
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-yellow-400">⭐</span>
-          <span className="text-gray-900 dark:text-white font-semibold text-sm">
-            5.0 (15件のレビュー)
-          </span>
+        <div className="mb-3">
+          <div className="flex items-center gap-1">
+            {Array.from({ length: 5 }, (_, index) => (
+              <span
+                key={`${bookId}-star-${index}`}
+                className={
+                  index < filledStars ? "text-yellow-400" : "text-gray-300"
+                }
+              >
+                ★
+              </span>
+            ))}
+          </div>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {reviewCountLabel}
+          </p>
         </div>
 
         {/* 説明文 */}
-        <p className="text-gray-700 dark:text-gray-300 text-sm line-clamp-3 mb-3">
-          人間関係の古典的名著。人に好かれ、人を説得し、人を変える原則をわかりやすく説いています。
+        <p className="text-gray-700 dark:text-gray-300 text-sm line-clamp-3 mb-4">
+          {summary}
         </p>
 
-        {/* ISBN と出版年 */}
-        <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-3">
-          <span>📅 1936年</span>
-          <span>ISBN: 9784422210517</span>
+        {/* 出版年とアクション */}
+        <div className="mt-auto flex items-end justify-between border-t border-gray-200 pt-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+          <div className="flex flex-col gap-1">
+            <span>{publicationYear}年</span>
+            <span>ISBN: {ISBN}</span>
+          </div>
+          <button
+            type="button"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-xl shadow-sm transition hover:scale-105 dark:bg-gray-700"
+            aria-label="いいね"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {liked ? "❤️" : "🤍"}
+          </button>
         </div>
       </div>
     </div>

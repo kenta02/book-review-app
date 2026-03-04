@@ -14,7 +14,7 @@ info:
     name: ISC
 
 servers:
-  - url: http://localhost:3001/api
+  - url: http://localhost:3000/api
     description: ローカル開発環境
 
 tags:
