@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useDeleteBook } from "../hooks/useDeleteBook";
 
 interface BookCardProps {
   title: string;
@@ -22,12 +23,18 @@ export function BookCard({
   liked = false,
 }: BookCardProps) {
   const navigate = useNavigate();
-  const filledStars = Math.max(0, Math.min(5, Math.round(Number(ratingDisplay))));
+  const filledStars = Math.max(
+    0,
+    Math.min(5, Math.round(Number(ratingDisplay))),
+  );
   const reviewCountLabel = "(15 reviews)";
 
   const handleCardClick = () => {
     navigate(`/books/${bookId}`);
   };
+
+  // 書籍削除用のカスタムフックを呼び出す
+  const deleteBook = useDeleteBook();
 
   return (
     <div
@@ -51,12 +58,14 @@ export function BookCard({
             <button
               type="button"
               className="block w-full px-4 py-2 text-left text-sm text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"
+              onClick={() => navigate(`/books/${bookId}/edit`)}
             >
               編集
             </button>
             <button
               type="button"
               className="block w-full px-4 py-2 text-left text-sm text-red-500 transition hover:bg-red-50 hover:text-red-600"
+              onClick={() => deleteBook.deleteBook(bookId)}
             >
               削除
             </button>

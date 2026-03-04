@@ -2,6 +2,9 @@ import { useState } from "react";
 import { MainLayout } from "../components/layouts/MainLayout";
 import { BookCard } from "../components/BookCard";
 import { useBooks } from "../hooks/useBooks";
+import { DeleteConfirmDialog } from "../components/DeleteConfirmDialog";
+import type { Book } from "../types";
+import { apiClient } from "../api/apiClient";
 
 export function DashboardPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -11,6 +14,15 @@ export function DashboardPage() {
   };
 
   const { books, loading, error } = useBooks();
+
+  // 削除確認ダイアログの状態管理
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [targetBookId, setTargetBookId] = useState<number | null>(null);
+
+  const handleDeleteClick = (book: Book) => {
+    setTargetBookId(book.id);
+    setConfirmOpen(true);
+  };
 
   // ローディング中、エラー中は早期リターンする
   if (loading) {
@@ -94,6 +106,17 @@ export function DashboardPage() {
             bookId={book.id}
           />
         ))}
+
+        <DeleteConfirmDialog
+          isOpen={confirmOpen}
+          title="書籍の削除"
+          message="本当にこの書籍を削除しますか？この操作は取り消せません。"
+          onConfirm={async () => {
+            await apiClient.deleteBook(targetBookId!);
+            setConfirmOpen(false);
+          }}
+          onCancel={() => setConfirmOpen(false)}
+        />
       </div>
     </MainLayout>
   );
