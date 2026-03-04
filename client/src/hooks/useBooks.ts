@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiClient } from "../api/apiClient";
+import { logger } from "../utils/logger";
 import type { Book } from "../types";
 
 /**
@@ -18,9 +19,11 @@ export function useBooks() {
       try {
         // APIクライアントから書籍一覧を取得する
         const res = await apiClient.getAllBooks();
+        logger.log("API Response:", res);
         if (res?.data?.books) {
           // 書籍データが正常に取得できた場合、状態を更新する
           if (mounted) {
+            logger.log("Books data:", res.data.books);
             setBooks(res.data.books);
           }
         } else {
@@ -30,6 +33,7 @@ export function useBooks() {
         if (mounted) {
           const errorMessage =
             e instanceof Error ? e.message : "予期せぬエラーが発生しました";
+          logger.error("Error fetching books:", errorMessage);
           setError(errorMessage);
         }
       } finally {

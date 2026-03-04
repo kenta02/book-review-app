@@ -31,10 +31,10 @@ export function BookCard({
     <div
       data-testid="book-card"
       onClick={handleCardClick}
-      className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 cursor-pointer"
+      className="rounded-lg shadow-md hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 cursor-pointer flex flex-col"
     >
       {/* グラデーション背景のヘッダー部分 */}
-      <div className="relative bg-gradient-to-br from-violet-600 to-purple-600 h-48 flex items-center justify-center">
+      <div className="relative bg-gradient-to-br from-violet-600 to-purple-600 h-40 flex items-center justify-center flex-shrink-0 rounded-t-lg">
         <h3 className="text-white text-center text-lg font-bold px-4 line-clamp-3">
           {title}
         </h3>
@@ -49,7 +49,7 @@ export function BookCard({
       </div>
 
       {/* カード本体 */}
-      <div className="p-4">
+      <div className="p-4 flex flex-col flex-1">
         {/* タイトル */}
         <h4 className="text-gray-900 dark:text-white font-bold text-base mb-1 line-clamp-2">
           {title}

@@ -5,6 +5,7 @@ import { ReviewSectionDetail } from "../components/books/ReviewSectionDetail";
 import type { Book, Review } from "../types";
 import { useEffect, useState } from "react";
 import { apiClient } from "../api/apiClient";
+import { logger } from "../utils/logger";
 
 export function BookDetailPage() {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ export function BookDetailPage() {
       .getBookById(Number(bookId))
       .then((res) => setBook(res.data.id ? res.data : null))
       .catch((err) => {
-        console.error("書籍情報の取得に失敗しました。", err);
+        logger.error("書籍情報の取得に失敗しました。", err);
         setError("書籍情報の取得に失敗しました。");
       });
 
@@ -40,7 +41,7 @@ export function BookDetailPage() {
       .getReviews(Number(bookId))
       .then((res) => setReviews(res.data.reviews))
       .catch((err) => {
-        console.error("レビュー取得に失敗しました。", err);
+        logger.error("レビュー取得に失敗しました。", err);
         setError("レビューの取得に失敗しました。");
       })
       .finally(() => setLoading(false));
