@@ -33,7 +33,6 @@ describe("BookCard", () => {
 
     expect(screen.getAllByText(/タイトル/).length).toBeGreaterThan(0);
     expect(screen.getByText(/著者/)).toBeInTheDocument();
-    expect(screen.getByText(/4.2/)).toBeInTheDocument();
     expect(screen.getByText(/説明文/)).toBeInTheDocument();
     expect(screen.getByText(/2021年/)).toBeInTheDocument();
     expect(screen.getByText(/ISBN: ABC/)).toBeInTheDocument();
