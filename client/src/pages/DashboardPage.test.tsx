@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "../api/apiClient";
 import { DashboardPage } from "./DashBoard";
@@ -89,7 +89,7 @@ describe("DashboardPage", () => {
     await waitFor(() => expect(screen.getByText(/Error:/)).toBeInTheDocument());
   });
 
-  it("toggles filter panel when filter button is clicked", async () => {
+  it("renders search controls and filter inputs", async () => {
     // resolve empty list so we don't need cards
     (
       apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
@@ -106,13 +106,14 @@ describe("DashboardPage", () => {
       expect(screen.queryByText(/Loading/)).not.toBeInTheDocument(),
     );
 
-    const filterBtn = screen.getByRole("button", { name: /フィルター/ });
-    expect(screen.queryByText(/出版年/)).not.toBeInTheDocument();
-
-    fireEvent.click(filterBtn);
-    expect(screen.getByText(/出版年/)).toBeInTheDocument();
-
-    fireEvent.click(filterBtn);
-    expect(screen.queryByText(/出版年/)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: /書籍名、著者名、ISBNで検索/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("clear-filters-button")).toBeInTheDocument();
+    expect(screen.getByTestId("search-button")).toBeInTheDocument();
+    expect(screen.getByLabelText(/評価/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/出版年 From/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/出版年 to/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/並び替え/)).toBeInTheDocument();
   });
 });
