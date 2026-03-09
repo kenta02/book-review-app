@@ -321,8 +321,11 @@ paths:
 
   /books:
     get:
-      summary: 書籍一覧取得
+      summary: 書籍一覧取得（検索・フィルタ・ソート対応）
       tags: [Books]
+      description: |
+        ページネーション付きの書籍リストを返します。
+        以下のクエリで検索・フィルタ・ソートが可能です。
       parameters:
         - name: page
           in: query
@@ -334,6 +337,42 @@ paths:
           schema:
             type: integer
             default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: 検索ワード（タイトル、著者、ISBN のいずれかを部分一致）
+        - name: minRating
+          in: query
+          schema:
+            type: number
+            format: float
+            minimum: 0
+            maximum: 5
+          description: 評価の下限（以上）
+        - name: minYear
+          in: query
+          schema:
+            type: integer
+          description: 出版年下限
+        - name: maxYear
+          in: query
+          schema:
+            type: integer
+          description: 出版年上限
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [rating, createdAt, title, author, publicationYear]
+          description: ソート対象フィールド
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: ソート方向
       responses:
         '200':
           description: 書籍一覧取得成功
