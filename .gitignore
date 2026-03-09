@@ -98,3 +98,5 @@ server/docs.code-workspace
 .claude/skills/
 AGENTS.md
 CLAUDE.md
+.github/skills/**
+.github/*
