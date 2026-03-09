@@ -28,6 +28,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.59.0",
     "bcrypt": "6.0.0",
     "cors": "2.8.5",
     "dotenv": "17.2.3",
