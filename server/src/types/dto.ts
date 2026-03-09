@@ -104,3 +104,63 @@ export type DeleteReviewServiceDto = {
   reviewId: number;
   userId: number;
 };
+
+/**
+ * ---------------------------------------------------------
+ * 書籍一覧検索用 DTO
+ * ListReviewsQueryDto と重複しないよう別名を使用する。
+ * ---------------------------------------------------------
+ */
+
+/**
+ * GET /api/books - 書籍一覧取得クエリパラメータ
+ * - 出力フォーマットを統一するため、クエリパラメータ用の DTO を定義
+ */
+export type BooksListQueryDto = {
+  page: number;
+  limit: number;
+  keyword?: string;
+  author?: string;
+  publicationYearFrom?: number;
+  publicationYearTo?: number;
+  ratingMin?: number;
+  sort?: string;
+  order?: 'asc' | 'desc';
+};
+
+/**
+ * GET /api/books - 書籍一覧取得クエリパラメータ
+ * - クエリパラメータの型定義とバリデーション結果の型定義を行う
+ */
+export type BooksListQueryInputDto = {
+  page?: string;
+  limit?: string;
+  keyword?: string;
+  author?: string;
+  publicationYearFrom?: string;
+  publicationYearTo?: string;
+  ratingMin?: string;
+  sort?: string;
+  order?: string;
+};
+
+/**
+ * API レスポンス - 書籍一覧
+ */
+export type BooksListResponseDto = {
+  items: {
+    id: number;
+    title: string;
+    author: string;
+    publicationYear: number;
+    ISBN: string;
+    summary: string;
+    averageRating?: number;
+    reviewCount?: number;
+    createdAt: string;
+  }[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
