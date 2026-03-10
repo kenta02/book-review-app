@@ -1,13 +1,17 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 
-import Book from '../models/Book';
-import { BookParams } from '../types/route-params';
-import Review from '../models/Review';
-import Favorite from '../models/Favorite';
-import { ERROR_MESSAGES } from '../constants/error-messages';
-import * as reviewService from '../services/review.service';
+import {
+  listBooks,
+  getBook,
+  createBook,
+  updateBook,
+  listBookReviews,
+  deleteBook,
+} from '../controllers/book.controller';
 
 const router = express.Router();
+
+// ルーティング層は責務を持たず、books 用 controller へそのまま委譲する。
 
 /**
  * GET /api/books - 書籍一覧をページングで取得
@@ -22,45 +26,7 @@ const router = express.Router();
  *
  * @example GET /api/books?page=1&limit=20 → 200
  */
-router.get('/', async (req: Request, res: Response) => {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const offset = (page - 1) * limit;
-
-    // findAndCountAll で総件数と該当行を同時取得（N+1 クエリ回避）
-    const { count, rows } = await Book.findAndCountAll({
-      limit,
-      offset,
-      order: [['createdAt', 'DESC']],
-    });
-
-    console.info(`Fetching books - page: ${page}, limit: ${limit}, offset: ${offset}`);
-    console.info(`Found ${count} books in total`);
-
-    res.json({
-      success: true,
-      data: {
-        books: rows,
-        pagination: {
-          currentPage: page,
-          totalItems: count,
-          totalPages: Math.ceil(count / limit),
-          itemsPerPage: limit,
-        },
-      },
-    });
-  } catch (error) {
-    console.error('Error fetching books:', error);
-    res.status(500).json({
-      success: false,
-      error: {
-        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-        code: 'INTERNAL_SERVER_ERROR',
-      },
-    });
-  }
-});
+router.get('/', listBooks);
 
 /**
  * GET /api/books/:id - 指定書籍の詳細取得
@@ -76,55 +42,7 @@ router.get('/', async (req: Request, res: Response) => {
  *
  * @example GET /api/books/1 → 200
  */
-router.get('/:id', async (req: Request<BookParams>, res: Response) => {
-  try {
-    const bookId = Number(req.params.id);
-    const errors = [];
-
-    // idの数値チェック
-    if (!Number.isInteger(bookId) || bookId <= 0) {
-      errors.push({
-        field: 'id',
-        message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
-      });
-    }
-    if (errors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.INVALID_BOOK_ID,
-          code: 'INVALID_BOOK_ID',
-          details: errors,
-        },
-      });
-    }
-
-    // 成功時
-    const bookInfo = await Book.findByPk(bookId);
-
-    if (bookInfo) {
-      return res.json({ success: true, data: bookInfo });
-    } else {
-      // 書籍がない場合
-      return res.status(404).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.BOOK_NOT_FOUND,
-          code: 'BOOK_NOT_FOUND',
-        },
-      });
-    }
-  } catch (error) {
-    console.error('Error fetching book:', error);
-    return res.status(500).json({
-      success: false,
-      error: {
-        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-        code: 'INTERNAL_SERVER_ERROR',
-      },
-    });
-  }
-});
+router.get('/:id', getBook);
 
 /**
  * POST /api/books - 書籍登録
@@ -144,67 +62,7 @@ router.get('/:id', async (req: Request<BookParams>, res: Response) => {
  *
  * @example POST /api/books {title:'t',author:'a'} → 201
  */
-router.post('/', async (req: Request, res: Response) => {
-  try {
-    const { title, author, publicationYear, ISBN, summary } = req.body;
-    console.debug('Received new book data:', req.body);
-    const errors = [];
-
-    if (!title || title.trim() === '') {
-      errors.push({ field: 'title', message: ERROR_MESSAGES.REQUIRED_TITLE });
-    }
-    if (!author || author.trim() === '') {
-      errors.push({ field: 'author', message: ERROR_MESSAGES.REQUIRED_AUTHOR });
-    }
-
-    if (errors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.VALIDATION_FAILED,
-          code: 'VALIDATION_ERROR',
-          details: errors,
-        },
-      });
-    }
-
-    // ISBN 重複チェック: 一意の識別子として機能
-    if (ISBN) {
-      const existingBook = await Book.findOne({ where: { ISBN } });
-      if (existingBook) {
-        return res.status(409).json({
-          success: false,
-          error: {
-            message: ERROR_MESSAGES.DUPLICATE_ISBN,
-            code: 'DUPLICATE_RESOURCE',
-          },
-        });
-      }
-    }
-
-    const newBook = await Book.create({
-      title,
-      author,
-      publicationYear,
-      ISBN,
-      summary,
-    });
-
-    res.status(201).json({
-      success: true,
-      data: newBook,
-    });
-  } catch (error) {
-    console.error('Error creating new book:', error);
-    res.status(500).json({
-      success: false,
-      error: {
-        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-        code: 'INTERNAL_SERVER_ERROR',
-      },
-    });
-  }
-});
+router.post('/', createBook);
 
 /**
  * PUT /api/books/:id - 書籍部分更新
@@ -226,109 +84,7 @@ router.post('/', async (req: Request, res: Response) => {
  *
  * @example PUT /api/books/1 {title:'new'} → 200
  */
-router.put('/:id', async (req: Request<BookParams>, res: Response) => {
-  try {
-    const bookId = Number(req.params.id);
-    const { title, author, publicationYear, ISBN, summary } = req.body;
-    console.debug('Received update data for bookId:', bookId, req.body);
-    const errors = [];
-
-    if (!Number.isInteger(bookId) || bookId <= 0) {
-      // idの数値チェック
-      errors.push({
-        field: 'id',
-        message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
-      });
-    }
-    if (errors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.INVALID_BOOK_ID,
-          code: 'INVALID_BOOK_ID',
-          details: errors,
-        },
-      });
-    }
-
-    // 書籍の存在チェック
-    const bookInfo = await Book.findByPk(bookId);
-
-    if (!bookInfo) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.BOOK_NOT_FOUND,
-          code: 'BOOK_NOT_FOUND',
-        },
-      });
-    }
-
-    // title, author のバリデーション（送られた場合のみチェック）
-    if (title !== undefined && (!title || title.trim() === '')) {
-      errors.push({ field: 'title', message: ERROR_MESSAGES.REQUIRED_TITLE });
-    }
-    if (author !== undefined && (!author || author.trim() === '')) {
-      errors.push({ field: 'author', message: ERROR_MESSAGES.REQUIRED_AUTHOR });
-    }
-
-    if (errors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.VALIDATION_FAILED,
-          code: 'VALIDATION_ERROR',
-          details: errors,
-        },
-      });
-    }
-
-    // ISBN 重複チェック（送られた場合のみ）
-    if (ISBN !== undefined) {
-      const isISBN = await Book.findOne({ where: { ISBN } });
-      if (isISBN && isISBN.get('id') !== bookId) {
-        return res.status(409).json({
-          success: false,
-          error: {
-            message: ERROR_MESSAGES.DUPLICATE_ISBN,
-            code: 'DUPLICATE_RESOURCE',
-          },
-        });
-      }
-    }
-
-    // 部分更新：送られたフィールドのみを更新
-    const updateData: Partial<{
-      title: string;
-      author: string;
-      publicationYear: number;
-      ISBN: string;
-      summary: string;
-    }> = {};
-
-    if (title !== undefined) updateData.title = title;
-    if (author !== undefined) updateData.author = author;
-    if (publicationYear !== undefined) updateData.publicationYear = publicationYear;
-    if (ISBN !== undefined) updateData.ISBN = ISBN;
-    if (summary !== undefined) updateData.summary = summary;
-
-    await bookInfo.update(updateData);
-
-    res.json({
-      success: true,
-      data: bookInfo,
-    });
-  } catch (error) {
-    console.error('Error updating book:', error);
-    res.status(500).json({
-      success: false,
-      error: {
-        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-        code: 'INTERNAL_SERVER_ERROR',
-      },
-    });
-  }
-});
+router.put('/:id', updateBook);
 
 /**
  * GET /api/books/:bookId/reviews - 書籍のレビュー一覧
@@ -346,58 +102,7 @@ router.put('/:id', async (req: Request<BookParams>, res: Response) => {
  *
  * @example GET /api/books/1/reviews → 200
  */
-router.get('/:bookId/reviews', async (req: Request<{ bookId: string }>, res: Response) => {
-  try {
-    const bookId = Number(req.params.bookId);
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-
-    // bookId の数値チェック
-    if (!Number.isInteger(bookId) || bookId <= 0) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.INVALID_BOOK_ID,
-          code: 'INVALID_BOOK_ID',
-          details: [{ field: 'bookId', message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT }],
-        },
-      });
-    }
-
-    // 書籍の存在確認
-    const book = await Book.findByPk(bookId);
-    if (!book) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.BOOK_NOT_FOUND,
-          code: 'BOOK_NOT_FOUND',
-        },
-      });
-    }
-
-    // reviewService.listReviews を呼び出し（既存ロジック再利用）
-    const result = await reviewService.listReviews({
-      page,
-      limit,
-      bookId,
-    });
-
-    return res.json({
-      success: true,
-      data: result,
-    });
-  } catch (error) {
-    console.error('Error fetching reviews for book:', error);
-    return res.status(500).json({
-      success: false,
-      error: {
-        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-        code: 'INTERNAL_SERVER_ERROR',
-      },
-    });
-  }
-});
+router.get('/:bookId/reviews', listBookReviews);
 
 /**
  * DELETE /api/books/:id - 書籍削除
@@ -414,68 +119,6 @@ router.get('/:bookId/reviews', async (req: Request<{ bookId: string }>, res: Res
  *
  * @example DELETE /api/books/1 → 204
  */
-router.delete('/:id', async (req: Request<BookParams>, res: Response) => {
-  try {
-    // パスパラメータ id の形式チェック（整数かつ 1 以上）
-    const bookId = Number(req.params.id);
-    if (!Number.isInteger(bookId) || bookId <= 0) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.INVALID_BOOK_ID,
-          code: 'INVALID_BOOK_ID',
-          details: [{ field: 'id', message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT }],
-        },
-      });
-    }
-
-    // 書籍の存在チェック
-    const bookInfo = await Book.findByPk(bookId);
-
-    if (!bookInfo) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.BOOK_NOT_FOUND,
-          code: 'BOOK_NOT_FOUND',
-        },
-      });
-    }
-
-    // .count() を使ってReviewとFavoriteの関連データの件数を取得
-    const results = await Promise.all([
-      Review.count({ where: { bookId } }),
-      Favorite.count({ where: { bookId } }),
-    ]);
-
-    const reviewCount = results[0];
-    const favoriteCount = results[1];
-
-    // 関連データが存在する場合は削除しない
-    if (reviewCount > 0 || favoriteCount > 0) {
-      return res.status(409).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.RELATED_DATA_EXISTS,
-          code: 'RELATED_DATA_EXISTS',
-        },
-      });
-    } else {
-      // 関連データがなければ書籍を削除
-      await bookInfo.destroy();
-      // 成功時は204 No Contentを返す
-      return res.sendStatus(204);
-    }
-  } catch (error) {
-    console.error('Error deleting book:', error);
-    res.status(500).json({
-      success: false,
-      error: {
-        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-        code: 'INTERNAL_SERVER_ERROR',
-      },
-    });
-  }
-});
+router.delete('/:id', deleteBook);
 
 export default router;
