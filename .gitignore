@@ -98,3 +98,9 @@ server/docs.code-workspace
 .claude/skills/
 AGENTS.md
 CLAUDE.md
+.github/skills/backend-integration/SKILL.md
+.github/copilot-instructions.md
+.github/skills/architecture/SKILL.md
+.github/skills/coding-standards/SKILL.md
+.github/skills/testing/SKILL.md
+.github/skills/ui-design/SKILL.md
