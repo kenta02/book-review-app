@@ -33,12 +33,8 @@ jobs:
       
       - name: Notify on failure
         if: failure()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '⚠️ SonarCloud Issues Sync failed. Please check the workflow logs.'
-            })
+        run: |
+          echo "⚠️ SonarCloud Issues Sync failed: see workflow logs"
+          # workflow_run トリガーでは context.issue が存在しないため
+          # GitHub API 経由でコメントを付けようとすると 404 になる。
+          # 必要ならここで Slack 等外部通知を呼ぶ。

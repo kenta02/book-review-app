@@ -46,7 +46,9 @@ function makeRequest(url, options = {}) {
       port: requestUrl.port,
       path: requestUrl.pathname + requestUrl.search,
       method: options.method || 'GET',
-      headers: options.headers || {},
+      headers: Object.assign({
+        'User-Agent': 'sonarcloud-issues-sync/1.0',
+      }, options.headers || {}),
     };
 
     if (options.body) {
