@@ -17,6 +17,9 @@ jobs:
     strategy:
       matrix:
         node-version: [18.x]
+    # GitHub は 2026/6 から Node.js 24 をデフォルトにする予定なので
+    # actions/checkout・actions/setup-node 等は適宜バージョンアップしてください。
+    # FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 環境変数で先行切り替えも可能。
 
     steps:
       - uses: actions/checkout@v3
@@ -31,7 +34,12 @@ jobs:
       # バックエンド分析
       - name: Install server dependencies
         working-directory: ./server
-        run: npm ci
+        run: |
+          npm ci
+          # npm ci sometimes skips optional native binaries due to an npm bug;
+          # Vitest pulls in rollup which depends on @rollup/rollup-<platform>.
+          # re-run npm install to fetch the missing package or explicitly add it.
+          npm install @rollup/rollup-linux-x64-gnu || true
 
       - name: Build server
         working-directory: ./server
