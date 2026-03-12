@@ -96,6 +96,34 @@ describe('auth.service', () => {
         token: 'token',
       });
     });
+
+    it('returns 409 when createUser fails with username unique constraint', async () => {
+      vi.mocked(userRepository.findUserByUsername).mockResolvedValue(null);
+      vi.mocked(userRepository.findUserByEmail).mockResolvedValue(null);
+      vi.mocked(bcrypt.hash).mockResolvedValue('hashed' as never);
+      vi.mocked(userRepository.createUser).mockRejectedValue({
+        name: 'SequelizeUniqueConstraintError',
+        errors: [{ path: 'username' }],
+      });
+
+      await expect(
+        authService.register({ username: 'race-user', email: 'race@example.com', password: 'password123' })
+      ).rejects.toMatchObject({ statusCode: 409, code: 'DUPLICATE_RESOURCE' });
+    });
+
+    it('returns 409 when createUser fails with email unique constraint', async () => {
+      vi.mocked(userRepository.findUserByUsername).mockResolvedValue(null);
+      vi.mocked(userRepository.findUserByEmail).mockResolvedValue(null);
+      vi.mocked(bcrypt.hash).mockResolvedValue('hashed' as never);
+      vi.mocked(userRepository.createUser).mockRejectedValue({
+        name: 'SequelizeUniqueConstraintError',
+        errors: [{ path: 'email' }],
+      });
+
+      await expect(
+        authService.register({ username: 'race-user', email: 'race@example.com', password: 'password123' })
+      ).rejects.toMatchObject({ statusCode: 409, code: 'DUPLICATE_RESOURCE' });
+    });
   });
 
   describe('login', () => {
