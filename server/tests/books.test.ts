@@ -8,6 +8,7 @@ import bookRouter from '../src/routes/books';
 import Book from '../src/models/Book';
 import Review from '../src/models/Review';
 import Favorite from '../src/models/Favorite';
+import { sequelize } from '../src/sequelize';
 
 // このファイルの目的：書籍 API の CRUD とページネーションを検証するテスト
 // - findAndCountAll のモックを用いてページング動作を確認
@@ -26,6 +27,10 @@ let app: express.Express;
 beforeEach(() => {
   app = makeApp();
   vi.restoreAllMocks();
+  vi.spyOn(sequelize, 'transaction').mockImplementation(async (callback: any) => {
+    const tx = { LOCK: { UPDATE: 'UPDATE' } };
+    return callback(tx);
+  });
 });
 
 afterEach(() => {

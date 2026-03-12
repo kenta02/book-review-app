@@ -53,7 +53,7 @@ describe('POST /api/auth/register', () => {
 
   it('returns 409 when username already exists', async () => {
     // User.findOne をモックして「既存ユーザーあり」の挙動を再現
-    vi.spyOn(User, 'findOne').mockResolvedValueOnce({ id: 1 } as unknown as UserInstance);
+    vi.spyOn(User, 'findOne').mockResolvedValue({ id: 1 } as unknown as UserInstance);
 
     const res = await request(app).post('/api/auth/register').send({
       username: 'taken',
