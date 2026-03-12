@@ -12,6 +12,7 @@ function sendApiError(res: Response, error: ApiError) {
     error: {
       message: error.message,
       code: error.code,
+      ...(error.details && { details: error.details }),
     },
   });
 }
