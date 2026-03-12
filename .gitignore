@@ -89,19 +89,27 @@ docs/
 .copilot-instructions
 book-review-app.code-workspace
 CODING_GUIDELINES.md
-.github/agents/copilot-instructions.md
-.github/agents/agents.md
 server/docs.code-workspace
-.github/agents/custom-buddy-agent.md
-.github/agents/SKILL.md
 .gitnexus
 .claude/skills/
-AGENTS.md
-CLAUDE.md
-.github/skills/backend-integration/SKILL.md
-.github/copilot-instructions.md
 .github/skills/architecture/SKILL.md
 .github/skills/coding-standards/SKILL.md
 .github/skills/testing/SKILL.md
 .github/skills/ui-design/SKILL.md
-.github/skills/sequrity/SKILL.md
+.github/skills/security/SKILL.md
+
+# AI 設定のローカル専用ファイル
+CLAUDE.local.md
+PROJECT_MEMORY.local.md
+.claude/settings.local.json
+
+# AI 設定ファイル一式
+PROJECT_MEMORY.md
+.mcp.json
+.github/copilot-instructions.md
+.github/agents/
+.github/instructions/
+.github/hooks/
+.github/mcp/
+.github/skills/
+  
