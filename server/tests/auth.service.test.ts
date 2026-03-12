@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '../src/errors/ApiError';
 import * as authService from '../src/services/auth.service';
@@ -33,8 +33,19 @@ function makeUserInstance(input: { id: number; username: string; email: string; 
 }
 
 describe('auth.service', () => {
+  const originalJwtSecret = process.env.JWT_SECRET;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.JWT_SECRET = 'test-jwt-secret';
+  });
+
+  afterAll(() => {
+    if (originalJwtSecret === undefined) {
+      delete process.env.JWT_SECRET;
+      return;
+    }
+    process.env.JWT_SECRET = originalJwtSecret;
   });
 
   describe('register', () => {
