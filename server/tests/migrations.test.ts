@@ -42,6 +42,7 @@ describe('20260306-0008 migration', () => {
   beforeEach(async () => {
     sequelize = new Sequelize({ dialect: 'sqlite', storage: ':memory:', logging: false });
     qi = sequelize.getQueryInterface();
+    await sequelize.query('PRAGMA foreign_keys = ON');
 
     // initial schema prior to running the migration
     await qi.createTable('Users', {
@@ -161,20 +162,6 @@ describe('20260306-0008 migration', () => {
       // remove the offending row and prepare a valid state for the remaining down checks
       await qi.sequelize.query("DELETE FROM Books WHERE title='dup' AND author='y'");
 
-      // --- additional robustness check: if some other migration (or manual tweak)
-      // had created a differently-named foreign key on ReviewVotes.userId, we
-      // still want `down` to drop *all* of them before re-adding the SET NULL
-      // variant.  mimic that by adding a fake constraint with an odd name.
-      await migration.up(qi, sequelizeModule);
-      await qi.addConstraint('ReviewVotes', {
-        fields: ['userId'],
-        type: 'foreign key',
-        name: 'some_other_fk',
-        references: { table: 'Users', field: 'id' },
-        onDelete: 'NO ACTION',
-        onUpdate: 'CASCADE',
-      });
-      // now perform down; it should not error
       await migration.down(qi, sequelizeModule);
 
       const desc = await qi.describeTable('ReviewVotes');
@@ -195,6 +182,29 @@ describe('20260306-0008 migration', () => {
           { title: 'dup', author: 'yet-another-author' },
         ])
       ).rejects.toThrow();
+    });
+
+    it('drops all userId foreign keys even if non-standard names exist', async () => {
+      await migration.up(qi, sequelizeModule);
+
+      await qi.addConstraint('ReviewVotes', {
+        fields: ['userId'],
+        type: 'foreign key',
+        name: 'some_other_fk',
+        references: { table: 'Users', field: 'id' },
+        onDelete: 'NO ACTION',
+        onUpdate: 'CASCADE',
+      });
+
+      await migration.down(qi, sequelizeModule);
+
+      const fkRows = await qi.sequelize.query<SQLiteForeignKeyRow>(
+        "PRAGMA foreign_key_list('ReviewVotes')",
+        { type: QueryTypes.SELECT }
+      );
+      const userFk = fkRows.find((f) => f.from === 'userId');
+      expect(userFk).toBeDefined();
+      expect(userFk?.on_delete).toBe('SET NULL');
     });
   });
 });
