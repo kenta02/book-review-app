@@ -1,3 +1,5 @@
+import { DestroyOptions, FindOptions, Transaction } from 'sequelize';
+
 import Book from '../models/Book';
 import Favorite from '../models/Favorite';
 import Review from '../models/Review';
@@ -34,8 +36,8 @@ export async function findBooksWithPagination(page: number, limit: number) {
  * @param bookId - 書籍 ID
  * @returns 書籍。存在しない場合は null
  */
-export async function findBookById(bookId: number) {
-  return Book.findByPk(bookId);
+export async function findBookById(bookId: number, options?: FindOptions) {
+  return Book.findByPk(bookId, options);
 }
 
 /**
@@ -76,8 +78,8 @@ export async function updateBook(book: BookInstance, data: UpdateBookDto) {
  * @param bookId - 書籍 ID
  * @returns レビュー件数
  */
-export async function countBookReviews(bookId: number) {
-  return Review.count({ where: { bookId } });
+export async function countBookReviews(bookId: number, options?: { transaction?: Transaction }) {
+  return Review.count({ where: { bookId }, transaction: options?.transaction });
 }
 
 /**
@@ -86,8 +88,8 @@ export async function countBookReviews(bookId: number) {
  * @param bookId - 書籍 ID
  * @returns お気に入り件数
  */
-export async function countBookFavorites(bookId: number) {
-  return Favorite.count({ where: { bookId } });
+export async function countBookFavorites(bookId: number, options?: { transaction?: Transaction }) {
+  return Favorite.count({ where: { bookId }, transaction: options?.transaction });
 }
 
 /**
@@ -95,6 +97,6 @@ export async function countBookFavorites(bookId: number) {
  *
  * @param book - 削除対象の書籍
  */
-export async function deleteBook(book: BookInstance) {
-  await book.destroy();
+export async function deleteBook(book: BookInstance, options?: DestroyOptions) {
+  await book.destroy(options);
 }

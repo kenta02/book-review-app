@@ -121,6 +121,20 @@ describe('POST /api/books', () => {
     expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
   });
 
+  it('returns 409 when title and author already exist', async () => {
+    vi.spyOn(Book, 'create').mockRejectedValue({
+      name: 'SequelizeUniqueConstraintError',
+      errors: [{ path: 'title' }, { path: 'author' }],
+    });
+    const res = await request(app).post('/api/books').send({
+      title: 'Same Title',
+      author: 'Same Author',
+      ISBN: 'unique-isbn',
+    });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
+  });
+
   it('returns 201 when created', async () => {
     const book = { id: 1 } as unknown as BookInstance;
     vi.spyOn(Book, 'create').mockResolvedValue(book);
@@ -179,6 +193,23 @@ describe('PUT /api/books/:id', () => {
     vi.spyOn(Book, 'findByPk').mockResolvedValue(fakeBook as unknown as BookInstance);
 
     const res = await request(app).put('/api/books/1').send({ ISBN: 'dup' });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
+  });
+
+  it('returns 409 when title and author duplicate another book', async () => {
+    const fakeBook = {
+      update: vi.fn().mockRejectedValue({
+        name: 'SequelizeUniqueConstraintError',
+        errors: [{ path: 'title' }, { path: 'author' }],
+      }),
+    };
+    vi.spyOn(Book, 'findByPk').mockResolvedValue(fakeBook as unknown as BookInstance);
+
+    const res = await request(app).put('/api/books/1').send({
+      title: 'Same Title',
+      author: 'Same Author',
+    });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
   });

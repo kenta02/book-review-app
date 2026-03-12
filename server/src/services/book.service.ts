@@ -1,7 +1,9 @@
+import { ForeignKeyConstraintError, UniqueConstraintError, ValidationErrorItem } from 'sequelize';
+
 import { ERROR_MESSAGES } from '../constants/error-messages';
 import { ApiError } from '../errors/ApiError';
 import * as bookRepository from '../repositories/book.repository';
-import { ForeignKeyConstraintError, UniqueConstraintError, ValidationErrorItem } from 'sequelize';
+import { sequelize } from '../sequelize';
 import * as reviewService from './review.service';
 import { CreateBookDto, ListBooksQueryDto, UpdateBookDto } from '../types/dto';
 import { logger } from '../utils/logger';
@@ -13,8 +15,15 @@ type ListBookReviewsInput = {
 };
 
 function isIsbnUniqueConstraintError(error: unknown): boolean {
+  const hasDuplicateFields = (paths: string[]) => {
+    const hasIsbn = paths.includes('ISBN');
+    const hasTitleAuthor = paths.includes('title') && paths.includes('author');
+    return hasIsbn || hasTitleAuthor;
+  };
+
   if (error instanceof UniqueConstraintError) {
-    return error.errors.some((item: ValidationErrorItem) => item.path === 'ISBN');
+    const paths = error.errors.map((item: ValidationErrorItem) => item.path || '').filter(Boolean);
+    return hasDuplicateFields(paths);
   }
 
   if (typeof error !== 'object' || error === null) {
@@ -30,7 +39,8 @@ function isIsbnUniqueConstraintError(error: unknown): boolean {
     return false;
   }
 
-  return (candidate.errors || []).some((item) => item.path === 'ISBN');
+  const paths = (candidate.errors || []).map((item) => item.path || '').filter(Boolean);
+  return hasDuplicateFields(paths);
 }
 
 /**
@@ -154,33 +164,38 @@ export async function listBookReviews(input: ListBookReviewsInput) {
  * @throws ApiError 書籍が存在しない、または関連データが残っている場合
  */
 export async function deleteBook(bookId: number) {
-  const book = await bookRepository.findBookById(bookId);
+  await sequelize.transaction(async (transaction) => {
+    const book = await bookRepository.findBookById(bookId, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
 
-  if (!book) {
-    throw new ApiError(404, 'BOOK_NOT_FOUND', ERROR_MESSAGES.BOOK_NOT_FOUND);
-  }
+    if (!book) {
+      throw new ApiError(404, 'BOOK_NOT_FOUND', ERROR_MESSAGES.BOOK_NOT_FOUND);
+    }
 
-  const [reviewCount, favoriteCount] = await Promise.all([
-    bookRepository.countBookReviews(bookId),
-    bookRepository.countBookFavorites(bookId),
-  ]);
+    const [reviewCount, favoriteCount] = await Promise.all([
+      bookRepository.countBookReviews(bookId, { transaction }),
+      bookRepository.countBookFavorites(bookId, { transaction }),
+    ]);
 
-  // 既存仕様では、レビューやお気に入りが 1 件でもあれば削除不可。
-  if (reviewCount > 0 || favoriteCount > 0) {
-    throw new ApiError(409, 'RELATED_DATA_EXISTS', ERROR_MESSAGES.RELATED_DATA_EXISTS);
-  }
-
-  try {
-    await bookRepository.deleteBook(book);
-  } catch (error) {
-    if (
-      error instanceof ForeignKeyConstraintError ||
-      (typeof error === 'object' &&
-        error !== null &&
-        (error as { name?: string }).name === 'SequelizeForeignKeyConstraintError')
-    ) {
+    // 既存仕様では、レビューやお気に入りが 1 件でもあれば削除不可。
+    if (reviewCount > 0 || favoriteCount > 0) {
       throw new ApiError(409, 'RELATED_DATA_EXISTS', ERROR_MESSAGES.RELATED_DATA_EXISTS);
     }
-    throw error;
-  }
+
+    try {
+      await bookRepository.deleteBook(book, { transaction });
+    } catch (error) {
+      if (
+        error instanceof ForeignKeyConstraintError ||
+        (typeof error === 'object' &&
+          error !== null &&
+          (error as { name?: string }).name === 'SequelizeForeignKeyConstraintError')
+      ) {
+        throw new ApiError(409, 'RELATED_DATA_EXISTS', ERROR_MESSAGES.RELATED_DATA_EXISTS);
+      }
+      throw error;
+    }
+  });
 }
