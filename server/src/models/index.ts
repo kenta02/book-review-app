@@ -32,7 +32,7 @@ ReviewVote.belongsTo(Review, { foreignKey: 'reviewId' });
 // User と ReviewVote の関連付け
 User.hasMany(ReviewVote, {
   foreignKey: 'userId',
-  onDelete: 'SET NULL',
+  onDelete: 'CASCADE',
   constraints: true,
 });
 ReviewVote.belongsTo(User, { foreignKey: 'userId' });

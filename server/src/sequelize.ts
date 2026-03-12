@@ -2,13 +2,15 @@ import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const dbName = process.env.DB_NAME ?? '';
-const dbUser = process.env.DB_USER ?? '';
+const isTestRuntime = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
+
+const dbName = process.env.DB_NAME ?? (isTestRuntime ? 'test_db' : '');
+const dbUser = process.env.DB_USER ?? (isTestRuntime ? 'test_user' : '');
 const dbPass = process.env.DB_PASS ?? '';
 const dbHost = process.env.DB_HOST;
 const dbPort = Number(process.env.DB_PORT) || 3306;
 
-if (!dbName || !dbUser) {
+if (!isTestRuntime && (!dbName || !dbUser)) {
   throw new Error('Database configuration (DB_NAME, DB_USER) must be provided via env');
 }
 

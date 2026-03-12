@@ -15,7 +15,7 @@ export function ReviewSectionDetail({ reviews }: ReviewSectionDetailProps) {
             ({reviews.length}件)
           </span>
         </h2>
-        <button className="py-2 px-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold text-sm hover:from-blue-600 hover:to-blue-700 active:scale-95 transition">
+        <button className="py-2 px-6 bg-gray-900 text-white rounded-lg font-semibold text-sm hover:bg-gray-800 active:scale-95 transition focus:outline-none focus:ring-2 focus:ring-gray-300 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white">
           レビューを書く
         </button>
       </div>

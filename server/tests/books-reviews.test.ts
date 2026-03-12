@@ -99,6 +99,35 @@ describe('GET /api/books/:bookId/reviews', () => {
     );
   });
 
+  it('reviews 一覧でも large limit をそのまま service に渡す', async () => {
+    const testBookId = 1;
+    vi.spyOn(Book, 'findByPk').mockResolvedValue({ id: testBookId } as unknown as BookInstance);
+
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    reviewServiceSpy.mockResolvedValue({
+      reviews: [],
+      pagination: {
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        itemsPerPage: 500,
+      },
+    });
+
+    await request(app)
+      .get(`/api/books/${testBookId}/reviews`)
+      .query({ limit: 500 })
+      .expect(200);
+
+    expect(reviewServiceSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        page: 1,
+        limit: 500,
+        bookId: testBookId,
+      })
+    );
+  });
+
   it('無効な書籍 ID（非整数）を返す場合 400 エラー', async () => {
     const res = await request(app)
       .get('/api/books/invalid/reviews')

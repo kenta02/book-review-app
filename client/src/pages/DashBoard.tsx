@@ -1,15 +1,8 @@
-import { useState } from "react";
 import { MainLayout } from "../components/layouts/MainLayout";
 import { BookCard } from "../components/BookCard";
 import { useBooks } from "../hooks/useBooks";
 
 export function DashboardPage() {
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-
-  const toggleFilter = () => {
-    setIsFilterOpen(!isFilterOpen);
-  };
-
   const { books, loading, error } = useBooks();
 
   // ローディング中、エラー中は早期リターンする
@@ -32,14 +25,17 @@ export function DashboardPage() {
             ここでは書籍の管理や検索ができます。
           </p>
         </div>
-        <button className="py-2 px-5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded font-semibold text-sm hover:from-purple-600 hover:to-pink-600 active:scale-95 transition whitespace-nowrap">
+        <button
+          data-testid="add-book-button"
+          className="py-2 px-5 bg-gray-900 text-white rounded font-semibold text-sm hover:bg-gray-800 active:scale-95 transition whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-gray-300 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+        >
           + 書籍を追加
         </button>
       </div>
 
-      <div className="bg-gray-50 dark:bg-slate-900 rounded-xl p-4 sm:p-6 mb-6">
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-center flex-wrap">
-          {/* hidden label for accessibility */}
+      <div className="bg-gray-50 dark:bg-slate-900 rounded-xl p-4 sm:p-6 mb-6 space-y-4">
+        {/* 検索入力フィールド */}
+        <div className="flex flex-col lg:flex-row gap-2 sm:gap-3">
           <label htmlFor="search-input" className="sr-only">
             検索
           </label>
@@ -48,37 +44,92 @@ export function DashboardPage() {
             type="text"
             aria-label="書籍名、著者名、ISBNで検索"
             placeholder="書籍名、著者名、ISBNで検索..."
-            className="flex-1 min-w-[250px] py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 border border-gray-300 dark:border-slate-700 rounded focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
+            className="w-full py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 border border-gray-300 dark:border-slate-700 rounded focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
           />
-          <select className="py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded cursor-pointer focus:border-purple-600 focus:ring-2 focus:ring-purple-400">
-            <option>評価順</option>
-            <option>最新順</option>
-            <option>人気順</option>
-          </select>
-          <button
-            onClick={toggleFilter}
-            className="py-2 px-5 border-2 border-purple-500 text-purple-600 dark:text-purple-400 rounded font-semibold text-sm hover:bg-purple-500 hover:text-white active:scale-95 transition whitespace-nowrap"
-          >
-            ⚙️ フィルター
-          </button>
         </div>
 
-        {isFilterOpen && (
-          <div className="mt-4 pt-4 border-t border-gray-300 dark:border-slate-700">
+        {/* フィルター項目 */}
+        <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
             <label
-              htmlFor="filter-year"
-              className="text-gray-700 dark:text-gray-400 mr-2"
+              htmlFor="filter-rating"
+              className="text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap"
             >
-              出版年
+              評価
             </label>
             <select
-              id="filter-year"
-              className="py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded cursor-pointer focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
+              id="filter-rating"
+              className="min-w-[180px] py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded cursor-pointer focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
             >
-              <option>全ての年</option>
+              <option>すべて</option>
+              <option>★1以上</option>
+              <option>★2以上</option>
+              <option>★3以上</option>
+              <option>★4以上</option>
+              <option>★5のみ</option>
             </select>
           </div>
-        )}
+
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+            <span className="text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+              出版年
+            </span>
+            <div className="flex gap-2 items-center">
+              <input
+                type="number"
+                inputMode="numeric"
+                placeholder="From"
+                aria-label="出版年 From"
+                className="w-[110px] py-2 px-3 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 border border-gray-300 dark:border-slate-700 rounded focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
+              />
+              <span className="text-gray-500 dark:text-gray-400">〜</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                placeholder="to"
+                aria-label="出版年 to"
+                className="w-[110px] py-2 px-3 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 border border-gray-300 dark:border-slate-700 rounded focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+            <label
+              htmlFor="sort-order"
+              className="text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap"
+            >
+              並び替え
+            </label>
+            <select
+              id="sort-order"
+              className="min-w-[220px] py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded cursor-pointer focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
+            >
+              <option>評価が高い順</option>
+              <option>登録日が新しい順</option>
+              <option>タイトル順</option>
+              <option>著者名順</option>
+              <option>出版年が新しい順</option>
+            </select>
+          </div>
+        </div>
+
+        {/* ボタングループ（右下） */}
+        <div className="flex flex-col sm:flex-row gap-2 justify-end">
+          <button
+            type="button"
+            data-testid="clear-filters-button"
+            className="py-2 px-4 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-gray-200 rounded font-semibold text-sm hover:bg-gray-100 dark:hover:bg-slate-800 active:scale-95 transition whitespace-nowrap"
+          >
+            クリア
+          </button>
+          <button
+            type="button"
+            data-testid="search-button"
+            className="py-2 px-5 bg-gray-900 text-white rounded font-semibold text-sm hover:bg-gray-800 active:scale-95 transition whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-gray-300 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+          >
+            検索
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 flex-1 overflow-y-auto">

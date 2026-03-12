@@ -1,0 +1,43 @@
+name: Copilot PR Review
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    env:
+      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 差分比較のためにフル履歴を取得
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+
+      - name: Run Copilot Review
+        if: ${{ !github.event.pull_request.head.repo.fork && env.COPILOT_GITHUB_TOKEN != '' }}
+        run: |
+          copilot -p "このPRの変更点を確認し、以下の観点でレビューしてください:
+          1. セキュリティ上の問題（認証情報の漏洩、インジェクション等）
+          2. コードの品質（可読性、重複、命名）
+          3. 潜在的なバグ
+          問題があれば具体的に指摘し、修正案も提示してください。" > copilot-review-comment.md
+
+      - name: Post Copilot Review
+        if: ${{ !github.event.pull_request.head.repo.fork && env.COPILOT_GITHUB_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment ${{ github.event.pull_request.number }} --body-file copilot-review-comment.md

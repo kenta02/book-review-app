@@ -8,6 +8,7 @@ import bookRouter from '../src/routes/books';
 import Book from '../src/models/Book';
 import Review from '../src/models/Review';
 import Favorite from '../src/models/Favorite';
+import { sequelize } from '../src/sequelize';
 
 // このファイルの目的：書籍 API の CRUD とページネーションを検証するテスト
 // - findAndCountAll のモックを用いてページング動作を確認
@@ -26,6 +27,10 @@ let app: express.Express;
 beforeEach(() => {
   app = makeApp();
   vi.restoreAllMocks();
+  vi.spyOn(sequelize, 'transaction').mockImplementation(async (callback: any) => {
+    const tx = { LOCK: { UPDATE: 'UPDATE' } };
+    return callback(tx);
+  });
 });
 
 afterEach(() => {
@@ -52,6 +57,23 @@ describe('GET /api/books', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.books).toHaveLength(2);
     expect(res.body.data.pagination.totalItems).toBe(2);
+  });
+
+  it('keeps legacy paging behavior for large limit values', async () => {
+    const spy = vi.spyOn(Book, 'findAndCountAll') as unknown as SpyInstance<
+      [FindAndCountOptions?],
+      { rows: BookInstance[]; count: number }
+    >;
+    spy.mockResolvedValue({ rows: [], count: 0 });
+
+    await request(app).get('/api/books?page=1&limit=500');
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        limit: 500,
+        offset: 0,
+      })
+    );
   });
 });
 
@@ -91,8 +113,10 @@ describe('POST /api/books', () => {
   });
 
   it('returns 409 when ISBN already exists', async () => {
-    const book = { id: 1 } as unknown as BookInstance;
-    vi.spyOn(Book, 'findOne').mockResolvedValue(book);
+    vi.spyOn(Book, 'create').mockRejectedValue({
+      name: 'SequelizeUniqueConstraintError',
+      errors: [{ path: 'ISBN' }],
+    });
     const res = await request(app).post('/api/books').send({
       title: 't',
       author: 'a',
@@ -102,8 +126,21 @@ describe('POST /api/books', () => {
     expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
   });
 
+  it('returns 409 when title and author already exist', async () => {
+    vi.spyOn(Book, 'create').mockRejectedValue({
+      name: 'SequelizeUniqueConstraintError',
+      errors: [{ path: 'title' }, { path: 'author' }],
+    });
+    const res = await request(app).post('/api/books').send({
+      title: 'Same Title',
+      author: 'Same Author',
+      ISBN: 'unique-isbn',
+    });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
+  });
+
   it('returns 201 when created', async () => {
-    vi.spyOn(Book, 'findOne').mockResolvedValue(null);
     const book = { id: 1 } as unknown as BookInstance;
     vi.spyOn(Book, 'create').mockResolvedValue(book);
     const res = await request(app).post('/api/books').send({
@@ -112,6 +149,19 @@ describe('POST /api/books', () => {
     });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
+  });
+
+  it('returns 400 when optional fields have invalid types', async () => {
+    const res = await request(app).post('/api/books').send({
+      title: 't',
+      author: 'a',
+      publicationYear: '2024',
+      ISBN: { value: 'x' },
+      summary: ['bad'],
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 });
 
@@ -139,13 +189,32 @@ describe('PUT /api/books/:id', () => {
   });
 
   it('returns 409 when ISBN duplicates another book', async () => {
-    const book = { id: 1 } as unknown as BookInstance;
-    vi.spyOn(Book, 'findByPk').mockResolvedValue(book);
-    vi.spyOn(Book, 'findOne').mockResolvedValue({
-      get: (key: string) => (key === 'id' ? 2 : null),
-    } as unknown as BookInstance);
+    const fakeBook = {
+      update: vi.fn().mockRejectedValue({
+        name: 'SequelizeUniqueConstraintError',
+        errors: [{ path: 'ISBN' }],
+      }),
+    };
+    vi.spyOn(Book, 'findByPk').mockResolvedValue(fakeBook as unknown as BookInstance);
 
     const res = await request(app).put('/api/books/1').send({ ISBN: 'dup' });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
+  });
+
+  it('returns 409 when title and author duplicate another book', async () => {
+    const fakeBook = {
+      update: vi.fn().mockRejectedValue({
+        name: 'SequelizeUniqueConstraintError',
+        errors: [{ path: 'title' }, { path: 'author' }],
+      }),
+    };
+    vi.spyOn(Book, 'findByPk').mockResolvedValue(fakeBook as unknown as BookInstance);
+
+    const res = await request(app).put('/api/books/1').send({
+      title: 'Same Title',
+      author: 'Same Author',
+    });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
   });
@@ -157,6 +226,17 @@ describe('PUT /api/books/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(fakeBook.update).toHaveBeenCalled();
+  });
+
+  it('returns 400 when optional update fields have invalid types', async () => {
+    const res = await request(app).put('/api/books/1').send({
+      publicationYear: '2024',
+      ISBN: 12345,
+      summary: { text: 'bad' },
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 });
 
@@ -195,5 +275,18 @@ describe('DELETE /api/books/:id', () => {
     const res = await request(app).delete('/api/books/1');
     expect(res.status).toBe(204);
     expect(fakeBook.destroy).toHaveBeenCalled();
+  });
+
+  it('returns 409 when delete fails by related data race', async () => {
+    const fakeBook = {
+      destroy: vi.fn().mockRejectedValue({ name: 'SequelizeForeignKeyConstraintError' }),
+    } as unknown as BookInstance;
+    vi.spyOn(Book, 'findByPk').mockResolvedValue(fakeBook);
+    vi.spyOn(Review, 'count').mockResolvedValue(0);
+    vi.spyOn(Favorite, 'count').mockResolvedValue(0);
+
+    const res = await request(app).delete('/api/books/1');
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('RELATED_DATA_EXISTS');
   });
 });

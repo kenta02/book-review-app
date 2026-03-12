@@ -1,8 +1,3 @@
-import Review from '../models/Review';
-import Book from '../models/Book';
-import Comment from '../models/Comment';
-import User from '../models/Users';
-import { sequelize } from '../sequelize';
 import {
   ReviewDto,
   ReviewDetailDto,
@@ -14,20 +9,21 @@ import {
 import { logger } from '../utils/logger';
 import { ApiError } from '../errors/ApiError';
 import { ERROR_MESSAGES } from '../constants/error-messages';
+import * as reviewRepository from '../repositories/review.repository';
 
 /**
  * モデルインスタンスを ReviewDto に変換するヘルパー。
- * @returns {ReviewDto}
+ *
+ * @param model - Review モデルまたは toJSON を持つオブジェクト
+ * @returns ReviewDto
  */
 function reviewModelToDto(model: unknown): ReviewDto {
-  // toJSON() を呼び出して JSON 形式を取得
   const json = (
     typeof (model as { toJSON?: unknown }).toJSON === 'function'
       ? (model as { toJSON: () => Record<string, unknown> }).toJSON()
       : model
   ) as Record<string, unknown>;
 
-  // 型を安全に変換（undefined/null チェック付き）
   return {
     id: Number(json.id),
     bookId: Number(json.bookId),
@@ -41,8 +37,9 @@ function reviewModelToDto(model: unknown): ReviewDto {
 
 /**
  * レビューのページング取得。bookId/userId による絞り込み可。
- * @param {ListReviewsQueryDto} queryDto
- * @returns {Promise<{reviews:ReviewDto[],pagination:{currentPage:number,totalPages:number,totalItems:number,itemsPerPage:number}}>} 
+ *
+ * @param queryDto - 一覧クエリ
+ * @returns レビュー一覧とページング情報
  */
 export async function listReviews(queryDto: ListReviewsQueryDto): Promise<{
   reviews: ReviewDto[];
@@ -56,25 +53,20 @@ export async function listReviews(queryDto: ListReviewsQueryDto): Promise<{
   const { page, limit, bookId, userId } = queryDto;
   const offset = (page - 1) * limit;
 
-  // フィルタ条件構築
   const where: Record<string, unknown> = {};
   if (bookId !== undefined) where.bookId = bookId;
   if (userId !== undefined) where.userId = userId;
 
   logger.info('[REVIEWS SERVICE] executing DB query', { where, page, limit, offset });
 
-  // DB からレビューを取得（総件数も同時に取得）
-  const { rows, count } = await Review.findAndCountAll({
+  const { rows, count } = await reviewRepository.findReviewsWithPagination({
     where,
-    attributes: ['id', 'bookId', 'userId', 'content', 'rating', 'createdAt', 'updatedAt'],
-    order: [['createdAt', 'DESC']],
     limit,
     offset,
   });
 
   logger.info('[REVIEWS SERVICE] db returned rows=', rows.length, 'count=', count);
 
-  // DTO に変換してページング情報と共に返却
   return {
     reviews: rows.map(reviewModelToDto),
     pagination: {
@@ -87,21 +79,14 @@ export async function listReviews(queryDto: ListReviewsQueryDto): Promise<{
 }
 
 /**
- * レビューID から詳細を取得（ユーザー名・本タイトル含む）。
- * @param {number} reviewId
- * @returns {Promise<ReviewDetailDto>}
- * @throws {ApiError} REVIEW_NOT_FOUND
+ * レビュー ID から詳細を取得（ユーザー名・本タイトル含む）。
+ *
+ * @param reviewId - レビュー ID
+ * @returns レビュー詳細
  */
 export async function getReviewDetail(reviewId: number): Promise<ReviewDetailDto> {
-  // レビュー取得（ユーザーと本の関連情報も一緒に取得）
-  const found = await Review.findByPk(reviewId, {
-    include: [
-      { model: User, attributes: ['id', 'username'] },
-      { model: Book, attributes: ['id', 'title'] },
-    ],
-  });
+  const found = await reviewRepository.findReviewDetailById(reviewId);
 
-  // レビューが存在しない場合は 404 エラーをスロー
   if (!found) {
     throw new ApiError(404, 'REVIEW_NOT_FOUND', ERROR_MESSAGES.REVIEW_NOT_FOUND);
   }
@@ -118,7 +103,6 @@ export async function getReviewDetail(reviewId: number): Promise<ReviewDetailDto
     updatedAt: Date;
   };
 
-  // 関連リソース情報を含めてレスポンス構築
   return {
     id: foundJson.id,
     bookId: foundJson.bookId,
@@ -133,22 +117,20 @@ export async function getReviewDetail(reviewId: number): Promise<ReviewDetailDto
 }
 
 /**
- * レビューを新規作成する。本の存在を検証。
- * @param {CreateReviewServiceDto} serviceDto
- * @returns {Promise<ReviewDto>}
- * @throws {ApiError} BOOK_NOT_FOUND
+ * レビューを新規作成する。本の存在を検証する。
+ *
+ * @param serviceDto - 作成入力
+ * @returns 作成済みレビュー
  */
 export async function createReview(serviceDto: CreateReviewServiceDto): Promise<ReviewDto> {
   const { bookId, content, rating, userId } = serviceDto;
 
-  // 本が存在するか確認（ビジネス検証）
-  const book = await Book.findByPk(bookId);
+  const book = await reviewRepository.findBookById(bookId);
   if (!book) {
     throw new ApiError(404, 'BOOK_NOT_FOUND', ERROR_MESSAGES.BOOK_NOT_FOUND);
   }
 
-  // レビュー新規作成
-  const newReview = await Review.create({
+  const newReview = await reviewRepository.createReview({
     bookId,
     userId,
     content,
@@ -159,6 +141,7 @@ export async function createReview(serviceDto: CreateReviewServiceDto): Promise<
     typeof (newReview as { toJSON?: unknown }).toJSON === 'function'
       ? (newReview as { toJSON: () => Record<string, unknown> }).toJSON()
       : (newReview as unknown as Record<string, unknown>);
+
   logger.info('[REVIEWS SERVICE] review created', {
     reviewId: createdJson.id,
     userId,
@@ -169,26 +152,23 @@ export async function createReview(serviceDto: CreateReviewServiceDto): Promise<
 
 /**
  * 指定レビューを所有者が更新する。
- * @param {UpdateReviewServiceDto} serviceDto
- * @returns {Promise<ReviewDto>}
- * @throws {ApiError} REVIEW_NOT_FOUND / FORBIDDEN
+ *
+ * @param serviceDto - 更新入力
+ * @returns 更新済みレビュー
  */
 export async function updateReview(serviceDto: UpdateReviewServiceDto): Promise<ReviewDto> {
   const { reviewId, content, userId } = serviceDto;
 
-  // レビュー取得
-  const review = await Review.findByPk(reviewId);
+  const review = await reviewRepository.findReviewById(reviewId);
   if (!review) {
     throw new ApiError(404, 'REVIEW_NOT_FOUND', ERROR_MESSAGES.REVIEW_NOT_FOUND);
   }
 
-  // 権限チェック：所有者（userId）が一致するか確認
   if (Number(review.get('userId')) !== Number(userId)) {
     throw new ApiError(403, 'FORBIDDEN', ERROR_MESSAGES.FORBIDDEN_REVIEW_UPDATE);
   }
 
-  // 内容を更新
-  const updated = await review.update({ content });
+  const updated = await reviewRepository.updateReviewContent(review, content);
 
   logger.info('[REVIEWS SERVICE] review updated', { reviewId, userId });
 
@@ -196,43 +176,32 @@ export async function updateReview(serviceDto: UpdateReviewServiceDto): Promise<
 }
 
 /**
- * レビューを所有者が削除する。関連コメントがあると 409。
- * @param {DeleteReviewServiceDto} serviceDto
- * @returns {Promise<void>}
- * @throws {ApiError} REVIEW_NOT_FOUND / FORBIDDEN / RELATED_DATA_EXISTS
+ * レビューを所有者が削除する。関連コメントがある場合は 409 を返す。
+ *
+ * @param serviceDto - 削除入力
  */
 export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<void> {
   const { reviewId, userId } = serviceDto;
 
-  // レビュー取得
-  const review = await Review.findByPk(reviewId);
+  const review = await reviewRepository.findReviewById(reviewId);
   if (!review) {
     throw new ApiError(404, 'REVIEW_NOT_FOUND', ERROR_MESSAGES.REVIEW_NOT_FOUND);
   }
 
-  // 権限チェック：所有者（userId）が一致するか確認
   if (Number(review.get('userId')) !== Number(userId)) {
     throw new ApiError(403, 'FORBIDDEN', ERROR_MESSAGES.FORBIDDEN_REVIEW_DELETE);
   }
 
-  // トランザクション開始（削除が確実に行われることを保証）
-  const transaction = await sequelize.transaction();
+  const transaction = await reviewRepository.createTransaction();
   try {
-    // 関連コメントの有無確認
-    const hasComments = await Comment.findOne({
-      where: { reviewId },
-      attributes: ['id'],
-      transaction,
-    });
+    const hasComments = await reviewRepository.findAnyCommentByReviewId(reviewId, transaction);
 
-    // コメントが存在する場合は削除を中止
     if (hasComments) {
       await transaction.rollback();
       throw new ApiError(409, 'RELATED_DATA_EXISTS', ERROR_MESSAGES.RELATED_DATA_EXISTS);
     }
 
-    // レビューを削除
-    await review.destroy({ transaction });
+    await reviewRepository.deleteReview(review, transaction);
     await transaction.commit();
 
     logger.info('[REVIEWS SERVICE] review deleted', { reviewId, userId });

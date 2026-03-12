@@ -19,17 +19,19 @@ const ReviewVote = sequelize.define(
         key: 'id',
       },
       onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
       unique: 'uniq_review_vote',
     },
 
     userId: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       references: {
         model: 'Users',
         key: 'id',
       },
-      onDelete: 'SET NULL',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
       unique: 'uniq_review_vote',
     },
 
