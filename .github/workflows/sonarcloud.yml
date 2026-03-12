@@ -39,7 +39,7 @@ jobs:
           # npm ci sometimes skips optional native binaries due to an npm bug;
           # Vitest pulls in rollup which depends on @rollup/rollup-<platform>.
           # re-run npm install to fetch the missing package or explicitly add it.
-          npm install @rollup/rollup-linux-x64-gnu || true
+          npm install --no-save @rollup/rollup-linux-x64-gnu@4.59.0 || true
 
       - name: Build server
         working-directory: ./server
@@ -48,7 +48,6 @@ jobs:
       - name: Run server tests with coverage
         working-directory: ./server
         run: npm run coverage:ci
-        continue-on-error: true
 
       # フロントエンド分析
       - name: Install client dependencies

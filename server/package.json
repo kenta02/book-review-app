@@ -40,7 +40,6 @@
     "yaml": "^2.4.1"
   },
   "devDependencies": {
-    "@rollup/rollup-darwin-arm64": "^4.59.0",
     "@types/bcrypt": "6.0.0",
     "@types/cors": "2.8.19",
     "@types/express": "^5.0.5",
