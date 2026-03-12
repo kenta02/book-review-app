@@ -47,6 +47,13 @@ jobs:
 
       - name: Run server tests with coverage
         working-directory: ./server
+        env:
+          DB_NAME: test_db
+          DB_USER: test_user
+          DB_PASS: test_pass
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          JWT_SECRET: test-jwt-secret
         run: npm run coverage:ci
 
       # フロントエンド分析
