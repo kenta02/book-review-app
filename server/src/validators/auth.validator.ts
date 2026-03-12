@@ -24,7 +24,8 @@ export type LoginPayload = {
  * @returns 検証結果
  */
 export function validateRegister(req: Request): ParseResult<RegisterPayload> {
-  const { username, email, password } = req.body as Partial<RegisterPayload>;
+  const body = (req.body ?? {}) as Partial<RegisterPayload>;
+  const { username, email, password } = body;
   const usernameStr = typeof username === 'string' ? username : '';
   const emailStr = typeof email === 'string' ? email : '';
   const passwordStr = typeof password === 'string' ? password : '';
@@ -63,7 +64,8 @@ export function validateRegister(req: Request): ParseResult<RegisterPayload> {
  * @returns 検証結果
  */
 export function validateLogin(req: Request): ParseResult<LoginPayload> {
-  const { email, password } = req.body as Partial<LoginPayload>;
+  const body = (req.body ?? {}) as Partial<LoginPayload>;
+  const { email, password } = body;
   const emailStr = typeof email === 'string' ? email : '';
   const passwordStr = typeof password === 'string' ? password : '';
   const errors: ValidationError[] = [];

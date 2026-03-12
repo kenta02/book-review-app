@@ -154,11 +154,11 @@ export function validateUpdateBook(
   }
 
   if (title !== undefined && (typeof title !== 'string' || title.trim() === '')) {
-    errors.push({ field: 'title', message: ERROR_MESSAGES.REQUIRED_TITLE });
+    errors.push({ field: 'title', message: ERROR_MESSAGES.INVALID_TITLE_IF_PROVIDED });
   }
 
   if (author !== undefined && (typeof author !== 'string' || author.trim() === '')) {
-    errors.push({ field: 'author', message: ERROR_MESSAGES.REQUIRED_AUTHOR });
+    errors.push({ field: 'author', message: ERROR_MESSAGES.INVALID_AUTHOR_IF_PROVIDED });
   }
 
   if (publicationYear !== undefined && !Number.isInteger(publicationYear)) {

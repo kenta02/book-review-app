@@ -108,8 +108,10 @@ describe('POST /api/books', () => {
   });
 
   it('returns 409 when ISBN already exists', async () => {
-    const book = { id: 1 } as unknown as BookInstance;
-    vi.spyOn(Book, 'findOne').mockResolvedValue(book);
+    vi.spyOn(Book, 'create').mockRejectedValue({
+      name: 'SequelizeUniqueConstraintError',
+      errors: [{ path: 'ISBN' }],
+    });
     const res = await request(app).post('/api/books').send({
       title: 't',
       author: 'a',
@@ -120,7 +122,6 @@ describe('POST /api/books', () => {
   });
 
   it('returns 201 when created', async () => {
-    vi.spyOn(Book, 'findOne').mockResolvedValue(null);
     const book = { id: 1 } as unknown as BookInstance;
     vi.spyOn(Book, 'create').mockResolvedValue(book);
     const res = await request(app).post('/api/books').send({
@@ -169,11 +170,13 @@ describe('PUT /api/books/:id', () => {
   });
 
   it('returns 409 when ISBN duplicates another book', async () => {
-    const book = { id: 1 } as unknown as BookInstance;
-    vi.spyOn(Book, 'findByPk').mockResolvedValue(book);
-    vi.spyOn(Book, 'findOne').mockResolvedValue({
-      get: (key: string) => (key === 'id' ? 2 : null),
-    } as unknown as BookInstance);
+    const fakeBook = {
+      update: vi.fn().mockRejectedValue({
+        name: 'SequelizeUniqueConstraintError',
+        errors: [{ path: 'ISBN' }],
+      }),
+    };
+    vi.spyOn(Book, 'findByPk').mockResolvedValue(fakeBook as unknown as BookInstance);
 
     const res = await request(app).put('/api/books/1').send({ ISBN: 'dup' });
     expect(res.status).toBe(409);
@@ -236,5 +239,18 @@ describe('DELETE /api/books/:id', () => {
     const res = await request(app).delete('/api/books/1');
     expect(res.status).toBe(204);
     expect(fakeBook.destroy).toHaveBeenCalled();
+  });
+
+  it('returns 409 when delete fails by related data race', async () => {
+    const fakeBook = {
+      destroy: vi.fn().mockRejectedValue({ name: 'SequelizeForeignKeyConstraintError' }),
+    } as unknown as BookInstance;
+    vi.spyOn(Book, 'findByPk').mockResolvedValue(fakeBook);
+    vi.spyOn(Review, 'count').mockResolvedValue(0);
+    vi.spyOn(Favorite, 'count').mockResolvedValue(0);
+
+    const res = await request(app).delete('/api/books/1');
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('RELATED_DATA_EXISTS');
   });
 });

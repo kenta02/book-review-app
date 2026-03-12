@@ -1,6 +1,7 @@
 import { ERROR_MESSAGES } from '../constants/error-messages';
 import { ApiError } from '../errors/ApiError';
 import * as bookRepository from '../repositories/book.repository';
+import { ForeignKeyConstraintError, UniqueConstraintError, ValidationErrorItem } from 'sequelize';
 import * as reviewService from './review.service';
 import { CreateBookDto, ListBooksQueryDto, UpdateBookDto } from '../types/dto';
 import { logger } from '../utils/logger';
@@ -10,6 +11,27 @@ type ListBookReviewsInput = {
   page: number;
   limit: number;
 };
+
+function isIsbnUniqueConstraintError(error: unknown): boolean {
+  if (error instanceof UniqueConstraintError) {
+    return error.errors.some((item: ValidationErrorItem) => item.path === 'ISBN');
+  }
+
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+
+  const candidate = error as {
+    name?: string;
+    errors?: Array<{ path?: string }>;
+  };
+
+  if (candidate.name !== 'SequelizeUniqueConstraintError') {
+    return false;
+  }
+
+  return (candidate.errors || []).some((item) => item.path === 'ISBN');
+}
 
 /**
  * 書籍一覧をページング付きで返します。
@@ -58,27 +80,27 @@ export async function getBookDetail(bookId: number) {
 /**
  * 書籍を新規作成します。
  *
- * ISBN が指定された場合は、作成前に重複を検査します。
+ * 一意制約違反（ISBN 重複）は DB 例外を 409 へ変換します。
  *
  * @param input - 作成入力
  * @returns 作成済み書籍
  * @throws ApiError ISBN が重複している場合
  */
 export async function createBook(input: CreateBookDto) {
-  if (input.ISBN) {
-    const existingBook = await bookRepository.findBookByIsbn(input.ISBN);
-    if (existingBook) {
+  try {
+    return await bookRepository.createBook(input);
+  } catch (error) {
+    if (isIsbnUniqueConstraintError(error)) {
       throw new ApiError(409, 'DUPLICATE_RESOURCE', ERROR_MESSAGES.DUPLICATE_ISBN);
     }
+    throw error;
   }
-
-  return bookRepository.createBook(input);
 }
 
 /**
  * 書籍を部分更新します。
  *
- * 更新対象の存在確認と ISBN 重複確認を service 層でまとめて扱います。
+ * 更新対象の存在確認を行い、一意制約違反（ISBN 重複）は 409 へ変換します。
  *
  * @param bookId - 書籍 ID
  * @param input - 更新対象フィールド
@@ -92,14 +114,14 @@ export async function updateBook(bookId: number, input: UpdateBookDto) {
     throw new ApiError(404, 'BOOK_NOT_FOUND', ERROR_MESSAGES.BOOK_NOT_FOUND);
   }
 
-  if (input.ISBN !== undefined) {
-    const duplicatedBook = await bookRepository.findBookByIsbn(input.ISBN);
-    if (duplicatedBook && duplicatedBook.get('id') !== bookId) {
+  try {
+    return await bookRepository.updateBook(book, input);
+  } catch (error) {
+    if (isIsbnUniqueConstraintError(error)) {
       throw new ApiError(409, 'DUPLICATE_RESOURCE', ERROR_MESSAGES.DUPLICATE_ISBN);
     }
+    throw error;
   }
-
-  return bookRepository.updateBook(book, input);
 }
 
 /**
@@ -148,5 +170,17 @@ export async function deleteBook(bookId: number) {
     throw new ApiError(409, 'RELATED_DATA_EXISTS', ERROR_MESSAGES.RELATED_DATA_EXISTS);
   }
 
-  await bookRepository.deleteBook(book);
+  try {
+    await bookRepository.deleteBook(book);
+  } catch (error) {
+    if (
+      error instanceof ForeignKeyConstraintError ||
+      (typeof error === 'object' &&
+        error !== null &&
+        (error as { name?: string }).name === 'SequelizeForeignKeyConstraintError')
+    ) {
+      throw new ApiError(409, 'RELATED_DATA_EXISTS', ERROR_MESSAGES.RELATED_DATA_EXISTS);
+    }
+    throw error;
+  }
 }

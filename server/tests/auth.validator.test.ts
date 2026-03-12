@@ -36,6 +36,11 @@ describe('auth.validator', () => {
         expect(result.errors.map((error) => error.field)).toEqual(['username', 'email', 'password']);
       }
     });
+
+    it('returns validation errors instead of throwing when body is null', () => {
+      const result = validateRegister(makeRequest(null));
+      expect(result.success).toBe(false);
+    });
   });
 
   describe('validateLogin', () => {
@@ -63,6 +68,11 @@ describe('auth.validator', () => {
       if (!result.success) {
         expect(result.errors.map((error) => error.field)).toEqual(['email', 'password']);
       }
+    });
+
+    it('returns validation errors instead of throwing when body is undefined', () => {
+      const result = validateLogin(makeRequest(undefined));
+      expect(result.success).toBe(false);
     });
   });
 });

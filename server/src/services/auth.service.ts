@@ -89,7 +89,7 @@ export async function login(payload: LoginPayload): Promise<AuthSuccessDto> {
 
   const isPasswordValid = await bcrypt.compare(password, userJson.password || '');
   if (!isPasswordValid) {
-    throw new ApiError(401, 'AUTHENTICATION_FAILED', ERROR_MESSAGES.PASSWORD_MISMATCH);
+    throw new ApiError(401, 'AUTHENTICATION_FAILED', ERROR_MESSAGES.AUTHENTICATION_FAILED);
   }
 
   const user = toAuthUserDto(existingUser);

@@ -17,13 +17,14 @@ export const ERROR_MESSAGES = {
   ID_MUST_BE_POSITIVE_INT: 'IDは1以上の整数である必要があります。',
   REQUIRED_TITLE: 'タイトルは必須項目です。',
   REQUIRED_AUTHOR: '著者は必須項目です。',
+  INVALID_TITLE_IF_PROVIDED: 'タイトルを指定する場合は空文字にできません。',
+  INVALID_AUTHOR_IF_PROVIDED: '著者を指定する場合は空文字にできません。',
 
   // Auth / user messages
   USERNAME_LENGTH: 'ユーザー名は2~150文字で入力してください.',
   EMAIL_FORMAT: 'メールアドレスは有効なメール形式で入力してください。',
   PASSWORD_MIN_LENGTH: 'パスワードは8文字以上で入力してください。',
   AUTHENTICATION_FAILED: '認証に失敗しました。メールアドレスまたはパスワードが正しくありません。',
-  PASSWORD_MISMATCH: '認証に失敗しました。パスワードが一致しません。',
 
   // Forbidden / permission
   FORBIDDEN_REVIEW_UPDATE: 'このレビューを更新する権限がありません。',
