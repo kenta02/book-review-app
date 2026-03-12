@@ -18,7 +18,11 @@ export type AuthSuccessDto = {
 };
 
 function getJwtSecret(): string {
-  return process.env.JWT_SECRET || 'dev_secret_key_12345';
+  const secretKey = process.env.JWT_SECRET;
+  if (!secretKey) {
+    throw new Error('JWT_SECRET is required');
+  }
+  return secretKey;
 }
 
 function toAuthUserDto(model: userRepository.UserInstance): AuthUserDto {
