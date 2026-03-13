@@ -5,7 +5,7 @@ import {
   UpdateReviewServiceDto,
   DeleteReviewServiceDto,
   ListReviewsQueryDto,
-} from '../types/dto';
+} from '../modules/review/dto/review.dto';
 import { logger } from '../utils/logger';
 import { ApiError } from '../errors/ApiError';
 import { ERROR_MESSAGES } from '../constants/error-messages';
