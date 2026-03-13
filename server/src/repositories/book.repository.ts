@@ -23,10 +23,16 @@ export type BookInstance = NonNullable<Awaited<ReturnType<typeof Book.findByPk>>
 export async function findBooksWithPagination(page: number, limit: number) {
   const offset = (page - 1) * limit;
 
+  // フィルター条件
+  const where: Record<string, unknown> = {};
+  // ソート条件
+  const order: [string, 'ASC' | 'DESC'][] = [['createdAt', 'DESC']];
+
   return Book.findAndCountAll({
     limit,
     offset,
-    order: [['createdAt', 'DESC']],
+    order,
+    where,
   });
 }
 

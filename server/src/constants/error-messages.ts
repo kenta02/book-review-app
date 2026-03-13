@@ -35,4 +35,9 @@ export const ERROR_MESSAGES = {
   DUPLICATE_EMAIL: '同じメールアドレスが既に存在します。',
   DUPLICATE_ISBN: '同じISBNの本が既に存在します。',
   RELATED_DATA_EXISTS: '関連するデータが存在するため、削除できません。',
+
+  // 検索関連
+  INVALID_SORT_FIELD:
+    'sortパラメータはtitle, author, publicationYearのいずれかで指定してください。',
+  INVALID_ORDER_VALUE: 'orderパラメータはascまたはdescで指定してください。',
 } as const;

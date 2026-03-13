@@ -5,6 +5,13 @@
 export type ListBooksQueryDto = {
   page: number;
   limit: number;
+  keyword?: string;
+  author?: string;
+  publicationYearFrom?: number;
+  publicationYearTo?: number;
+  ratingMin?: number;
+  sort?: string;
+  order?: string;
 };
 
 /**

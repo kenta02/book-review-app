@@ -42,6 +42,13 @@ export function validateListBooksQuery(req: Request): ListBooksQueryDto {
   return {
     page: parseLegacyPagingValue(req.query.page, 1),
     limit: parseLegacyPagingValue(req.query.limit, 20),
+    keyword: typeof req.query.keyword === 'string' ? req.query.keyword.trim() : undefined,
+    author: typeof req.query.author === 'string' ? req.query.author.trim() : undefined,
+    publicationYearFrom: parseLegacyPagingValue(req.query.publicationYearFrom, 1),
+    publicationYearTo: parseLegacyPagingValue(req.query.publicationYearTo, 1),
+    ratingMin: parseLegacyPagingValue(req.query.ratingMin, 0),
+    sort: typeof req.query.sort === 'string' ? req.query.sort.trim() : undefined,
+    order: typeof req.query.order === 'string' ? req.query.order.trim() : undefined,
   };
 }
 
