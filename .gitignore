@@ -112,4 +112,14 @@ PROJECT_MEMORY.md
 .github/hooks/
 .github/mcp/
 .github/skills/
+
+# Track only shared skill docs used for CI parity workflow.
+!.github/skills/
+.github/skills/*
+!.github/skills/README.md
+!.github/skills/test-ci-parity/
+!.github/skills/test-ci-parity/SKILL.md
   
+.github/pull_request_template.md
+.github/skills/README.md
+.github/skills/test-ci-parity/SKILL.md
