@@ -3,7 +3,7 @@ import { DestroyOptions, FindOptions, Transaction } from 'sequelize';
 import Book from '../models/Book';
 import Favorite from '../models/Favorite';
 import Review from '../models/Review';
-import { CreateBookDto, UpdateBookDto } from '../types/dto';
+import { CreateBookDto, UpdateBookDto } from '../modules/book/dto/book.dto';
 
 /**
  * `Book.findByPk` が返す実体型です。

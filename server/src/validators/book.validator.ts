@@ -1,7 +1,7 @@
 import { Request } from 'express';
 
 import { ERROR_MESSAGES } from '../constants/error-messages';
-import { CreateBookDto, ListBooksQueryDto, UpdateBookDto } from '../types/dto';
+import { CreateBookDto, ListBooksQueryDto, UpdateBookDto } from '../modules/book/dto/book.dto';
 
 export interface ValidationError {
   field: string;

@@ -5,7 +5,7 @@ import { ApiError } from '../errors/ApiError';
 import * as bookRepository from '../repositories/book.repository';
 import { sequelize } from '../sequelize';
 import * as reviewService from './review.service';
-import { CreateBookDto, ListBooksQueryDto, UpdateBookDto } from '../types/dto';
+import { CreateBookDto, ListBooksQueryDto, UpdateBookDto } from '../modules/book/dto/book.dto';
 import { logger } from '../utils/logger';
 
 type ListBookReviewsInput = {
