@@ -54,14 +54,7 @@ jobs:
 
       - name: Run server unit tests
         working-directory: ./server
-        env:
-          DB_NAME: test_db
-          DB_USER: test_user
-          DB_PASS: test_pass
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          JWT_SECRET: test-jwt-secret
-        run: npm run test:ci
+        run: npm run test:ci-parity
 
       # ----- frontend -----
       # クライアントサイド（./client）に対するステップ
