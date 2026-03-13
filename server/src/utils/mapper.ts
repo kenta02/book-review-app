@@ -1,4 +1,4 @@
-import type { CommentDto } from '../types/dto';
+import type { CommentDto } from '../modules/comment/dto/comment.dto';
 
 // Model -> DTO 変換ユーティリティ
 // - Sequelize の model.toJSON() を受けて、API に返す形に整形します。
