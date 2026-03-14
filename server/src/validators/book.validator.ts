@@ -38,17 +38,44 @@ function parseLegacyPagingValue(rawValue: unknown, defaultValue: number): number
  * @param req - Express Request
  * @returns 正規化済みの一覧クエリ
  */
-export function validateListBooksQuery(req: Request): ListBooksQueryDto {
+export function validateListBooksQuery(req: Request): ParseResult<ListBooksQueryDto> {
+  const page = parseLegacyPagingValue(req.query.page, 1);
+  const limit = parseLegacyPagingValue(req.query.limit, 20);
+  const errors: ValidationError[] = [];
+
+  if (page <= 0) {
+    errors.push({
+      field: 'page',
+      message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
+      code: 'INVALID_PAGE',
+    });
+  }
+
+  if (limit <= 0) {
+    errors.push({
+      field: 'limit',
+      message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
+      code: 'INVALID_LIMIT',
+    });
+  }
+
+  if (errors.length > 0) {
+    return { success: false, errors };
+  }
+
   return {
-    page: parseLegacyPagingValue(req.query.page, 1),
-    limit: parseLegacyPagingValue(req.query.limit, 20),
-    keyword: typeof req.query.keyword === 'string' ? req.query.keyword.trim() : undefined,
-    author: typeof req.query.author === 'string' ? req.query.author.trim() : undefined,
-    publicationYearFrom: parseLegacyPagingValue(req.query.publicationYearFrom, 1),
-    publicationYearTo: parseLegacyPagingValue(req.query.publicationYearTo, 1),
-    ratingMin: parseLegacyPagingValue(req.query.ratingMin, 0),
-    sort: typeof req.query.sort === 'string' ? req.query.sort.trim() : undefined,
-    order: typeof req.query.order === 'string' ? req.query.order.trim() : undefined,
+    success: true,
+    data: {
+      page,
+      limit,
+      keyword: typeof req.query.keyword === 'string' ? req.query.keyword.trim() : undefined,
+      author: typeof req.query.author === 'string' ? req.query.author.trim() : undefined,
+      publicationYearFrom: parseLegacyPagingValue(req.query.publicationYearFrom, 1),
+      publicationYearTo: parseLegacyPagingValue(req.query.publicationYearTo, 1),
+      ratingMin: parseLegacyPagingValue(req.query.ratingMin, 0),
+      sort: typeof req.query.sort === 'string' ? req.query.sort.trim() : undefined,
+      order: typeof req.query.order === 'string' ? req.query.order.trim() : undefined,
+    },
   };
 }
 

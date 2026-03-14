@@ -1,9 +1,9 @@
-import { DestroyOptions, FindOptions, Transaction } from 'sequelize';
+import { DestroyOptions, FindOptions, Op, Transaction } from 'sequelize';
 
 import Book from '../models/Book';
 import Favorite from '../models/Favorite';
 import Review from '../models/Review';
-import { CreateBookDto, UpdateBookDto } from '../modules/book/dto/book.dto';
+import { CreateBookDto, ListBooksQueryDto, UpdateBookDto } from '../modules/book/dto/book.dto';
 
 /**
  * `Book.findByPk` が返す実体型です。
@@ -20,18 +20,50 @@ export type BookInstance = NonNullable<Awaited<ReturnType<typeof Book.findByPk>>
  * @param limit - 1 ページあたりの件数
  * @returns 総件数と該当ページの書籍一覧
  */
-export async function findBooksWithPagination(page: number, limit: number) {
+export async function findBooksWithPagination(queryDto: ListBooksQueryDto) {
+  const { page, limit, keyword, author, publicationYearFrom, publicationYearTo, sort, order } = queryDto;
   const offset = (page - 1) * limit;
 
   // フィルター条件
   const where: Record<string, unknown> = {};
   // ソート条件
-  const order: [string, 'ASC' | 'DESC'][] = [['createdAt', 'DESC']];
+  const orderClause: [string, 'ASC' | 'DESC'][] = [['createdAt', 'DESC']];
+
+  // 著者名の部分一致検索
+  if(author){
+    where.author = { [Op.like]: `%${author}%` };
+  }
+
+  // 出版年の範囲検索
+  if(publicationYearFrom !== undefined || publicationYearTo !== undefined) {
+
+// where.publicationYear は unknown 扱いになるため、条件オブジェクトを先に組み立ててから代入する
+    const publicationYearCondition: Record<symbol, number> = {};
+
+    if(publicationYearFrom !== undefined) {
+      publicationYearCondition[Op.gte] = publicationYearFrom;
+    }
+    if(publicationYearTo !== undefined) {
+      publicationYearCondition[Op.lte] = publicationYearTo;
+    }
+    where.publicationYear = publicationYearCondition;
+  }
+
+  // タイトルでソート
+  if(sort === 'title') {
+    orderClause[0] = ['title', order === 'asc' ? 'ASC' : 'DESC'];
+  }else if(sort === 'publicationYear') {
+    orderClause[0] = ['publicationYear', order === 'asc' ? 'ASC' : 'DESC'];
+  } else if(sort === 'createdAt') {
+    orderClause[0] = ['createdAt', order === 'asc' ? 'ASC' : 'DESC'];
+  }
+
+
 
   return Book.findAndCountAll({
     limit,
     offset,
-    order,
+    order: orderClause,
     where,
   });
 }

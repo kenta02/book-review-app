@@ -50,8 +50,11 @@ function isIsbnUniqueConstraintError(error: unknown): boolean {
  * @returns 書籍一覧とページング情報
  */
 export async function listBooks(queryDto: ListBooksQueryDto) {
+
+  // この service は単純な橋渡し役なので、repository の返り値をそのまま返す形で実装しています。
+  // listBooksを拡張したい場合は、repository の返り値を加工して返す形で実装してください。
   const { page, limit } = queryDto;
-  const { count, rows } = await bookRepository.findBooksWithPagination(page, limit);
+  const { count, rows } = await bookRepository.findBooksWithPagination(queryDto);
 
   logger.info('[BOOKS SERVICE] books fetched', {
     page,

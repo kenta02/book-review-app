@@ -50,28 +50,29 @@ function sendApiError(res: Response, error: ApiError) {
  * @returns 書籍一覧とページング情報
  */
 export async function listBooks(req: Request, res: Response) {
-  try {
+
     const query = validateListBooksQuery(req);
-    const result = await bookService.listBooks(query);
+    const result = await bookService.listBooks(query.success ? query.data : { page: 1, limit: 20 });
 
-    return res.json({
-      success: true,
-      data: result,
-    });
-  } catch (error) {
-    if (error instanceof ApiError) {
-      return sendApiError(res, error);
-    }
+    const parseResult = validateListBooksQuery(req);
 
-    logger.error('[BOOKS GET] unexpected error occurred', error);
-    return res.status(500).json({
-      success: false,
-      error: {
-        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-        code: 'INTERNAL_SERVER_ERROR',
-      },
-    });
-  }
+  // バリデーション失敗時は400 Bad Requestでエラーコードと詳細を返す。
+  if(!parseResult.success) {
+
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: ERROR_MESSAGES.VALIDATION_FAILED,
+          code: 'VALIDATION_ERROR',
+          details: parseResult.errors,
+        },
+      });
+    } 
+
+
+  const result = await bookService.listBooks(parseResult.data);
+  return res.json({ success: true, data: result });
+
 }
 
 /**
