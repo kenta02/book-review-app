@@ -21,7 +21,7 @@ export type BookInstance = NonNullable<Awaited<ReturnType<typeof Book.findByPk>>
  * @returns 総件数と該当ページの書籍一覧
  */
 export async function findBooksWithPagination(queryDto: ListBooksQueryDto) {
-  const { page, limit, keyword, author, publicationYearFrom, publicationYearTo, sort, order } = queryDto;
+  const { page, limit, author, publicationYearFrom, publicationYearTo, sort, order } = queryDto;
   const offset = (page - 1) * limit;
 
   // フィルター条件
@@ -29,12 +29,16 @@ export async function findBooksWithPagination(queryDto: ListBooksQueryDto) {
   // ソート条件
   const orderClause: [string, 'ASC' | 'DESC'][] = [['createdAt', 'DESC']];
 
+  // ソート順はascのみASC、それ以外はDESCとする 
+  const sortOrder: 'ASC' | 'DESC' = order === 'asc' ? 'ASC' : 'DESC';
+
   // 著者名の部分一致検索
   if(author){
     where.author = { [Op.like]: `%${author}%` };
   }
 
   // 出版年の範囲検索
+  // 
   if(publicationYearFrom !== undefined || publicationYearTo !== undefined) {
 
 // where.publicationYear は unknown 扱いになるため、条件オブジェクトを先に組み立ててから代入する
@@ -51,11 +55,11 @@ export async function findBooksWithPagination(queryDto: ListBooksQueryDto) {
 
   // タイトルでソート
   if(sort === 'title') {
-    orderClause[0] = ['title', order === 'asc' ? 'ASC' : 'DESC'];
+    orderClause[0] = ['title', sortOrder];
   }else if(sort === 'publicationYear') {
-    orderClause[0] = ['publicationYear', order === 'asc' ? 'ASC' : 'DESC'];
+    orderClause[0] = ['publicationYear', sortOrder];
   } else if(sort === 'createdAt') {
-    orderClause[0] = ['createdAt', order === 'asc' ? 'ASC' : 'DESC'];
+    orderClause[0] = ['createdAt', sortOrder];
   }
 
 

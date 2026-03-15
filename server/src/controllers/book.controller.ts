@@ -51,9 +51,6 @@ function sendApiError(res: Response, error: ApiError) {
  */
 export async function listBooks(req: Request, res: Response) {
 
-    const query = validateListBooksQuery(req);
-    const result = await bookService.listBooks(query.success ? query.data : { page: 1, limit: 20 });
-
     const parseResult = validateListBooksQuery(req);
 
   // バリデーション失敗時は400 Bad Requestでエラーコードと詳細を返す。
