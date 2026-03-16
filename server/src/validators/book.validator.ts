@@ -45,7 +45,38 @@ function parseLegacyPagingValue(
 export function validateListBooksQuery(req: Request): ParseResult<ListBooksQueryDto> {
   const page = parseLegacyPagingValue(req.query.page, 1);
   const limit = parseLegacyPagingValue(req.query.limit, 20);
+
+  const sort = typeof req.query.sort === 'string' ? req.query.sort.trim() : undefined;
+  const order = typeof req.query.order === 'string' ? req.query.order.trim() : undefined;
+
+  const VALID_SORT_VALUES = ['rating', 'title', 'publicationYear', 'createdAt'] as const;
+  const VALID_ORDER_VALUES = ['asc', 'desc'] as const;
+
   const errors: ValidationError[] = [];
+
+  if (sort && !VALID_SORT_VALUES.includes(sort as (typeof VALID_SORT_VALUES)[number])) {
+    errors.push({
+      field: 'sort',
+      message: `sortに指定できない値です。`,
+      code: 'INVALID_SORT',
+    });
+  }
+
+  if (order && !VALID_ORDER_VALUES.includes(order as (typeof VALID_ORDER_VALUES)[number])) {
+    errors.push({
+      field: 'order',
+      message: `orderに指定できない値です。`,
+      code: 'INVALID_ORDER',
+    });
+  }
+
+  if (limit !== undefined && limit > 100) {
+    errors.push({
+      field: 'limit',
+      message: 'limitは100以下で指定してください。',
+      code: 'INVALID_LIMIT',
+    });
+  }
 
   if (page !== undefined && page <= 0) {
     errors.push({
@@ -80,8 +111,8 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
       publicationYearFrom: parseLegacyPagingValue(req.query.publicationYearFrom, undefined),
       publicationYearTo: parseLegacyPagingValue(req.query.publicationYearTo, undefined),
       ratingMin: parseLegacyPagingValue(req.query.ratingMin, undefined),
-      sort: typeof req.query.sort === 'string' ? req.query.sort.trim() : undefined,
-      order: typeof req.query.order === 'string' ? req.query.order.trim() : undefined,
+      sort,
+      order: order?.toLowerCase(),
     },
   };
 }

@@ -60,21 +60,14 @@ describe('GET /api/books', () => {
     expect(res.body.data.pagination.totalItems).toBe(2);
   });
 
-  it('keeps legacy paging behavior for large limit values', async () => {
-    const spy = vi.spyOn(Book, 'findAndCountAll') as unknown as SpyInstance<
-      [FindAndCountOptions?],
-      { rows: BookInstance[]; count: number }
-    >;
-    spy.mockResolvedValue({ rows: [], count: 0 });
+  it('returns 400 for large limit values', async () => {
+    const spy = vi.spyOn(Book, 'findAndCountAll');
 
-    await request(app).get('/api/books?page=1&limit=500');
+    const res = await request(app).get('/api/books?page=1&limit=500');
 
-    expect(spy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        limit: 500,
-        offset: 0,
-      })
-    );
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it('applies keyword search across title, author, and summary', async () => {
@@ -139,6 +132,36 @@ describe('GET /api/books', () => {
         having: expect.any(Object),
       })
     );
+  });
+
+  it('returns 400 when sort is not allowed', async () => {
+    const spy = vi.spyOn(Book, 'findAndCountAll');
+
+    const res = await request(app).get('/api/books?sort=unknown');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when order is not allowed', async () => {
+    const spy = vi.spyOn(Book, 'findAndCountAll');
+
+    const res = await request(app).get('/api/books?order=sideways');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when limit exceeds the maximum', async () => {
+    const spy = vi.spyOn(Book, 'findAndCountAll');
+
+    const res = await request(app).get('/api/books?limit=101');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(spy).not.toHaveBeenCalled();
   });
 });
 
