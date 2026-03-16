@@ -14,6 +14,15 @@ type ListBookReviewsInput = {
   limit: number;
 };
 
+/**
+ * Sequelize の一意制約違反が「ISBN 重複」または「title + author 重複」に該当するか判定します。
+ *
+ * `UniqueConstraintError` は DB 方言やモック方法によって shape が少しぶれるため、
+ * service 層で吸収して API 向けの 409 エラーへ寄せています。
+ *
+ * @param error - repository 層から送出された例外
+ * @returns 重複エラーとして扱うべき場合は true
+ */
 function isIsbnUniqueConstraintError(error: unknown): boolean {
   const hasDuplicateFields = (paths: string[]) => {
     const hasIsbn = paths.includes('ISBN');
@@ -50,24 +59,25 @@ function isIsbnUniqueConstraintError(error: unknown): boolean {
  * @returns 書籍一覧とページング情報
  */
 export async function listBooks(queryDto: ListBooksQueryDto) {
-
-  // この service は単純な橋渡し役なので、repository の返り値をそのまま返す形で実装しています。
-  // listBooksを拡張したい場合は、repository の返り値を加工して返す形で実装してください。
   const { page, limit } = queryDto;
-  const { count, rows } = await bookRepository.findBooksWithPagination(queryDto);
+
+  const { count: rawCount, rows } = await bookRepository.findBooksWithPagination(queryDto);
+  // `findAndCountAll` は group なしでは number、group ありでは配列を返すため、
+  // pagination 用の総件数へここで正規化します。
+  const totalItems = Array.isArray(rawCount) ? rawCount.length : rawCount;
 
   logger.info('[BOOKS SERVICE] books fetched', {
     page,
     limit,
-    totalItems: count,
+    totalItems: totalItems,
   });
 
   return {
     books: rows,
     pagination: {
       currentPage: page,
-      totalItems: count,
-      totalPages: Math.ceil(count / limit),
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
       itemsPerPage: limit,
     },
   };
@@ -168,6 +178,7 @@ export async function listBookReviews(input: ListBookReviewsInput) {
  */
 export async function deleteBook(bookId: number) {
   await sequelize.transaction(async (transaction) => {
+    // 削除可否判定と実削除を同一トランザクションに載せ、競合時の不整合を避けます。
     const book = await bookRepository.findBookById(bookId, {
       transaction,
       lock: transaction.LOCK.UPDATE,

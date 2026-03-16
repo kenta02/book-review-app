@@ -2,6 +2,7 @@ import express from 'express';
 import request from 'supertest';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import type { SpyInstance } from 'vitest';
+import { Op } from 'sequelize';
 import type { FindAndCountOptions } from 'sequelize';
 
 import bookRouter from '../src/routes/books';
@@ -72,6 +73,70 @@ describe('GET /api/books', () => {
       expect.objectContaining({
         limit: 500,
         offset: 0,
+      })
+    );
+  });
+
+  it('applies keyword search across title, author, and summary', async () => {
+    const spy = vi.spyOn(Book, 'findAndCountAll') as unknown as SpyInstance<
+      [FindAndCountOptions?],
+      { rows: BookInstance[]; count: number }
+    >;
+    spy.mockResolvedValue({ rows: [], count: 0 });
+
+    await request(app).get('/api/books?keyword=React');
+
+    const options = spy.mock.calls[0]?.[0] as FindAndCountOptions | undefined;
+    const where = options?.where as Record<string | symbol, unknown>;
+
+    expect(where[Op.or]).toEqual([
+      { title: { [Op.like]: '%React%' } },
+      { author: { [Op.like]: '%React%' } },
+      { summary: { [Op.like]: '%React%' } },
+    ]);
+  });
+
+  it('uses grouped review aggregation when sorting by rating', async () => {
+    const book1 = { id: 1 } as unknown as BookInstance;
+    const groupedCount = [{ count: 1 }, { count: 1 }];
+    const spy = vi.spyOn(Book, 'findAndCountAll') as unknown as SpyInstance<
+      [FindAndCountOptions?],
+      { rows: BookInstance[]; count: Array<{ count: number }> }
+    >;
+    spy.mockResolvedValue({ rows: [book1], count: groupedCount });
+
+    const res = await request(app).get('/api/books?sort=rating&order=asc');
+
+    const options = spy.mock.calls[0]?.[0] as FindAndCountOptions | undefined;
+
+    expect(options).toEqual(
+      expect.objectContaining({
+        include: [{ model: Review, attributes: [] }],
+        group: ['Book.id'],
+      })
+    );
+    expect(options?.order).toEqual([[expect.any(Object), 'ASC']]);
+    expect(res.status).toBe(200);
+    expect(res.body.data.pagination.totalItems).toBe(2);
+  });
+
+  it('applies having clause when ratingMin is specified', async () => {
+    const groupedCount = [{ count: 1 }];
+    const spy = vi.spyOn(Book, 'findAndCountAll') as unknown as SpyInstance<
+      [FindAndCountOptions?],
+      { rows: BookInstance[]; count: Array<{ count: number }> }
+    >;
+    spy.mockResolvedValue({ rows: [], count: groupedCount });
+
+    await request(app).get('/api/books?ratingMin=4');
+
+    const options = spy.mock.calls[0]?.[0] as FindAndCountOptions | undefined;
+
+    expect(options).toEqual(
+      expect.objectContaining({
+        include: [{ model: Review, attributes: [] }],
+        group: ['Book.id'],
+        having: expect.any(Object),
       })
     );
   });

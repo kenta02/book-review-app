@@ -23,7 +23,10 @@ export type ParseResult<T> =
  * @param defaultValue - フォールバック値
  * @returns 互換挙動で正規化した数値
  */
-function parseLegacyPagingValue(rawValue: unknown, defaultValue: number): number {
+function parseLegacyPagingValue(
+  rawValue: unknown,
+  defaultValue: number | undefined
+): number | undefined {
   const firstValue = Array.isArray(rawValue) ? rawValue[0] : rawValue;
   const parsed = parseInt(String(firstValue), 10);
   return parsed || defaultValue;
@@ -32,8 +35,9 @@ function parseLegacyPagingValue(rawValue: unknown, defaultValue: number): number
 /**
  * 一覧取得用のクエリを正規化します。
  *
- * `page` と `limit` は既存仕様に合わせて `parseInt(...) || default`
- * と同等の変換だけを行います。
+ * validator の責務は「HTTP で受け取った値を、以降の層が扱いやすい DTO へ寄せること」です。
+ * ここでは `page` / `limit` の既定値補完と、任意フィルタの未指定判定を行い、
+ * repository で不要な条件が生えないようにしています。
  *
  * @param req - Express Request
  * @returns 正規化済みの一覧クエリ
@@ -43,7 +47,7 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
   const limit = parseLegacyPagingValue(req.query.limit, 20);
   const errors: ValidationError[] = [];
 
-  if (page <= 0) {
+  if (page !== undefined && page <= 0) {
     errors.push({
       field: 'page',
       message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
@@ -51,7 +55,7 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
     });
   }
 
-  if (limit <= 0) {
+  if (limit !== undefined && limit <= 0) {
     errors.push({
       field: 'limit',
       message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
@@ -66,13 +70,16 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
   return {
     success: true,
     data: {
-      page,
-      limit,
+      // 一覧 API のページングは既存互換を保つため、未指定時のみ既定値を補います。
+      page: page === undefined ? 1 : page,
+      limit: limit === undefined ? 20 : limit,
+      // 文字列系フィルタはここで trim しておくと、下位層で空白除去を繰り返さずに済みます。
       keyword: typeof req.query.keyword === 'string' ? req.query.keyword.trim() : undefined,
       author: typeof req.query.author === 'string' ? req.query.author.trim() : undefined,
-      publicationYearFrom: parseLegacyPagingValue(req.query.publicationYearFrom, 1),
-      publicationYearTo: parseLegacyPagingValue(req.query.publicationYearTo, 1),
-      ratingMin: parseLegacyPagingValue(req.query.ratingMin, 0),
+      // 任意条件は未指定のまま `undefined` で渡し、repository 側で「条件なし」を判定します。
+      publicationYearFrom: parseLegacyPagingValue(req.query.publicationYearFrom, undefined),
+      publicationYearTo: parseLegacyPagingValue(req.query.publicationYearTo, undefined),
+      ratingMin: parseLegacyPagingValue(req.query.ratingMin, undefined),
       sort: typeof req.query.sort === 'string' ? req.query.sort.trim() : undefined,
       order: typeof req.query.order === 'string' ? req.query.order.trim() : undefined,
     },
@@ -168,6 +175,7 @@ export function validateCreateBook(req: Request): ParseResult<CreateBookDto> {
  * 書籍更新のパスパラメータとボディを検証します。
  *
  * 部分更新 API なので、送られてきた項目だけを `data` に残します。
+ * これにより service / repository 側では「更新対象のキーだけを受け取る」前提で実装できます。
  *
  * @param req - Express Request
  * @returns 検証済みの bookId と更新データ、またはエラー配列
@@ -225,6 +233,7 @@ export function validateUpdateBook(
     data: {
       bookId,
       data: {
+        // 送られてきた項目だけを残すことで、既存値を意図せず空で上書きしないようにします。
         ...(typeof title === 'string' ? { title: title.trim() } : {}),
         ...(typeof author === 'string' ? { author: author.trim() } : {}),
         ...(publicationYear !== undefined ? { publicationYear } : {}),
@@ -263,8 +272,8 @@ export function validateGetBookReviews(
     success: true,
     data: {
       bookId,
-      page: parseLegacyPagingValue(req.query.page, 1),
-      limit: parseLegacyPagingValue(req.query.limit, 20),
+      page: parseLegacyPagingValue(req.query.page, 1) || 1,
+      limit: parseLegacyPagingValue(req.query.limit, 20) || 20,
     },
   };
 }
