@@ -54,11 +54,12 @@ app.get('/openapi.yaml', (_req: Request, res: Response) => {
 
 // APIプロキシ: Swagger UIからのリクエストをメインサーバーにフォワード
 app.use('/api', (req: Request, res: Response) => {
-  const apiPath = req.path.replace(/^\/api/, '');
   const options = {
     hostname: 'localhost',
     port: 3000,
-    path: `/api${apiPath}`,
+    // `req.path` だと query string が落ちるため、Swagger からの
+    // sort / filter / pagination パラメータをそのまま転送できない。
+    path: req.originalUrl,
     method: req.method,
     headers: req.headers,
   };
