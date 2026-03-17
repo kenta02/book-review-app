@@ -330,6 +330,7 @@ export function validateGetBookReviews(
   req: Request
 ): ParseResult<{ bookId: number; page: number; limit: number }> {
   const bookId = Number(req.params.bookId);
+  const errors: ValidationError[] = [];
 
   if (!Number.isInteger(bookId) || bookId <= 0) {
     return {
@@ -342,6 +343,32 @@ export function validateGetBookReviews(
         },
       ],
     };
+  }
+
+  const rawPage = Array.isArray(req.query.page) ? req.query.page[0] : req.query.page;
+  const rawLimit = Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit;
+
+  // 互換のため page/limit の数値化自体は legacy ルールを維持しつつ、
+  // クエリで明示的に non-positive が渡された場合だけ弾く。
+  const rawParsedPage = parseInt(String(rawPage), 10);
+  const rawParsedLimit = parseInt(String(rawLimit), 10);
+  if (rawPage !== undefined && Number.isInteger(rawParsedPage) && rawParsedPage <= 0) {
+    errors.push({
+      field: 'page',
+      message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
+      code: 'INVALID_PAGE',
+    });
+  }
+  if (rawLimit !== undefined && Number.isInteger(rawParsedLimit) && rawParsedLimit <= 0) {
+    errors.push({
+      field: 'limit',
+      message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
+      code: 'INVALID_LIMIT',
+    });
+  }
+
+  if (errors.length > 0) {
+    return { success: false, errors };
   }
 
   return {
