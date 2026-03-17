@@ -199,7 +199,6 @@ export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<
     const hasComments = await reviewRepository.findAnyCommentByReviewId(reviewId, transaction);
 
     if (hasComments) {
-      await transaction.rollback();
       throw new ApiError(409, 'RELATED_DATA_EXISTS', ERROR_MESSAGES.RELATED_DATA_EXISTS);
     }
 
