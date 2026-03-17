@@ -15,6 +15,7 @@ declare global {
   namespace Express {
     interface Request {
       userId?: number;
+      userRole?: string;
     }
   }
 }
@@ -57,6 +58,7 @@ export const authenticateToken = async (
     if (user) {
       const userToJson = user.toJSON();
       req.userId = userToJson.id;
+      req.userRole = userToJson.role;
       // next() を呼び出して次のミドルウェアへ
       next();
     } else {
@@ -75,4 +77,20 @@ export const authenticateToken = async (
     });
     return;
   }
+};
+
+export const requireAdmin = (
+  req: Request,
+  res: Response,
+  next: express.NextFunction
+): void => {
+  if (req.userRole !== 'admin') {
+    res.status(403).json({
+      success: false,
+      error: { message: ERROR_MESSAGES.FORBIDDEN_ADMIN_REQUIRED, code: 'FORBIDDEN' },
+    });
+    return;
+  }
+
+  next();
 };
