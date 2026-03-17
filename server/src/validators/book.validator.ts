@@ -32,6 +32,34 @@ function parseLegacyPagingValue(
   return parsed || defaultValue;
 }
 
+function parseStrictOptionalInteger(
+  rawValue: unknown,
+  field: string,
+  errors: ValidationError[]
+): number | undefined {
+  const firstValue = Array.isArray(rawValue) ? rawValue[0] : rawValue;
+
+  if (firstValue === undefined || firstValue === null) {
+    return undefined;
+  }
+
+  const normalized = String(firstValue).trim();
+  if (normalized === '') {
+    return undefined;
+  }
+
+  if (!/^-?\d+$/.test(normalized)) {
+    errors.push({
+      field,
+      message: `${field}は整数で指定してください。`,
+      code: 'INVALID_QUERY_PARAM',
+    });
+    return undefined;
+  }
+
+  return Number(normalized);
+}
+
 /**
  * 一覧取得用のクエリを正規化します。
  *
@@ -46,15 +74,30 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
   const page = parseLegacyPagingValue(req.query.page, 1);
   const limit = parseLegacyPagingValue(req.query.limit, 20);
 
-  const sort = typeof req.query.sort === 'string' ? req.query.sort.trim() : undefined;
-  const order = typeof req.query.order === 'string' ? req.query.order.trim() : undefined;
+  const rawSort =
+    typeof req.query.sort === 'string' ? req.query.sort.trim() || undefined : undefined;
+  const rawOrder =
+    typeof req.query.order === 'string'
+      ? req.query.order.trim().toLowerCase() || undefined
+      : undefined;
 
-  const VALID_SORT_VALUES = ['rating', 'title', 'publicationYear', 'createdAt'] as const;
+  const VALID_SORT_VALUES = ['rating', 'title', 'author', 'publicationYear', 'createdAt'] as const;
   const VALID_ORDER_VALUES = ['asc', 'desc'] as const;
 
   const errors: ValidationError[] = [];
+  const publicationYearFrom = parseStrictOptionalInteger(
+    req.query.publicationYearFrom,
+    'publicationYearFrom',
+    errors
+  );
+  const publicationYearTo = parseStrictOptionalInteger(
+    req.query.publicationYearTo,
+    'publicationYearTo',
+    errors
+  );
+  const ratingMin = parseStrictOptionalInteger(req.query.ratingMin, 'ratingMin', errors);
 
-  if (sort && !VALID_SORT_VALUES.includes(sort as (typeof VALID_SORT_VALUES)[number])) {
+  if (rawSort && !VALID_SORT_VALUES.includes(rawSort as (typeof VALID_SORT_VALUES)[number])) {
     errors.push({
       field: 'sort',
       message: `sortに指定できない値です。`,
@@ -62,7 +105,7 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
     });
   }
 
-  if (order && !VALID_ORDER_VALUES.includes(order as (typeof VALID_ORDER_VALUES)[number])) {
+  if (rawOrder && !VALID_ORDER_VALUES.includes(rawOrder as (typeof VALID_ORDER_VALUES)[number])) {
     errors.push({
       field: 'order',
       message: `orderに指定できない値です。`,
@@ -105,14 +148,16 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
       page: page === undefined ? 1 : page,
       limit: limit === undefined ? 20 : limit,
       // 文字列系フィルタはここで trim しておくと、下位層で空白除去を繰り返さずに済みます。
-      keyword: typeof req.query.keyword === 'string' ? req.query.keyword.trim() : undefined,
-      author: typeof req.query.author === 'string' ? req.query.author.trim() : undefined,
+      keyword:
+        typeof req.query.keyword === 'string' ? req.query.keyword.trim() || undefined : undefined,
+      author:
+        typeof req.query.author === 'string' ? req.query.author.trim() || undefined : undefined,
       // 任意条件は未指定のまま `undefined` で渡し、repository 側で「条件なし」を判定します。
-      publicationYearFrom: parseLegacyPagingValue(req.query.publicationYearFrom, undefined),
-      publicationYearTo: parseLegacyPagingValue(req.query.publicationYearTo, undefined),
-      ratingMin: parseLegacyPagingValue(req.query.ratingMin, undefined),
-      sort,
-      order: order?.toLowerCase(),
+      publicationYearFrom,
+      publicationYearTo,
+      ratingMin,
+      sort: rawSort as ListBooksQueryDto['sort'],
+      order: rawOrder as ListBooksQueryDto['order'],
     },
   };
 }

@@ -39,6 +39,6 @@ export const ERROR_MESSAGES = {
 
   // 検索関連
   INVALID_SORT_FIELD:
-    'sortパラメータはtitle, author, publicationYearのいずれかで指定してください。',
+    'sortパラメータはtitle, author, publicationYear, rating, createdAtのいずれかで指定してください。',
   INVALID_ORDER_VALUE: 'orderパラメータはascまたはdescで指定してください。',
 } as const;
