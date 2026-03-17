@@ -29,6 +29,7 @@ export const ERROR_MESSAGES = {
   // Forbidden / permission
   FORBIDDEN_REVIEW_UPDATE: 'このレビューを更新する権限がありません。',
   FORBIDDEN_REVIEW_DELETE: 'このレビューを削除する権限がありません。',
+  FORBIDDEN_ADMIN_REQUIRED: '管理者権限が必要です。',
 
   // Duplicates / conflicts
   DUPLICATE_USERNAME: '同じユーザー名が既に存在します。',
