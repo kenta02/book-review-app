@@ -75,19 +75,38 @@ describe('PUT /api/reviews/:reviewId', () => {
 
   it('allows admin to update non-owned review', async () => {
     const adminApp = makeApp(2, 'admin');
+    const createdAt = new Date().toISOString();
+    const updatedAt = new Date().toISOString();
     type FakeReviewWithUpdate = {
       get: (key: string) => number | null;
       update: ReturnType<typeof vi.fn>;
     };
     const fakeReview: FakeReviewWithUpdate = {
       get: (k: string) => (k === 'userId' ? 99 : null),
-      update: vi.fn().mockResolvedValue({ id: 5, content: 'updated by admin', userId: 99 }),
+      update: vi.fn().mockResolvedValue({
+        id: 5,
+        bookId: 1,
+        userId: 99,
+        content: 'updated by admin',
+        rating: 4,
+        createdAt,
+        updatedAt,
+      }),
     };
     vi.spyOn(Review, 'findByPk').mockResolvedValue(fakeReview as unknown as ReviewInstance);
 
     const res = await request(adminApp).put('/api/reviews/5').send({ content: 'updated by admin' });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+    expect(res.body.data).toMatchObject({
+      id: 5,
+      bookId: 1,
+      userId: 99,
+      content: 'updated by admin',
+      createdAt,
+      updatedAt,
+    });
+    expect(fakeReview.update).toHaveBeenCalledWith({ content: 'updated by admin' });
   });
 
   // コンテンツのバリデーションエラーのテスト
