@@ -62,6 +62,8 @@ export interface Book {
   publicationYear: number;
   ISBN: string;
   summary: string;
+  averageRating?: number | null;
+  reviewCount?: number;
   createdAt: string;
   updatedAt: string;
 }
