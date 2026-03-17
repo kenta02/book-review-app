@@ -154,13 +154,13 @@ describe('GET /api/auth/me', () => {
     expect(res.body.error.code).toBe('AUTHENTICATION_REQUIRED');
   });
 
-  it('returns 404 when user not found', async () => {
+  it('returns 401 when authenticated user id is stale and user is not found', async () => {
     const authApp = makeApp(123);
     vi.spyOn(User, 'findByPk').mockResolvedValue(null);
 
     const res = await request(authApp).get('/api/auth/me');
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
     expect(res.body.error.code).toBe('USER_NOT_FOUND');
   });
 

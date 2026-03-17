@@ -27,7 +27,7 @@ function makeApp(setUserId?: number, setUserRole?: string) {
 let app: express.Express;
 
 beforeEach(() => {
-  app = makeApp(2); // authenticated as userId = 2 by default
+  app = makeApp(2, 'user'); // authenticated as userId = 2 by default
   vi.restoreAllMocks();
 });
 

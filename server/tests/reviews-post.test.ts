@@ -12,12 +12,13 @@ import Book from '../src/models/Book';
 type ReviewInstance = InstanceType<typeof Review>;
 type BookInstance = InstanceType<typeof Book>;
 
-type TestRequest = express.Request & { userId?: number };
-function makeApp(setUserId?: number) {
+type TestRequest = express.Request & { userId?: number; userRole?: string };
+function makeApp(setUserId?: number, setUserRole?: string) {
   const app = express();
   app.use(express.json());
   app.use((req: TestRequest, _res: express.Response, next: express.NextFunction) => {
     if (setUserId !== undefined) req.userId = setUserId;
+    if (setUserRole !== undefined) req.userRole = setUserRole;
     next();
   });
   app.use('/api', reviewRouter);
@@ -27,7 +28,7 @@ function makeApp(setUserId?: number) {
 let app: express.Express;
 
 beforeEach(() => {
-  app = makeApp(2);
+  app = makeApp(2, 'user');
   vi.restoreAllMocks();
 });
 
