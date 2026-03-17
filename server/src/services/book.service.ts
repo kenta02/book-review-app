@@ -59,28 +59,37 @@ function isIsbnUniqueConstraintError(error: unknown): boolean {
  * @returns 書籍一覧とページング情報
  */
 export async function listBooks(queryDto: ListBooksQueryDto) {
-  const { page, limit } = queryDto;
+  try {
+    const { page, limit } = queryDto;
 
-  const { count: rawCount, rows } = await bookRepository.findBooksWithPagination(queryDto);
-  // `findAndCountAll` は group なしでは number、group ありでは配列を返すため、
-  // pagination 用の総件数へここで正規化します。
-  const totalItems = Array.isArray(rawCount) ? rawCount.length : rawCount;
+    const { count: rawCount, rows } = await bookRepository.findBooksWithPagination(queryDto);
+    // `findAndCountAll` は group なしでは number、group ありでは配列を返すため、
+    // pagination 用の総件数へここで正規化します。
+    const totalItems = Array.isArray(rawCount) ? rawCount.length : rawCount;
 
-  logger.info('[BOOKS SERVICE] books fetched', {
-    page,
-    limit,
-    totalItems: totalItems,
-  });
+    logger.info('[BOOKS SERVICE] books fetched', {
+      page,
+      limit,
+      totalItems: totalItems,
+    });
 
-  return {
-    books: rows,
-    pagination: {
-      currentPage: page,
-      totalItems,
-      totalPages: Math.ceil(totalItems / limit),
-      itemsPerPage: limit,
-    },
-  };
+    return {
+      books: rows,
+      pagination: {
+        currentPage: page,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        itemsPerPage: limit,
+      },
+    };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    logger.error('[BOOKS SERVICE] failed to fetch books', error);
+    throw new ApiError(500, 'INTERNAL_SERVER_ERROR', ERROR_MESSAGES.INTERNAL_SERVER_ERROR);
+  }
 }
 
 /**

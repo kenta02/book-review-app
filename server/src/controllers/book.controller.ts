@@ -51,22 +51,37 @@ function sendApiError(res: Response, error: ApiError) {
  * @returns 書籍一覧とページング情報
  */
 export async function listBooks(req: Request, res: Response) {
-  const parseResult = validateListBooksQuery(req);
+  try {
+    const parseResult = validateListBooksQuery(req);
 
-  // 不正なクエリで下位層に進まないよう、controller で早期 return します。
-  if (!parseResult.success) {
-    return res.status(400).json({
+    // 不正なクエリで下位層に進まないよう、controller で早期 return します。
+    if (!parseResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: ERROR_MESSAGES.VALIDATION_FAILED,
+          code: 'VALIDATION_ERROR',
+          details: parseResult.errors,
+        },
+      });
+    }
+
+    const result = await bookService.listBooks(parseResult.data);
+    return res.json({ success: true, data: result });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return sendApiError(res, error);
+    }
+
+    logger.error('[BOOKS GET LIST] unexpected error occurred', error);
+    return res.status(500).json({
       success: false,
       error: {
-        message: ERROR_MESSAGES.VALIDATION_FAILED,
-        code: 'VALIDATION_ERROR',
-        details: parseResult.errors,
+        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
+        code: 'INTERNAL_SERVER_ERROR',
       },
     });
   }
-
-  const result = await bookService.listBooks(parseResult.data);
-  return res.json({ success: true, data: result });
 }
 
 /**
