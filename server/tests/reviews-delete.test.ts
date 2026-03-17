@@ -98,6 +98,7 @@ describe('DELETE /api/reviews/:reviewId', () => {
     const res = await request(adminApp).delete('/api/reviews/8');
     expect(res.status).toBe(204);
     expect(fakeReview.destroy).toHaveBeenCalledWith({ transaction: fakeTransaction });
+    expect(fakeTransaction.commit).toHaveBeenCalled();
   });
 
   // 関連コメントが存在する場合の競合のテスト
