@@ -329,11 +329,51 @@ paths:
           schema:
             type: integer
             default: 1
+          description: ページ番号（1以上）
         - name: limit
           in: query
           schema:
             type: integer
             default: 20
+          description: 1ページあたり件数（1-100）
+        - name: keyword
+          in: query
+          schema:
+            type: string
+          description: タイトル・著者・概要に対する部分一致検索キーワード
+        - name: author
+          in: query
+          schema:
+            type: string
+          description: 著者名の部分一致検索
+        - name: publicationYearFrom
+          in: query
+          schema:
+            type: integer
+          description: 出版年の下限
+        - name: publicationYearTo
+          in: query
+          schema:
+            type: integer
+          description: 出版年の上限
+        - name: ratingMin
+          in: query
+          schema:
+            type: integer
+          description: 平均評価の下限
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [title, author, publicationYear, rating, createdAt]
+          description: ソート項目
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: ソート順
       responses:
         '200':
           description: 書籍一覧取得成功
@@ -395,8 +435,16 @@ paths:
           description: バリデーションエラー
         '401':
           description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: 管理者権限が必要
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
           description: ISBN既存
 
@@ -469,8 +517,16 @@ paths:
           description: バリデーションエラー
         '401':
           description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: 管理者権限が必要
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: 書籍が見つからない
         '409':
@@ -492,8 +548,16 @@ paths:
           description: 書籍削除成功（ボディなし）
         '401':
           description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: 管理者権限が必要
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: 書籍が見つからない
         '409':
