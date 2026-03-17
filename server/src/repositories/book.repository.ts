@@ -3,7 +3,6 @@ import {
   DestroyOptions,
   FindOptions,
   fn,
-  literal,
   Op,
   Order,
   Transaction,
@@ -95,10 +94,10 @@ export async function findBooksWithPagination(queryDto: ListBooksQueryDto) {
   // レビュー本体は返さず、AVG(rating) の計算だけに使うため attributes は空にしています。
   const include = usesRatingAggregation ? [{ model: Review, attributes: [] }] : [];
 
-  const avgRatingLiteral = literal('AVG(`Reviews`.`rating`)');
+  const avgRatingExpression = fn('AVG', col('Reviews.rating'));
 
   // `AVG(Reviews.rating) AS avgRating` を一覧結果へ追加し、必要ならクライアントから参照できるようにします。
-  const avgRatingAttribute: [ReturnType<typeof literal>, string] = [avgRatingLiteral, 'avgRating'];
+  const avgRatingAttribute: [ReturnType<typeof fn>, string] = [avgRatingExpression, 'avgRating'];
 
   const attributes = usesRatingAggregation
     ? {
@@ -108,9 +107,11 @@ export async function findBooksWithPagination(queryDto: ListBooksQueryDto) {
 
   // sort=rating のときだけ集計列で並べ替え、それ以外は通常カラムのソートを使います。
   if (queryDto.sort === 'rating') {
-    orderClause[0] = [avgRatingLiteral, sortOrder];
+    orderClause[0] = [avgRatingExpression, sortOrder];
   } else if (queryDto.sort === 'title') {
     orderClause[0] = ['title', sortOrder];
+  } else if (queryDto.sort === 'author') {
+    orderClause[0] = ['author', sortOrder];
   } else if (queryDto.sort === 'publicationYear') {
     orderClause[0] = ['publicationYear', sortOrder];
   } else if (queryDto.sort === 'createdAt') {
