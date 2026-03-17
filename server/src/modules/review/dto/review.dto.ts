@@ -60,6 +60,7 @@ export type CreateReviewServiceDto = CreateReviewDto & {
 export type UpdateReviewServiceDto = UpdateReviewDto & {
   userId: number;
   reviewId: number;
+  requesterRole?: string;
 };
 
 /**
@@ -68,4 +69,5 @@ export type UpdateReviewServiceDto = UpdateReviewDto & {
 export type DeleteReviewServiceDto = {
   reviewId: number;
   userId: number;
+  requesterRole?: string;
 };

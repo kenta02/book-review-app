@@ -15,6 +15,7 @@ declare global {
   namespace Express {
     interface Request {
       userId?: number;
+      userRole?: string;
     }
   }
 }
@@ -24,8 +25,22 @@ export const authenticateToken = async (
   res: Response,
   next: express.NextFunction
 ): Promise<void> => {
-  // テストや他のミドルウェアで既に req.userId が設定されていればそのまま通す
+  // テストや他のミドルウェアで既に user 情報が設定済みならそのまま通す
   if (req.userId !== undefined && req.userId !== null) {
+    if (req.userRole !== undefined) {
+      return next();
+    }
+
+    const existingUser = await User.findByPk(req.userId);
+    if (!existingUser) {
+      res.status(401).json({
+        success: false,
+        error: { message: ERROR_MESSAGES.USER_NOT_FOUND, code: 'USER_NOT_FOUND' },
+      });
+      return;
+    }
+
+    req.userRole = existingUser.toJSON().role;
     return next();
   }
 
@@ -57,6 +72,7 @@ export const authenticateToken = async (
     if (user) {
       const userToJson = user.toJSON();
       req.userId = userToJson.id;
+      req.userRole = userToJson.role;
       // next() を呼び出して次のミドルウェアへ
       next();
     } else {
@@ -75,4 +91,20 @@ export const authenticateToken = async (
     });
     return;
   }
+};
+
+export const requireAdmin = (
+  req: Request,
+  res: Response,
+  next: express.NextFunction
+): void => {
+  if (req.userRole !== 'admin') {
+    res.status(403).json({
+      success: false,
+      error: { message: ERROR_MESSAGES.FORBIDDEN_ADMIN_REQUIRED, code: 'FORBIDDEN' },
+    });
+    return;
+  }
+
+  next();
 };

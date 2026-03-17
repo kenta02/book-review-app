@@ -43,7 +43,8 @@ function sendApiError(res: Response, error: ApiError) {
  * 書籍一覧を取得します。
  *
  * controller は HTTP の入口として、クエリの正規化結果を service に渡し、
- * 返却されたデータをそのまま API レスポンスに整形します。
+ * 返却されたデータを API レスポンスへ整形します。
+ * 一覧 API では validator が失敗した時点で処理を止め、service / repository へ進ませません。
  *
  * @param req - Express Request
  * @param res - Express Response
@@ -51,19 +52,28 @@ function sendApiError(res: Response, error: ApiError) {
  */
 export async function listBooks(req: Request, res: Response) {
   try {
-    const query = validateListBooksQuery(req);
-    const result = await bookService.listBooks(query);
+    const parseResult = validateListBooksQuery(req);
 
-    return res.json({
-      success: true,
-      data: result,
-    });
+    // 不正なクエリで下位層に進まないよう、controller で早期 return します。
+    if (!parseResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: ERROR_MESSAGES.VALIDATION_FAILED,
+          code: 'VALIDATION_ERROR',
+          details: parseResult.errors,
+        },
+      });
+    }
+
+    const result = await bookService.listBooks(parseResult.data);
+    return res.json({ success: true, data: result });
   } catch (error) {
     if (error instanceof ApiError) {
       return sendApiError(res, error);
     }
 
-    logger.error('[BOOKS GET] unexpected error occurred', error);
+    logger.error('[BOOKS GET LIST] unexpected error occurred', error);
     return res.status(500).json({
       success: false,
       error: {
@@ -86,7 +96,7 @@ export async function getBookDetail(req: Request, res: Response) {
     const parseResult = validateGetBookDetail(req);
 
     if (!parseResult.success) {
-      // バリデーション層は詳細を返し、controller が HTTP 用メッセージへ寄せる。
+      // validator は入力の失敗理由を返し、controller は HTTP 向けの形式へ整えます。
       const firstErrorCode = parseResult.errors[0]?.code || 'VALIDATION_ERROR';
       return res.status(400).json({
         success: false,
@@ -171,6 +181,7 @@ export async function updateBook(req: Request, res: Response) {
     const parseResult = validateUpdateBook(req);
 
     if (!parseResult.success) {
+      // ID 不正だけは既存 API のエラーコード互換を維持します。
       const hasInvalidBookId = parseResult.errors.some((error) => error.code === 'INVALID_BOOK_ID');
       return res.status(400).json({
         success: false,

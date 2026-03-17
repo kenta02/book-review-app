@@ -1,3 +1,6 @@
+export type BookSortField = 'title' | 'author' | 'publicationYear' | 'rating' | 'createdAt';
+export type BookSortOrder = 'asc' | 'desc';
+
 /**
  * GET /api/books - リスト取得クエリパラメータ
  * - validator で正規化後の値を扱うため、常に number として保持する
@@ -5,6 +8,13 @@
 export type ListBooksQueryDto = {
   page: number;
   limit: number;
+  keyword?: string;
+  author?: string;
+  publicationYearFrom?: number;
+  publicationYearTo?: number;
+  ratingMin?: number;
+  sort?: BookSortField;
+  order?: BookSortOrder;
 };
 
 /**

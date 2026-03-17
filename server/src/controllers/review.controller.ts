@@ -140,6 +140,7 @@ export async function deleteReview(req: Request, res: Response) {
     await reviewService.deleteReview({
       reviewId: parseResult.data.reviewId,
       userId,
+      ...(req.userRole ? { requesterRole: req.userRole } : {}),
     });
 
     return res.sendStatus(204);
@@ -191,6 +192,7 @@ export async function updateReview(req: Request, res: Response) {
       reviewId: parseResult.data.reviewId,
       content: parseResult.data.content,
       userId,
+      ...(req.userRole ? { requesterRole: req.userRole } : {}),
     });
 
     return res.json({ success: true, data });

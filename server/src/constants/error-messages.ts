@@ -29,10 +29,16 @@ export const ERROR_MESSAGES = {
   // Forbidden / permission
   FORBIDDEN_REVIEW_UPDATE: 'このレビューを更新する権限がありません。',
   FORBIDDEN_REVIEW_DELETE: 'このレビューを削除する権限がありません。',
+  FORBIDDEN_ADMIN_REQUIRED: '管理者権限が必要です。',
 
   // Duplicates / conflicts
   DUPLICATE_USERNAME: '同じユーザー名が既に存在します。',
   DUPLICATE_EMAIL: '同じメールアドレスが既に存在します。',
   DUPLICATE_ISBN: '同じISBNの本が既に存在します。',
   RELATED_DATA_EXISTS: '関連するデータが存在するため、削除できません。',
+
+  // 検索関連
+  INVALID_SORT_FIELD:
+    'sortパラメータはtitle, author, publicationYear, rating, createdAtのいずれかで指定してください。',
+  INVALID_ORDER_VALUE: 'orderパラメータはascまたはdescで指定してください。',
 } as const;

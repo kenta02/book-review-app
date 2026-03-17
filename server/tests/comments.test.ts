@@ -23,6 +23,9 @@ vi.mock('../src/middleware/auth', () => ({
     req.userId = 2;
     next();
   },
+  requireAdmin: (_req: unknown, _res: unknown, next: () => void) => {
+    next();
+  },
 }));
 
 import app from '../src/app';
