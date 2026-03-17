@@ -1,9 +1,7 @@
 import express from 'express';
 import request from 'supertest';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import type { SpyInstance } from 'vitest';
-import { Op } from 'sequelize';
-import type { FindAndCountOptions } from 'sequelize';
+import { Op, type FindAndCountOptions, type Transaction } from 'sequelize';
 import jwt from 'jsonwebtoken';
 
 import bookRouter from '../src/routes/books';
@@ -18,6 +16,11 @@ import { sequelize } from '../src/sequelize';
 
 type BookInstance = InstanceType<typeof Book>;
 type UserInstance = InstanceType<typeof User>;
+type TransactionCallback = (transaction: Transaction) => unknown | Promise<unknown>;
+type FindAndCountAllResult = {
+  rows: BookInstance[];
+  count: number | Array<{ count: number }>;
+};
 
 function makeApp() {
   const app = express();
@@ -26,8 +29,16 @@ function makeApp() {
   return app;
 }
 
+function mockFindAndCountAll(result: FindAndCountAllResult) {
+  const spy = vi.spyOn(Book, 'findAndCountAll');
+  spy.mockImplementation((async () => result) as unknown as typeof Book.findAndCountAll);
+  return spy;
+}
+
 function mockAuthenticatedUser(role: 'admin' | 'user' = 'admin', userId = 1) {
-  vi.spyOn(jwt, 'verify').mockReturnValue({ id: userId } as unknown as jwt.JwtPayload);
+  vi.spyOn(jwt, 'verify').mockImplementation(
+    (() => ({ id: userId } as jwt.JwtPayload)) as unknown as typeof jwt.verify
+  );
   vi.spyOn(User, 'findByPk').mockResolvedValue({
     toJSON: () => ({ id: userId, role }),
   } as unknown as UserInstance);
@@ -38,10 +49,12 @@ let app: express.Express;
 beforeEach(() => {
   app = makeApp();
   vi.restoreAllMocks();
-  vi.spyOn(sequelize, 'transaction').mockImplementation(async (callback: any) => {
-    const tx = { LOCK: { UPDATE: 'UPDATE' } };
-    return callback(tx);
-  });
+  vi.spyOn(sequelize, 'transaction').mockImplementation(
+    (async (callback: TransactionCallback) => {
+      const tx = { LOCK: { UPDATE: 'UPDATE' } } as unknown as Transaction;
+      return callback(tx);
+    }) as unknown as typeof sequelize.transaction
+  );
 });
 
 afterEach(() => {
@@ -51,22 +64,34 @@ afterEach(() => {
 // GET /api/books のページネーション動作を確認
 describe('GET /api/books', () => {
   it('returns paginated books', async () => {
-    const book1 = { id: 1 } as unknown as BookInstance;
-    const book2 = { id: 2 } as unknown as BookInstance;
+    const book1 = {
+      toJSON: () => ({ id: 1, title: 'A', averageRating: '4.5', reviewCount: '3' }),
+      get: (key: string) => (key === 'averageRating' ? '4.5' : key === 'reviewCount' ? '3' : undefined),
+    } as unknown as BookInstance;
+    const book2 = {
+      toJSON: () => ({ id: 2, title: 'B', averageRating: null, reviewCount: null }),
+      get: (key: string) => (key === 'averageRating' ? null : key === 'reviewCount' ? null : undefined),
+    } as unknown as BookInstance;
     // Sequelize の findAndCountAll は overload によって
     // `count` の型が number | GroupedCountResultItem[] と変わるため
     // テスト上は any へダウンキャストしてモックします。
-    const spy = vi.spyOn(Book, 'findAndCountAll') as unknown as SpyInstance<
-      [FindAndCountOptions?],
-      { rows: BookInstance[]; count: number }
-    >;
-    spy.mockResolvedValue({ rows: [book1, book2], count: 2 });
+    mockFindAndCountAll({ rows: [book1, book2], count: 2 });
 
     const res = await request(app).get('/api/books?page=1&limit=2');
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.books).toHaveLength(2);
+    expect(res.body.data.books[0]).toMatchObject({
+      id: 1,
+      averageRating: 4.5,
+      reviewCount: 3,
+    });
+    expect(res.body.data.books[1]).toMatchObject({
+      id: 2,
+      averageRating: null,
+      reviewCount: 0,
+    });
     expect(res.body.data.pagination.totalItems).toBe(2);
   });
 
@@ -81,11 +106,7 @@ describe('GET /api/books', () => {
   });
 
   it('applies keyword search across title, author, and summary', async () => {
-    const spy = vi.spyOn(Book, 'findAndCountAll') as unknown as SpyInstance<
-      [FindAndCountOptions?],
-      { rows: BookInstance[]; count: number }
-    >;
-    spy.mockResolvedValue({ rows: [], count: 0 });
+    const spy = mockFindAndCountAll({ rows: [], count: 0 });
 
     await request(app).get('/api/books?keyword=React');
 
@@ -102,11 +123,10 @@ describe('GET /api/books', () => {
   it('uses grouped review aggregation when sorting by rating', async () => {
     const book1 = { id: 1 } as unknown as BookInstance;
     const groupedCount = [{ count: 1 }, { count: 1 }];
-    const spy = vi.spyOn(Book, 'findAndCountAll') as unknown as SpyInstance<
-      [FindAndCountOptions?],
-      { rows: BookInstance[]; count: Array<{ count: number }> }
-    >;
-    spy.mockResolvedValue({ rows: [book1], count: groupedCount });
+    const spy = mockFindAndCountAll({
+      rows: [book1],
+      count: groupedCount,
+    });
 
     const res = await request(app).get('/api/books?sort=rating&order=asc');
 
@@ -125,11 +145,7 @@ describe('GET /api/books', () => {
 
   it('applies having clause when ratingMin is specified', async () => {
     const groupedCount = [{ count: 1 }];
-    const spy = vi.spyOn(Book, 'findAndCountAll') as unknown as SpyInstance<
-      [FindAndCountOptions?],
-      { rows: BookInstance[]; count: Array<{ count: number }> }
-    >;
-    spy.mockResolvedValue({ rows: [], count: groupedCount });
+    const spy = mockFindAndCountAll({ rows: [], count: groupedCount });
 
     await request(app).get('/api/books?ratingMin=4');
 
