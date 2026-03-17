@@ -4,23 +4,33 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import type { SpyInstance } from 'vitest';
 import { Op } from 'sequelize';
 import type { FindAndCountOptions } from 'sequelize';
+import jwt from 'jsonwebtoken';
 
 import bookRouter from '../src/routes/books';
 import Book from '../src/models/Book';
 import Review from '../src/models/Review';
 import Favorite from '../src/models/Favorite';
+import User from '../src/models/Users';
 import { sequelize } from '../src/sequelize';
 
 // このファイルの目的：書籍 API の CRUD とページネーションを検証するテスト
 // - findAndCountAll のモックを用いてページング動作を確認
 
 type BookInstance = InstanceType<typeof Book>;
+type UserInstance = InstanceType<typeof User>;
 
 function makeApp() {
   const app = express();
   app.use(express.json());
   app.use('/api/books', bookRouter);
   return app;
+}
+
+function mockAuthenticatedUser(role: 'admin' | 'user' = 'admin', userId = 1) {
+  vi.spyOn(jwt, 'verify').mockReturnValue({ id: userId } as unknown as jwt.JwtPayload);
+  vi.spyOn(User, 'findByPk').mockResolvedValue({
+    toJSON: () => ({ id: userId, role }),
+  } as unknown as UserInstance);
 }
 
 let app: express.Express;
@@ -194,59 +204,95 @@ describe('GET /api/books/:id', () => {
 
 // POST /api/books のバリデーションと重複チェック
 describe('POST /api/books', () => {
+  it('returns 401 when unauthenticated', async () => {
+    const res = await request(app).post('/api/books').send({ title: 't', author: 'a' });
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('AUTHENTICATION_REQUIRED');
+  });
+
+  it('returns 403 when non-admin user', async () => {
+    mockAuthenticatedUser('user');
+    const res = await request(app)
+      .post('/api/books')
+      .set('Authorization', 'Bearer token')
+      .send({ title: 't', author: 'a' });
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
   it('returns 400 when validation fails', async () => {
-    const res = await request(app).post('/api/books').send({ title: '', author: '' });
+    mockAuthenticatedUser('admin');
+    const res = await request(app)
+      .post('/api/books')
+      .set('Authorization', 'Bearer token')
+      .send({ title: '', author: '' });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 
   it('returns 409 when ISBN already exists', async () => {
+    mockAuthenticatedUser('admin');
     vi.spyOn(Book, 'create').mockRejectedValue({
       name: 'SequelizeUniqueConstraintError',
       errors: [{ path: 'ISBN' }],
     });
-    const res = await request(app).post('/api/books').send({
-      title: 't',
-      author: 'a',
-      ISBN: 'dup',
-    });
+    const res = await request(app)
+      .post('/api/books')
+      .set('Authorization', 'Bearer token')
+      .send({
+        title: 't',
+        author: 'a',
+        ISBN: 'dup',
+      });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
   });
 
   it('returns 409 when title and author already exist', async () => {
+    mockAuthenticatedUser('admin');
     vi.spyOn(Book, 'create').mockRejectedValue({
       name: 'SequelizeUniqueConstraintError',
       errors: [{ path: 'title' }, { path: 'author' }],
     });
-    const res = await request(app).post('/api/books').send({
-      title: 'Same Title',
-      author: 'Same Author',
-      ISBN: 'unique-isbn',
-    });
+    const res = await request(app)
+      .post('/api/books')
+      .set('Authorization', 'Bearer token')
+      .send({
+        title: 'Same Title',
+        author: 'Same Author',
+        ISBN: 'unique-isbn',
+      });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
   });
 
   it('returns 201 when created', async () => {
+    mockAuthenticatedUser('admin');
     const book = { id: 1 } as unknown as BookInstance;
     vi.spyOn(Book, 'create').mockResolvedValue(book);
-    const res = await request(app).post('/api/books').send({
-      title: 't',
-      author: 'a',
-    });
+    const res = await request(app)
+      .post('/api/books')
+      .set('Authorization', 'Bearer token')
+      .send({
+        title: 't',
+        author: 'a',
+      });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
   });
 
   it('returns 400 when optional fields have invalid types', async () => {
-    const res = await request(app).post('/api/books').send({
-      title: 't',
-      author: 'a',
-      publicationYear: '2024',
-      ISBN: { value: 'x' },
-      summary: ['bad'],
-    });
+    mockAuthenticatedUser('admin');
+    const res = await request(app)
+      .post('/api/books')
+      .set('Authorization', 'Bearer token')
+      .send({
+        title: 't',
+        author: 'a',
+        publicationYear: '2024',
+        ISBN: { value: 'x' },
+        summary: ['bad'],
+      });
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -255,28 +301,57 @@ describe('POST /api/books', () => {
 
 // PUT /api/books/:id の検証と更新動作
 describe('PUT /api/books/:id', () => {
+  it('returns 401 when unauthenticated', async () => {
+    const res = await request(app).put('/api/books/1').send({ title: 't' });
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('AUTHENTICATION_REQUIRED');
+  });
+
+  it('returns 403 when non-admin user', async () => {
+    mockAuthenticatedUser('user');
+    const res = await request(app)
+      .put('/api/books/1')
+      .set('Authorization', 'Bearer token')
+      .send({ title: 't' });
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
   it('returns 400 for invalid id', async () => {
-    const res = await request(app).put('/api/books/0').send({ title: 't' });
+    mockAuthenticatedUser('admin');
+    const res = await request(app)
+      .put('/api/books/0')
+      .set('Authorization', 'Bearer token')
+      .send({ title: 't' });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('INVALID_BOOK_ID');
   });
 
   it('returns 404 when book not found', async () => {
+    mockAuthenticatedUser('admin');
     vi.spyOn(Book, 'findByPk').mockResolvedValue(null);
-    const res = await request(app).put('/api/books/999').send({ title: 't' });
+    const res = await request(app)
+      .put('/api/books/999')
+      .set('Authorization', 'Bearer token')
+      .send({ title: 't' });
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('BOOK_NOT_FOUND');
   });
 
   it('returns 400 when validation fails for provided fields', async () => {
+    mockAuthenticatedUser('admin');
     const book = { id: 1 } as unknown as BookInstance;
     vi.spyOn(Book, 'findByPk').mockResolvedValue(book);
-    const res = await request(app).put('/api/books/1').send({ title: '' });
+    const res = await request(app)
+      .put('/api/books/1')
+      .set('Authorization', 'Bearer token')
+      .send({ title: '' });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 
   it('returns 409 when ISBN duplicates another book', async () => {
+    mockAuthenticatedUser('admin');
     const fakeBook = {
       update: vi.fn().mockRejectedValue({
         name: 'SequelizeUniqueConstraintError',
@@ -285,12 +360,16 @@ describe('PUT /api/books/:id', () => {
     };
     vi.spyOn(Book, 'findByPk').mockResolvedValue(fakeBook as unknown as BookInstance);
 
-    const res = await request(app).put('/api/books/1').send({ ISBN: 'dup' });
+    const res = await request(app)
+      .put('/api/books/1')
+      .set('Authorization', 'Bearer token')
+      .send({ ISBN: 'dup' });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
   });
 
   it('returns 409 when title and author duplicate another book', async () => {
+    mockAuthenticatedUser('admin');
     const fakeBook = {
       update: vi.fn().mockRejectedValue({
         name: 'SequelizeUniqueConstraintError',
@@ -299,29 +378,40 @@ describe('PUT /api/books/:id', () => {
     };
     vi.spyOn(Book, 'findByPk').mockResolvedValue(fakeBook as unknown as BookInstance);
 
-    const res = await request(app).put('/api/books/1').send({
-      title: 'Same Title',
-      author: 'Same Author',
-    });
+    const res = await request(app)
+      .put('/api/books/1')
+      .set('Authorization', 'Bearer token')
+      .send({
+        title: 'Same Title',
+        author: 'Same Author',
+      });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
   });
 
   it('returns 200 when updated', async () => {
+    mockAuthenticatedUser('admin');
     const fakeBook = { update: vi.fn().mockResolvedValue(undefined) };
     vi.spyOn(Book, 'findByPk').mockResolvedValue(fakeBook as unknown as BookInstance);
-    const res = await request(app).put('/api/books/1').send({ title: 't' });
+    const res = await request(app)
+      .put('/api/books/1')
+      .set('Authorization', 'Bearer token')
+      .send({ title: 't' });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(fakeBook.update).toHaveBeenCalled();
   });
 
   it('returns 400 when optional update fields have invalid types', async () => {
-    const res = await request(app).put('/api/books/1').send({
-      publicationYear: '2024',
-      ISBN: 12345,
-      summary: { text: 'bad' },
-    });
+    mockAuthenticatedUser('admin');
+    const res = await request(app)
+      .put('/api/books/1')
+      .set('Authorization', 'Bearer token')
+      .send({
+        publicationYear: '2024',
+        ISBN: 12345,
+        summary: { text: 'bad' },
+      });
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -330,42 +420,60 @@ describe('PUT /api/books/:id', () => {
 
 // DELETE /api/books/:id の関連データチェック
 describe('DELETE /api/books/:id', () => {
+  it('returns 401 when unauthenticated', async () => {
+    const res = await request(app).delete('/api/books/1');
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('AUTHENTICATION_REQUIRED');
+  });
+
+  it('returns 403 when non-admin user', async () => {
+    mockAuthenticatedUser('user');
+    const res = await request(app).delete('/api/books/1').set('Authorization', 'Bearer token');
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
   it('returns 400 for invalid id', async () => {
-    const res = await request(app).delete('/api/books/0');
+    mockAuthenticatedUser('admin');
+    const res = await request(app).delete('/api/books/0').set('Authorization', 'Bearer token');
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('INVALID_BOOK_ID');
   });
 
   it('returns 404 when book not found', async () => {
+    mockAuthenticatedUser('admin');
     vi.spyOn(Book, 'findByPk').mockResolvedValue(null);
-    const res = await request(app).delete('/api/books/999');
+    const res = await request(app).delete('/api/books/999').set('Authorization', 'Bearer token');
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('BOOK_NOT_FOUND');
   });
 
   it('returns 409 when related data exists', async () => {
+    mockAuthenticatedUser('admin');
     const book = { destroy: vi.fn() } as unknown as BookInstance;
     vi.spyOn(Book, 'findByPk').mockResolvedValue(book);
     vi.spyOn(Review, 'count').mockResolvedValue(1);
     vi.spyOn(Favorite, 'count').mockResolvedValue(0);
 
-    const res = await request(app).delete('/api/books/1');
+    const res = await request(app).delete('/api/books/1').set('Authorization', 'Bearer token');
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('RELATED_DATA_EXISTS');
   });
 
   it('returns 204 when deleted', async () => {
+    mockAuthenticatedUser('admin');
     const fakeBook = { destroy: vi.fn().mockResolvedValue(undefined) } as unknown as BookInstance;
     vi.spyOn(Book, 'findByPk').mockResolvedValue(fakeBook as unknown as BookInstance);
     vi.spyOn(Review, 'count').mockResolvedValue(0);
     vi.spyOn(Favorite, 'count').mockResolvedValue(0);
 
-    const res = await request(app).delete('/api/books/1');
+    const res = await request(app).delete('/api/books/1').set('Authorization', 'Bearer token');
     expect(res.status).toBe(204);
     expect(fakeBook.destroy).toHaveBeenCalled();
   });
 
   it('returns 409 when delete fails by related data race', async () => {
+    mockAuthenticatedUser('admin');
     const fakeBook = {
       destroy: vi.fn().mockRejectedValue({ name: 'SequelizeForeignKeyConstraintError' }),
     } as unknown as BookInstance;
@@ -373,7 +481,7 @@ describe('DELETE /api/books/:id', () => {
     vi.spyOn(Review, 'count').mockResolvedValue(0);
     vi.spyOn(Favorite, 'count').mockResolvedValue(0);
 
-    const res = await request(app).delete('/api/books/1');
+    const res = await request(app).delete('/api/books/1').set('Authorization', 'Bearer token');
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('RELATED_DATA_EXISTS');
   });
