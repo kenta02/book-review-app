@@ -14,6 +14,40 @@ type ListBookReviewsInput = {
   limit: number;
 };
 
+type BookListRow = {
+  toJSON?: () => Record<string, unknown>;
+  get?: (key: string) => unknown;
+} & Record<string, unknown>;
+
+/**
+ * 書籍一覧クエリの 1 行を API レスポンス形式へ正規化します。
+ *
+ * Sequelize の一覧結果は、モデルインスタンス経由で集計列を持つ場合と
+ * plain object に近い shape で扱う場合があるため、ここで吸収します。
+ * 集計列は API 契約に合わせて `averageRating` は `number | null`、
+ * `reviewCount` は未評価時でも `0` へ揃えます。
+ *
+ * @param row - repository から返された書籍一覧の 1 行
+ * @returns API レスポンスへ載せる正規化済み書籍データ
+ */
+function normalizeListBook(row: BookListRow) {
+  const raw = typeof row.toJSON === 'function' ? row.toJSON() : row;
+  const averageRatingValue =
+    raw.averageRating ?? (typeof row.get === 'function' ? row.get('averageRating') : undefined);
+  const reviewCountValue =
+    raw.reviewCount ?? (typeof row.get === 'function' ? row.get('reviewCount') : undefined);
+
+  return {
+    ...raw,
+    averageRating:
+      averageRatingValue === null || averageRatingValue === undefined
+        ? null
+        : Number(averageRatingValue),
+    reviewCount:
+      reviewCountValue === null || reviewCountValue === undefined ? 0 : Number(reviewCountValue),
+  };
+}
+
 /**
  * Sequelize の一意制約違反が「ISBN 重複」または「title + author 重複」に該当するか判定します。
  *
@@ -74,7 +108,7 @@ export async function listBooks(queryDto: ListBooksQueryDto) {
     });
 
     return {
-      books: rows,
+      books: rows.map((row) => normalizeListBook(row as unknown as BookListRow)),
       pagination: {
         currentPage: page,
         totalItems,
