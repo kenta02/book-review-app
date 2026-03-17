@@ -357,6 +357,8 @@ paths:
     post:
       summary: 書籍追加
       tags: [Books]
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -391,6 +393,10 @@ paths:
                     $ref: '#/components/schemas/Book'
         '400':
           description: バリデーションエラー
+        '401':
+          description: 未認証
+        '403':
+          description: 管理者権限が必要
         '409':
           description: ISBN既存
 
@@ -422,6 +428,8 @@ paths:
     put:
       summary: 書籍更新（部分更新対応）
       tags: [Books]
+      security:
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -459,6 +467,10 @@ paths:
                     $ref: '#/components/schemas/Book'
         '400':
           description: バリデーションエラー
+        '401':
+          description: 未認証
+        '403':
+          description: 管理者権限が必要
         '404':
           description: 書籍が見つからない
         '409':
@@ -467,6 +479,8 @@ paths:
     delete:
       summary: 書籍削除
       tags: [Books]
+      security:
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -476,6 +490,10 @@ paths:
       responses:
         '204':
           description: 書籍削除成功（ボディなし）
+        '401':
+          description: 未認証
+        '403':
+          description: 管理者権限が必要
         '404':
           description: 書籍が見つからない
         '409':
