@@ -1,44 +1,44 @@
 export const ERROR_MESSAGES = {
   VALIDATION_FAILED: 'Validation failed',
   INTERNAL_SERVER_ERROR: 'Internal server error',
-  AUTHENTICATION_REQUIRED: '認証が必要です。',
-  NOT_FOUND: '指定されたリソースが見つかりません。',
+  AUTHENTICATION_REQUIRED: 'Authentication required',
+  NOT_FOUND: 'The requested resource was not found',
 
-  // Resource not found
-  REVIEW_NOT_FOUND: '指定されたレビューが存在しません。',
-  BOOK_NOT_FOUND: '指定された本が存在しません。',
-  USER_NOT_FOUND: 'ユーザーが見つかりません。',
-  PARENT_COMMENT_NOT_FOUND: '指定された親コメントが存在しません。',
-  PARENT_COMMENT_WRONG_REVIEW: '親コメントは同じレビューに属している必要があります。',
+  // リソース未存在
+  REVIEW_NOT_FOUND: 'The requested review was not found',
+  BOOK_NOT_FOUND: 'The requested book was not found',
+  USER_NOT_FOUND: 'User not found',
+  PARENT_COMMENT_NOT_FOUND: 'The specified parent comment was not found',
+  PARENT_COMMENT_WRONG_REVIEW: 'Parent comment must belong to the same review',
 
-  // Validation / field messages
+  // バリデーション/フィールド関連
   INVALID_BOOK_ID: 'Invalid book id',
   INVALID_USER_ID: 'Invalid user id',
-  ID_MUST_BE_POSITIVE_INT: 'IDは1以上の整数である必要があります。',
-  REQUIRED_TITLE: 'タイトルは必須項目です。',
-  REQUIRED_AUTHOR: '著者は必須項目です。',
-  INVALID_TITLE_IF_PROVIDED: 'タイトルを指定する場合は空文字にできません。',
-  INVALID_AUTHOR_IF_PROVIDED: '著者を指定する場合は空文字にできません。',
+  ID_MUST_BE_POSITIVE_INT: 'ID must be a positive integer',
+  REQUIRED_TITLE: 'Title is required',
+  REQUIRED_AUTHOR: 'Author is required',
+  INVALID_TITLE_IF_PROVIDED: 'Title cannot be empty when provided',
+  INVALID_AUTHOR_IF_PROVIDED: 'Author cannot be empty when provided',
 
-  // Auth / user messages
-  USERNAME_LENGTH: 'ユーザー名は2~150文字で入力してください.',
-  EMAIL_FORMAT: 'メールアドレスは有効なメール形式で入力してください。',
-  PASSWORD_MIN_LENGTH: 'パスワードは8文字以上で入力してください。',
-  AUTHENTICATION_FAILED: '認証に失敗しました。メールアドレスまたはパスワードが正しくありません。',
+  // 認証/ユーザー関連
+  USERNAME_LENGTH: 'Username must be between 2 and 150 characters',
+  EMAIL_FORMAT: 'Email must be a valid email address',
+  PASSWORD_MIN_LENGTH: 'Password must be at least 8 characters',
+  AUTHENTICATION_FAILED: 'Authentication failed. Email or password is incorrect.',
 
-  // Forbidden / permission
-  FORBIDDEN_REVIEW_UPDATE: 'このレビューを更新する権限がありません。',
-  FORBIDDEN_REVIEW_DELETE: 'このレビューを削除する権限がありません。',
-  FORBIDDEN_ADMIN_REQUIRED: '管理者権限が必要です。',
+  // 権限/禁止関連
+  FORBIDDEN_REVIEW_UPDATE: 'You do not have permission to update this review',
+  FORBIDDEN_REVIEW_DELETE: 'You do not have permission to delete this review',
+  FORBIDDEN_ADMIN_REQUIRED: 'Admin privileges are required',
 
-  // Duplicates / conflicts
-  DUPLICATE_USERNAME: '同じユーザー名が既に存在します。',
-  DUPLICATE_EMAIL: '同じメールアドレスが既に存在します。',
-  DUPLICATE_ISBN: '同じISBNの本が既に存在します。',
-  RELATED_DATA_EXISTS: '関連するデータが存在するため、削除できません。',
+  // 重複/競合関連
+  DUPLICATE_USERNAME: 'Username already exists',
+  DUPLICATE_EMAIL: 'Email already exists',
+  DUPLICATE_ISBN: 'A book with the same ISBN already exists',
+  RELATED_DATA_EXISTS: 'Cannot delete because related data exists',
 
   // 検索関連
   INVALID_SORT_FIELD:
-    'sortパラメータはtitle, author, publicationYear, rating, createdAtのいずれかで指定してください。',
-  INVALID_ORDER_VALUE: 'orderパラメータはascまたはdescで指定してください。',
+    'sort must be one of: title, author, publicationYear, rating, createdAt',
+  INVALID_ORDER_VALUE: 'order must be either asc or desc',
 } as const;

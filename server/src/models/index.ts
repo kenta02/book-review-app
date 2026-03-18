@@ -1,4 +1,4 @@
-// server/src/models/index.ts
+// モデル関連付けの定義
 import User from './Users';
 import Book from './Book';
 import Review from './Review';

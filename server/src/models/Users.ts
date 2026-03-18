@@ -4,7 +4,7 @@ import { DataTypes, Model, Optional } from 'sequelize';
 
 import { sequelize } from '../sequelize';
 
-// attribute interface helps TypeScript know what fields exist on instances
+// インスタンスに存在するフィールドを TypeScript に伝える属性インターフェース
 export interface UserAttributes {
   id: number;
   username: string;
@@ -15,7 +15,7 @@ export interface UserAttributes {
   updatedAt: Date;
 }
 
-// when creating a new user we don't provide id/role/timestamps
+// 新規作成時は id/role/timestamps を指定しない
 export interface UserCreationAttributes extends Optional<
   UserAttributes,
   'id' | 'role' | 'createdAt' | 'updatedAt'
