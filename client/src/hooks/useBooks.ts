@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { apiClient } from "../api/apiClient";
+import { createUnknownAppError } from "../errors/AppError";
+import type { ErrorCode } from "../errors/errorCodes";
+import { normalizeError } from "../errors/normalizeError";
 import { logger } from "../utils/logger";
 import type { Book } from "../types";
 
@@ -10,7 +13,7 @@ import type { Book } from "../types";
 export function useBooks() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<ErrorCode | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -27,14 +30,13 @@ export function useBooks() {
             setBooks(res.data.books);
           }
         } else {
-          throw new Error("不正なレスポンス形式です。");
+          throw createUnknownAppError("Unexpected response payload");
         }
       } catch (e) {
         if (mounted) {
-          const errorMessage =
-            e instanceof Error ? e.message : "予期せぬエラーが発生しました";
-          logger.error("Error fetching books:", errorMessage);
-          setError(errorMessage);
+          const appError = normalizeError(e);
+          logger.error("Error fetching books:", appError);
+          setErrorCode(appError.errorCode);
         }
       } finally {
         if (mounted) {
@@ -50,5 +52,5 @@ export function useBooks() {
     };
   }, []);
 
-  return { books, loading, error };
+  return { books, loading, errorCode };
 }
