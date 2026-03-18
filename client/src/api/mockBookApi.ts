@@ -1,4 +1,5 @@
 import type { ApiResponse, Book, CreateBookRequest } from "../types";
+import { ApiHttpError } from "../errors/AppError";
 
 const mockBooks: Record<number, Book> = {
   1: {
@@ -77,7 +78,7 @@ export const mockBookApi = {
     const book = mockBooks[bookId];
 
     if (!book) {
-      throw new Error(`Book ${bookId} not found`);
+      throw new ApiHttpError(404, `Book ${bookId} not found`);
     }
 
     return {
@@ -146,7 +147,7 @@ export const mockBookApi = {
     const existingBook = mockBooks[bookId];
 
     if (!existingBook) {
-      throw new Error(`Book ${bookId} not found`);
+      throw new ApiHttpError(404, `Book ${bookId} not found`);
     }
 
     const updatedBook = {
@@ -170,7 +171,7 @@ export const mockBookApi = {
 
     // mockBooksから該当書籍を削除
     if (!mockBooks[bookId]) {
-      throw new Error(`Book ${bookId} not found`);
+      throw new ApiHttpError(404, `Book ${bookId} not found`);
     }
     delete mockBooks[bookId];
 
