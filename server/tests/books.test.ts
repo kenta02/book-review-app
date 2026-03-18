@@ -22,6 +22,11 @@ type FindAndCountAllResult = {
   count: number | Array<{ count: number }>;
 };
 
+/**
+ * 書籍ルーターだけを組み込んだテスト用 Express アプリを生成します。
+ *
+ * @returns テスト対象の Express アプリ
+ */
 function makeApp() {
   const app = express();
   app.use(express.json());
@@ -29,12 +34,24 @@ function makeApp() {
   return app;
 }
 
+/**
+ * `findAndCountAll` の戻り値をページングテスト向けにモックします。
+ *
+ * @param result - モックする一覧結果
+ * @returns `findAndCountAll` の spy
+ */
 function mockFindAndCountAll(result: FindAndCountAllResult) {
   const spy = vi.spyOn(Book, 'findAndCountAll');
   spy.mockImplementation((async () => result) as unknown as typeof Book.findAndCountAll);
   return spy;
 }
 
+/**
+ * 認証済みユーザーを簡易的にモックします。
+ *
+ * @param role - 認可判定に使うロール
+ * @param userId - 認証済みユーザー ID
+ */
 function mockAuthenticatedUser(role: 'admin' | 'user' = 'admin', userId = 1) {
   vi.spyOn(jwt, 'verify').mockImplementation(
     (() => ({ id: userId } as jwt.JwtPayload)) as unknown as typeof jwt.verify
