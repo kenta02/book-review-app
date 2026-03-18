@@ -1,7 +1,7 @@
 // JWT を検証する
 // ユーザー情報を取得する
 // 失敗時はエラーを返す
-// 成功時は req.userId などを設定して next() に進める ← これが key point
+// 成功時は req.userId などを設定して next() に進める（重要）
 
 import express, { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
@@ -10,7 +10,7 @@ import User from '../models/Users';
 import { ERROR_MESSAGES } from '../constants/error-messages';
 
 // Express の Request 型を拡張して userId プロパティを追加
-/* eslint-disable @typescript-eslint/no-namespace -- required for Express request augmentation */
+/* eslint-disable @typescript-eslint/no-namespace -- Express の型拡張に必要 */
 declare global {
   namespace Express {
     interface Request {

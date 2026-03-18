@@ -10,7 +10,7 @@ export class ApiError extends Error {
     public details?: ErrorDetail[]
   ) {
     super(message);
-    // Fix prototype chain for instanceof to work after transpile
+    // トランスパイル後も instanceof が正しく動くようにプロトタイプを補正
     Object.setPrototypeOf(this, new.target.prototype);
     if (Error.captureStackTrace) Error.captureStackTrace(this, this.constructor);
   }

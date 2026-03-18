@@ -51,7 +51,7 @@ function parseStrictOptionalInteger(
   if (!/^-?\d+$/.test(normalized)) {
     errors.push({
       field,
-      message: `${field}は整数で指定してください。`,
+      message: `${field} must be an integer.`,
       code: 'INVALID_QUERY_PARAM',
     });
     return undefined;
@@ -100,7 +100,7 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
   if (rawSort && !VALID_SORT_VALUES.includes(rawSort as (typeof VALID_SORT_VALUES)[number])) {
     errors.push({
       field: 'sort',
-      message: `sortに指定できない値です。`,
+      message: 'Invalid sort value.',
       code: 'INVALID_SORT',
     });
   }
@@ -108,7 +108,7 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
   if (rawOrder && !VALID_ORDER_VALUES.includes(rawOrder as (typeof VALID_ORDER_VALUES)[number])) {
     errors.push({
       field: 'order',
-      message: `orderに指定できない値です。`,
+      message: 'Invalid order value.',
       code: 'INVALID_ORDER',
     });
   }
@@ -116,7 +116,7 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
   if (limit !== undefined && limit > 100) {
     errors.push({
       field: 'limit',
-      message: 'limitは100以下で指定してください。',
+      message: 'limit must be 100 or less.',
       code: 'INVALID_LIMIT',
     });
   }
@@ -212,21 +212,21 @@ export function validateCreateBook(req: Request): ParseResult<CreateBookDto> {
   if (publicationYear !== undefined && !Number.isInteger(publicationYear)) {
     errors.push({
       field: 'publicationYear',
-      message: 'publicationYearは整数で指定してください。',
+      message: 'publicationYear must be an integer.',
     });
   }
 
   if (ISBN !== undefined && typeof ISBN !== 'string') {
     errors.push({
       field: 'ISBN',
-      message: 'ISBNは文字列で指定してください。',
+      message: 'ISBN must be a string.',
     });
   }
 
   if (summary !== undefined && typeof summary !== 'string') {
     errors.push({
       field: 'summary',
-      message: 'summaryは文字列で指定してください。',
+      message: 'summary must be a string.',
     });
   }
 
@@ -282,21 +282,21 @@ export function validateUpdateBook(
   if (publicationYear !== undefined && !Number.isInteger(publicationYear)) {
     errors.push({
       field: 'publicationYear',
-      message: 'publicationYearは整数で指定してください。',
+      message: 'publicationYear must be an integer.',
     });
   }
 
   if (ISBN !== undefined && typeof ISBN !== 'string') {
     errors.push({
       field: 'ISBN',
-      message: 'ISBNは文字列で指定してください。',
+      message: 'ISBN must be a string.',
     });
   }
 
   if (summary !== undefined && typeof summary !== 'string') {
     errors.push({
       field: 'summary',
-      message: 'summaryは文字列で指定してください。',
+      message: 'summary must be a string.',
     });
   }
 
