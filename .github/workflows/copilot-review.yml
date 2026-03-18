@@ -2,7 +2,11 @@ name: Copilot PR Review
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, develop]
+
+concurrency:
+  group: copilot-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -39,14 +43,29 @@ jobs:
           GH_TOKEN: ${{ env.COPILOT_GITHUB_TOKEN }}
           GH_COPILOT_NO_INTERACTIVE: "1"
         run: |
-          DIFF=$(gh pr diff ${{ github.event.pull_request.number }})
+          gh pr diff ${{ github.event.pull_request.number }} > pr.diff
+
           {
             echo "## Copilot Review"
-            gh copilot explain "$DIFF"
+            gh copilot explain < pr.diff
           } > copilot-review-comment.md
 
-      - name: Post Copilot Review
+      - name: Post or update Copilot Review
         if: ${{ !github.event.pull_request.head.repo.fork && env.COPILOT_GITHUB_TOKEN != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh pr comment ${{ github.event.pull_request.number }} --body-file copilot-review-comment.md
+        run: |
+          COMMENT_ID=$(
+            gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+              --jq '.[] | select(.user.type == "Bot" and (.body | startswith("## Copilot Review"))) | .id' \
+              | head -n 1
+          )
+
+          if [ -n "$COMMENT_ID" ]; then
+            gh api \
+              --method PATCH \
+              "repos/${{ github.repository }}/issues/comments/$COMMENT_ID" \
+              --field body="$(cat copilot-review-comment.md)"
+          else
+            gh pr comment ${{ github.event.pull_request.number }} --body-file copilot-review-comment.md
+          fi
