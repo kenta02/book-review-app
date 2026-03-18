@@ -64,7 +64,7 @@ jobs:
         env:
           npm_config_os: linux
           npm_config_cpu: x64
-        run: npm install
+        run: npm ci
 
       - name: Lint client
         working-directory: ./client
