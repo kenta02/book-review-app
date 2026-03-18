@@ -24,17 +24,24 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install Copilot CLI
-        run: npm install -g @github/copilot
+      - name: Install GitHub Copilot CLI
+        # npm パッケージ @github/copilot は存在しない
+        # 正しくは gh 拡張として提供されている
+        env:
+          GH_TOKEN: ${{ env.COPILOT_GITHUB_TOKEN }}
+        run: gh extension install github/gh-copilot
 
       - name: Run Copilot Review
         if: ${{ !github.event.pull_request.head.repo.fork && env.COPILOT_GITHUB_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ env.COPILOT_GITHUB_TOKEN }}
+          GH_COPILOT_NO_INTERACTIVE: "1"
         run: |
-          copilot -p "このPRの変更点を確認し、以下の観点でレビューしてください:
-          1. セキュリティ上の問題（認証情報の漏洩、インジェクション等）
-          2. コードの品質（可読性、重複、命名）
-          3. 潜在的なバグ
-          問題があれば具体的に指摘し、修正案も提示してください。" > copilot-review-comment.md
+          DIFF=$(gh pr diff ${{ github.event.pull_request.number }})
+          {
+            echo "## Copilot Review"
+            gh copilot explain "$DIFF"
+          } > copilot-review-comment.md
 
       - name: Post Copilot Review
         if: ${{ !github.event.pull_request.head.repo.fork && env.COPILOT_GITHUB_TOKEN != '' }}

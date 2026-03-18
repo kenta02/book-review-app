@@ -12,17 +12,17 @@ jobs:
   sync-issues:
     # SonarCloud 分析が成功したときのみ実行
     if: github.event.workflow_run.conclusion == 'success'
-    
+
     runs-on: ubuntu-latest
-    
+
     steps:
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v4
+
       - name: Use Node.js 18
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18.x
-      
+
       - name: Run SonarCloud Issues Sync
         run: node scripts/sync-sonarcloud-issues.js
         env:
@@ -30,7 +30,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
           GH_REPO: ${{ github.repository }}
-      
+
       - name: Notify on failure
         if: failure()
         run: |
