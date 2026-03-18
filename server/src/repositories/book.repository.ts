@@ -37,9 +37,10 @@ function escapeLikePattern(value: string): string {
 /**
  * 書籍一覧をページング付きで取得します。
  *
- * 検索条件の有無に応じて、単純な一覧取得と評価集計付き一覧取得を切り替えます。
- * `sort=rating` または `ratingMin` が指定されたときだけ Review を JOIN し、
- * AVG(rating) を使った ORDER BY / HAVING を組み立てます。
+ * 一覧では常にレビュー集計を付与し、
+ * `averageRating` / `reviewCount` をレスポンスに載せられるようにします。
+ * `sort=rating` または `ratingMin` が指定されたときは、
+ * 同じ集計列を ORDER BY / HAVING にも使います。
  *
  * @param queryDto - 一覧取得クエリ
  * @returns 総件数と該当ページの書籍一覧
@@ -88,22 +89,24 @@ export async function findBooksWithPagination(queryDto: ListBooksQueryDto) {
     ];
   }
 
-  // 評価条件が必要なケースだけ Review を JOIN し、集計クエリへ切り替えます。
-  const usesRatingAggregation = queryDto.sort === 'rating' || queryDto.ratingMin !== undefined;
-
-  // レビュー本体は返さず、AVG(rating) の計算だけに使うため attributes は空にしています。
-  const include = usesRatingAggregation ? [{ model: Review, attributes: [] }] : [];
+  // レビュー本体は返さず、集計値だけに使います。
+  const include = [{ model: Review, attributes: [] }];
 
   const avgRatingExpression = fn('AVG', col('Reviews.rating'));
+  const reviewCountExpression = fn('COUNT', col('Reviews.id'));
 
-  // `AVG(Reviews.rating) AS avgRating` を一覧結果へ追加し、必要ならクライアントから参照できるようにします。
-  const avgRatingAttribute: [ReturnType<typeof fn>, string] = [avgRatingExpression, 'avgRating'];
+  const averageRatingAttribute: [ReturnType<typeof fn>, string] = [
+    avgRatingExpression,
+    'averageRating',
+  ];
+  const reviewCountAttribute: [ReturnType<typeof fn>, string] = [
+    reviewCountExpression,
+    'reviewCount',
+  ];
 
-  const attributes = usesRatingAggregation
-    ? {
-        include: [avgRatingAttribute],
-      }
-    : undefined;
+  const attributes = {
+    include: [averageRatingAttribute, reviewCountAttribute],
+  };
 
   // sort=rating のときだけ集計列で並べ替え、それ以外は通常カラムのソートを使います。
   if (queryDto.sort === 'rating') {
@@ -119,27 +122,23 @@ export async function findBooksWithPagination(queryDto: ListBooksQueryDto) {
   }
 
   const baseOptions = {
+    attributes,
+    distinct: false,
+    group: ['Book.id'],
+    include,
     limit: queryDto.limit,
     offset,
     order: orderClause,
     where,
   };
 
-  // AVG を使う条件では、Book.id 単位の集計と HAVING を明示的に付与します。
-  if (usesRatingAggregation) {
-    const having =
-      queryDto.ratingMin !== undefined
-        ? sequelizeWhere(fn('AVG', col('Reviews.rating')), {
-            [Op.gte]: queryDto.ratingMin,
-          })
-        : undefined;
+  if (queryDto.ratingMin !== undefined) {
+    const having = sequelizeWhere(avgRatingExpression, {
+      [Op.gte]: queryDto.ratingMin,
+    });
 
     return Book.findAndCountAll({
       ...baseOptions,
-      include,
-      attributes,
-      // 1冊につき1行へ畳み込むため、Book.id で GROUP BY します。
-      group: [`Book.id`],
       having,
     });
   }
