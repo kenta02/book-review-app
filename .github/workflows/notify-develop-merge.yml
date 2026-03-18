@@ -22,7 +22,7 @@ jobs:
           script: |
             const pr = context.payload.pull_request;
             const message = `🎉 develop にマージされました！\n\n- PR: #${pr.number} (${pr.html_url})\n- タイトル: ${pr.title}\n- マージコミット: ${pr.merge_commit_sha}`;
-            await github.issues.createComment({
+            await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr.number,

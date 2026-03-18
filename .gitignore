@@ -81,7 +81,6 @@ tmp/
 temp/
 .cache/
 kadai.txt
-.gitignore
 
 
 # ドキュメント類
@@ -119,8 +118,5 @@ PROJECT_MEMORY.md
 !.github/skills/README.md
 !.github/skills/test-ci-parity/
 !.github/skills/test-ci-parity/SKILL.md
-  
-.github/pull_request_template.md
 .github/skills/README.md
-.github/skills/test-ci-parity/SKILL.md
 AGENTS.md

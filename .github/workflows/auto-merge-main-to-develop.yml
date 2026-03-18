@@ -56,5 +56,5 @@ jobs:
         run: |
           PR_NUMBER=${{ steps.create_pr.outputs.pull_request_number }}
           echo "Enabling auto-merge for PR #$PR_NUMBER"
-          gh pr merge "$PR_NUMBER" --auto --merge --delete-branch
+          gh pr merge "$PR_NUMBER" --auto --merge
           echo "Requested auto-merge for PR #$PR_NUMBER (if allowed)."

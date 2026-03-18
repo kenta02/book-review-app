@@ -29,26 +29,22 @@ jobs:
           node-version: 22
 
       - name: Install GitHub Copilot CLI
-        # npm パッケージ @github/copilot は存在しない
-        # 正しくは gh 拡張として提供されている
         env:
-          # GitHub Actions では `github.token` が常に利用可能なので、
-          # COPILOT_GITHUB_TOKEN が未設定でもインストール自体は通す。
-          GH_TOKEN: ${{ github.token }}
-        run: gh extension install github/gh-copilot
+          # Copilot CLI の認証には COPILOT_GITHUB_TOKEN / GH_TOKEN / GITHUB_TOKEN が使える。
+          GITHUB_TOKEN: ${{ github.token }}
+        run: npm install -g @github/copilot
 
       - name: Run Copilot Review
         if: ${{ !github.event.pull_request.head.repo.fork && env.COPILOT_GITHUB_TOKEN != '' }}
         env:
-          GH_TOKEN: ${{ env.COPILOT_GITHUB_TOKEN }}
-          GH_COPILOT_NO_INTERACTIVE: "1"
+          COPILOT_GITHUB_TOKEN: ${{ env.COPILOT_GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           gh pr diff ${{ github.event.pull_request.number }} > pr.diff
 
-          {
-            echo "## Copilot Review"
-            gh copilot explain < pr.diff
-          } > copilot-review-comment.md
+          copilot -p "Read ./pr.diff via the shell tool and write a concise markdown pull request review comment. Start the response with '## Copilot Review'. Focus on actionable risks, regressions, and missing tests. If there are no material issues, say so briefly." \
+            --allow-tool 'shell(cat)' \
+            > copilot-review-comment.md
 
       - name: Post or update Copilot Review
         if: ${{ !github.event.pull_request.head.repo.fork && env.COPILOT_GITHUB_TOKEN != '' }}

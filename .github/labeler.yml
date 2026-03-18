@@ -3,32 +3,42 @@
 
 # 例: 変更ファイルが `client/` 内なら `frontend` を付与
 frontend:
-  - "client/**"
+  - changed-files:
+      - any-glob-to-any-file: "client/**"
 
 backend:
-  - "server/**"
+  - changed-files:
+      - any-glob-to-any-file: "server/**"
 
 docs:
-  - "docs/**"
-  - "*.md"
-  - "**/*.md"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "*.md"
+          - "**/*.md"
 
 chore:
-  - ".github/**"
-  - "scripts/**"
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - "scripts/**"
 
 dependencies:
-  - "package.json"
-  - "package-lock.json"
-  - "yarn.lock"
-  - "client/package.json"
-  - "client/package-lock.json"
-  - "client/yarn.lock"
-  - "server/package.json"
-  - "server/package-lock.json"
-  - "server/yarn.lock"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "package.json"
+          - "package-lock.json"
+          - "yarn.lock"
+          - "client/package.json"
+          - "client/package-lock.json"
+          - "client/yarn.lock"
+          - "server/package.json"
+          - "server/package-lock.json"
+          - "server/yarn.lock"
 
 test:
-  - "**/__tests__/**"
-  - "**/*.test.*"
-  - "**/*.spec.*"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/__tests__/**"
+          - "**/*.test.*"
+          - "**/*.spec.*"

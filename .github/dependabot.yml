@@ -5,9 +5,7 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
-    # セキュリティアップデートのみを優先したい場合は以下を追加できます
-    # allow:
-    #   - dependency-type: "direct" # or "all"
+    # `allow` は version/security updates の両方に影響するため、現状は未指定のままにする。
 
   - package-ecosystem: "npm"
     directory: "/client"
