@@ -18,6 +18,10 @@ function mapStatusToErrorCode(statusCode: number) {
     return ERROR_CODES.NOT_FOUND;
   }
 
+  if (statusCode === 409) {
+    return ERROR_CODES.VALIDATION_ERROR;
+  }
+
   if (statusCode >= 500) {
     return ERROR_CODES.SERVER_ERROR;
   }

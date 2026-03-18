@@ -48,7 +48,18 @@ async function fetchJson<T>(
     throw new ApiHttpError(response.status, response.statusText);
   }
 
-  const payload: unknown = await response.json();
+  const rawText = await response.text();
+  let payload: unknown;
+  try {
+    payload = JSON.parse(rawText) as unknown;
+  } catch {
+    // API から JSON が返らない場合は、呼び出し元で扱いやすい HTTP エラーへ寄せる。
+    throw new ApiHttpError(
+      response.status,
+      rawText ? `Invalid JSON response: ${rawText.slice(0, 200)}` : 'Invalid JSON response'
+    );
+  }
+
   return unwrapResponseData<T>(payload);
 }
 

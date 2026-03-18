@@ -31,6 +31,13 @@ describe("normalizeError", () => {
     expect(result.statusCode).toBe(404);
   });
 
+  it("409 を VALIDATION_ERROR に正規化", () => {
+    const httpError = new ApiHttpError(409, "Conflict");
+    const result = normalizeError(httpError);
+    expect(result.errorCode).toBe(ERROR_CODES.VALIDATION_ERROR);
+    expect(result.statusCode).toBe(409);
+  });
+
   it("400 を VALIDATION_ERROR に正規化", () => {
     const httpError = new ApiHttpError(400, "Bad Request");
     const result = normalizeError(httpError);

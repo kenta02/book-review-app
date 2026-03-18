@@ -11,7 +11,7 @@
     "moduleResolution": "bundler",
     "target": "esnext",
     // グローバル型定義にVitestのテストヘルパーを含める
-    "types": ["vite/client", "vitest"],
+    "types": ["vite/client", "vitest/globals"],
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
@@ -47,9 +47,6 @@
   },
   "exclude": [
     "node_modules",
-    "dist",
-    // テストファイルは型チェックの対象外とする（Vitest が実行時に評価する）
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx"
+    "dist"
   ]
 }
