@@ -28,7 +28,9 @@ jobs:
         # npm パッケージ @github/copilot は存在しない
         # 正しくは gh 拡張として提供されている
         env:
-          GH_TOKEN: ${{ env.COPILOT_GITHUB_TOKEN }}
+          # GitHub Actions では `github.token` が常に利用可能なので、
+          # COPILOT_GITHUB_TOKEN が未設定でもインストール自体は通す。
+          GH_TOKEN: ${{ github.token }}
         run: gh extension install github/gh-copilot
 
       - name: Run Copilot Review
