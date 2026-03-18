@@ -1,0 +1,60 @@
+name: Sync main → develop (create PR)
+
+# mainブランチに push があったときに、develop への同期用 PR を作成します。
+# 既存の PR があれば再利用し、新規 PR の自動マージ（auto-merge）を有効化します。
+# auto-merge の有効化に失敗してもジョブ自体は成功（緑）のままにします。
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync-main-to-develop:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Ensure sync PR exists
+        id: create_pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # 既存の open な PR があればそれを使う
+          PR_NUMBER=$(gh pr list --base develop --head main --state open --json number --jq '.[0].number // ""')
+
+          if [ -n "$PR_NUMBER" ]; then
+            echo "Found existing PR #$PR_NUMBER"
+          else
+            echo "Creating new sync PR (main → develop)"
+            PR_NUMBER=$(gh pr create --base develop --head main --title "Sync main → develop" \
+              --body "Auto-sync main into develop (triggered by push to main)." \
+              --label "sync" --json number --jq '.number')
+            echo "Created PR #$PR_NUMBER"
+          fi
+
+          echo "pull_request_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Enable auto-merge for sync PR (non-blocking)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=${{ steps.create_pr.outputs.pull_request_number }}
+          echo "Enabling auto-merge for PR #$PR_NUMBER"
+          gh pr merge "$PR_NUMBER" --auto --merge --delete-branch
+          echo "Requested auto-merge for PR #$PR_NUMBER (if allowed)."
