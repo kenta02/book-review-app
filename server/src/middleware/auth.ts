@@ -31,17 +31,25 @@ export const authenticateToken = async (
       return next();
     }
 
-    const existingUser = await User.findByPk(req.userId);
-    if (!existingUser) {
-      res.status(401).json({
+    try {
+      const existingUser = await User.findByPk(req.userId);
+      if (!existingUser) {
+        res.status(401).json({
+          success: false,
+          error: { message: ERROR_MESSAGES.USER_NOT_FOUND, code: 'USER_NOT_FOUND' },
+        });
+        return;
+      }
+
+      req.userRole = existingUser.toJSON().role;
+      return next();
+    } catch (error) {
+      res.status(500).json({
         success: false,
-        error: { message: ERROR_MESSAGES.USER_NOT_FOUND, code: 'USER_NOT_FOUND' },
+        error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
       });
       return;
     }
-
-    req.userRole = existingUser.toJSON().role;
-    return next();
   }
 
   // authHeader が存在するか確認
