@@ -15,6 +15,8 @@ export const ERROR_MESSAGES = {
   INVALID_BOOK_ID: 'Invalid book id',
   INVALID_USER_ID: 'Invalid user id',
   ID_MUST_BE_POSITIVE_INT: 'ID must be a positive integer',
+  PAGE_MUST_BE_POSITIVE_INT: 'Page must be a positive integer',
+  LIMIT_MUST_BE_POSITIVE_INT: 'Limit must be a positive integer',
   REQUIRED_TITLE: 'Title is required',
   REQUIRED_AUTHOR: 'Author is required',
   INVALID_TITLE_IF_PROVIDED: 'Title cannot be empty when provided',

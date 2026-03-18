@@ -22,5 +22,5 @@ export const ValidationMessages = {
   PARENT_ID_MUST_BE_POSITIVE: 'Parent comment ID must be a positive integer.',
 
   // レート関連
-  RATING_MUST_BE_1_TO_5: 'rating must be an integer between 1 and 5.',
+  RATING_MUST_BE_1_TO_5: 'Rating must be an integer between 1 and 5.',
 };

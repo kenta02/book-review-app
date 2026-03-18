@@ -16,8 +16,9 @@ export type ParseResult<T> =
 /**
  * 既存実装の `parseInt(value) || defaultValue` と同じ挙動で数値化します。
  *
- * 0 や NaN はデフォルト値に倒し、負数はそのまま通すことで、
- * リファクタリング前の books API と互換にします。
+ * 0 や NaN はデフォルト値に倒し、負数はそのまま通します。
+ * 呼び出し元で non-positive の明示入力を先に弾くことで、
+ * 既存互換と入力バリデーションを両立します。
  *
  * @param rawValue - クエリから受け取った生の値
  * @param defaultValue - フォールバック値
@@ -124,7 +125,7 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
   if (page !== undefined && page <= 0) {
     errors.push({
       field: 'page',
-      message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
+      message: ERROR_MESSAGES.PAGE_MUST_BE_POSITIVE_INT,
       code: 'INVALID_PAGE',
     });
   }
@@ -132,7 +133,7 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
   if (limit !== undefined && limit <= 0) {
     errors.push({
       field: 'limit',
-      message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
+      message: ERROR_MESSAGES.LIMIT_MUST_BE_POSITIVE_INT,
       code: 'INVALID_LIMIT',
     });
   }
@@ -144,7 +145,7 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
   return {
     success: true,
     data: {
-      // 一覧 API のページングは既存互換を保つため、未指定時のみ既定値を補います。
+      // 一覧 API では未指定時だけ既定値を補い、明示的な不正値は上でバリデーションします。
       page: page === undefined ? 1 : page,
       limit: limit === undefined ? 20 : limit,
       // 文字列系フィルタはここで trim しておくと、下位層で空白除去を繰り返さずに済みます。
@@ -348,8 +349,8 @@ export function validateGetBookReviews(
   const rawPage = Array.isArray(req.query.page) ? req.query.page[0] : req.query.page;
   const rawLimit = Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit;
 
-  // 互換のため page/limit の数値化自体は legacy ルールを維持しつつ、
-  // クエリで明示的に non-positive が渡された場合だけ弾く。
+  // 一覧 API と同様に、未指定や 0/NaN 相当は既定値へ寄せつつ、
+  // 明示的な non-positive 整数だけは入力エラーとして返します。
   const rawParsedPage = parseInt(String(rawPage), 10);
   const rawParsedLimit = parseInt(String(rawLimit), 10);
   if (rawPage !== undefined && Number.isInteger(rawParsedPage) && rawParsedPage <= 0) {
