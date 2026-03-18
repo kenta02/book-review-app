@@ -1,17 +1,19 @@
 import { MainLayout } from "../components/layouts/MainLayout";
 import { BookCard } from "../components/BookCard";
+import { BOOK_LIST_ERROR_MESSAGES } from "../constants/messages";
 import { useBooks } from "../hooks/useBooks";
 
 export function DashboardPage() {
-  const { books, loading, error } = useBooks();
+  const { books, loading, errorCode } = useBooks();
+  const errorMessage = errorCode ? BOOK_LIST_ERROR_MESSAGES[errorCode] : null;
 
   // ローディング中、エラー中は早期リターンする
   if (loading) {
     return <MainLayout>Loading...</MainLayout>;
   }
 
-  if (error) {
-    return <MainLayout>Error: {error}</MainLayout>;
+  if (errorMessage) {
+    return <MainLayout>Error: {errorMessage}</MainLayout>;
   }
 
   return (
