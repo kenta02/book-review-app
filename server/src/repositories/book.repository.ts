@@ -133,12 +133,9 @@ export async function findBooksWithPagination(queryDto: ListBooksQueryDto) {
   };
 
   if (queryDto.ratingMin !== undefined) {
-    const having =
-      queryDto.ratingMin !== undefined
-        ? sequelizeWhere(avgRatingExpression, {
-            [Op.gte]: queryDto.ratingMin,
-          })
-        : undefined;
+    const having = sequelizeWhere(avgRatingExpression, {
+      [Op.gte]: queryDto.ratingMin,
+    });
 
     return Book.findAndCountAll({
       ...baseOptions,

@@ -106,7 +106,7 @@ describe('GET /api/books', () => {
   });
 
   it('applies keyword search across title, author, and summary', async () => {
-    const spy = mockFindAndCountAll({ rows: [], count: 0 });
+    const spy = mockFindAndCountAll({ rows: [], count: [] });
 
     await request(app).get('/api/books?keyword=React');
 
@@ -141,6 +141,24 @@ describe('GET /api/books', () => {
     expect(options?.order).toEqual([[expect.any(Object), 'ASC']]);
     expect(res.status).toBe(200);
     expect(res.body.data.pagination.totalItems).toBe(2);
+  });
+
+  it('falls back to null and 0 when aggregation values are not finite numbers', async () => {
+    const book = {
+      toJSON: () => ({ id: 1, title: 'C', averageRating: 'NaN', reviewCount: 'Infinity' }),
+      get: (key: string) =>
+        key === 'averageRating' ? 'NaN' : key === 'reviewCount' ? 'Infinity' : undefined,
+    } as unknown as BookInstance;
+    mockFindAndCountAll({ rows: [book], count: [{ count: 1 }] });
+
+    const res = await request(app).get('/api/books');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.books[0]).toMatchObject({
+      id: 1,
+      averageRating: null,
+      reviewCount: 0,
+    });
   });
 
   it('applies having clause when ratingMin is specified', async () => {

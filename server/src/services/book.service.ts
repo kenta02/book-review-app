@@ -17,7 +17,22 @@ type ListBookReviewsInput = {
 type BookListRow = {
   toJSON?: () => Record<string, unknown>;
   get?: (key: string) => unknown;
-} & Record<string, unknown>;
+};
+
+/**
+ * 集計列に混在しうる値を有限数へ寄せます。
+ *
+ * @param value - DB / Sequelize から返る生値
+ * @returns 有限数なら number、そうでなければ null
+ */
+function toFiniteNumber(value: unknown): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : null;
+}
 
 /**
  * 書籍一覧クエリの 1 行を API レスポンス形式へ正規化します。
@@ -31,20 +46,18 @@ type BookListRow = {
  * @returns API レスポンスへ載せる正規化済み書籍データ
  */
 function normalizeListBook(row: BookListRow) {
-  const raw = typeof row.toJSON === 'function' ? row.toJSON() : row;
+  const raw = typeof row.toJSON === 'function' ? row.toJSON() : (row as Record<string, unknown>);
   const averageRatingValue =
     raw.averageRating ?? (typeof row.get === 'function' ? row.get('averageRating') : undefined);
   const reviewCountValue =
     raw.reviewCount ?? (typeof row.get === 'function' ? row.get('reviewCount') : undefined);
+  const averageRating = toFiniteNumber(averageRatingValue);
+  const reviewCount = toFiniteNumber(reviewCountValue);
 
   return {
     ...raw,
-    averageRating:
-      averageRatingValue === null || averageRatingValue === undefined
-        ? null
-        : Number(averageRatingValue),
-    reviewCount:
-      reviewCountValue === null || reviewCountValue === undefined ? 0 : Number(reviewCountValue),
+    averageRating,
+    reviewCount: reviewCount ?? 0,
   };
 }
 
@@ -108,7 +121,7 @@ export async function listBooks(queryDto: ListBooksQueryDto) {
     });
 
     return {
-      books: rows.map((row) => normalizeListBook(row as unknown as BookListRow)),
+      books: rows.map((row) => normalizeListBook(row)),
       pagination: {
         currentPage: page,
         totalItems,
