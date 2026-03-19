@@ -4,7 +4,10 @@ import { ERROR_MESSAGES } from '../constants/error-messages';
 import { ApiError } from '../errors/ApiError';
 import * as commentService from '../services/comment.service';
 import { logger } from '../utils/logger';
-import { validateCreateComment, validateGetCommentsForReview } from '../validators/comment.validator';
+import {
+  validateCreateComment,
+  validateGetCommentsForReview,
+} from '../validators/comment.validator';
 
 type ErrorResponse = {
   message: string;
@@ -32,7 +35,7 @@ function sendApiError(res: Response, error: ApiError) {
  * @param res - Express Response
  * @returns コメント一覧
  */
-export async function listComments(req: Request, res: Response) {
+export async function listComments(req: Request, res: Response): Promise<Response> {
   try {
     const parseResult = validateGetCommentsForReview(req);
     if (!parseResult.success) {
@@ -70,7 +73,7 @@ export async function listComments(req: Request, res: Response) {
  * @param res - Express Response
  * @returns 作成後コメント
  */
-export async function createComment(req: Request, res: Response) {
+export async function createComment(req: Request, res: Response): Promise<Response> {
   try {
     const userId = req.userId;
     if (!userId) {

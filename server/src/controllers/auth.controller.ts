@@ -34,7 +34,7 @@ function sendInternalServerError(res: Response, logMessage: string) {
  * @param res - Express Response
  * @returns 登録結果
  */
-export async function register(req: Request, res: Response) {
+export async function register(req: Request, res: Response): Promise<Response> {
   try {
     const parseResult = validateRegister(req);
     if (!parseResult.success) {
@@ -66,7 +66,7 @@ export async function register(req: Request, res: Response) {
  * @param res - Express Response
  * @returns ログイン結果
  */
-export async function login(req: Request, res: Response) {
+export async function login(req: Request, res: Response): Promise<Response> {
   try {
     const parseResult = validateLogin(req);
     if (!parseResult.success) {
@@ -98,7 +98,7 @@ export async function login(req: Request, res: Response) {
  * @param res - Express Response
  * @returns プロフィール情報
  */
-export async function me(req: Request, res: Response) {
+export async function me(req: Request, res: Response): Promise<Response> {
   try {
     const userId = req.userId;
     if (!userId) {
