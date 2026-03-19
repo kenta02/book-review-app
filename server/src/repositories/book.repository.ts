@@ -3,6 +3,7 @@ import {
   DestroyOptions,
   FindOptions,
   fn,
+  GroupedCountResultItem,
   Op,
   Order,
   Transaction,
@@ -21,6 +22,14 @@ import { CreateBookDto, ListBooksQueryDto, UpdateBookDto } from '../modules/book
  * 取得済みインスタンスを受け取るためこの型を明示しています。
  */
 export type BookInstance = NonNullable<Awaited<ReturnType<typeof Book.findByPk>>>;
+
+/**
+ * `findAndCountAll` の戻り値型（group あり/なしで `count` の型が変わるため、テストやハンドリングで明示的に扱います）
+ */
+export type FindBooksWithPaginationResult = {
+  rows: BookInstance[];
+  count: number | GroupedCountResultItem[];
+};
 
 /**
  * LIKE クエリに使用する値をエスケープします。
@@ -45,7 +54,9 @@ function escapeLikePattern(value: string): string {
  * @param queryDto - 一覧取得クエリ
  * @returns 総件数と該当ページの書籍一覧
  */
-export async function findBooksWithPagination(queryDto: ListBooksQueryDto) {
+export async function findBooksWithPagination(
+  queryDto: ListBooksQueryDto
+): Promise<FindBooksWithPaginationResult> {
   const offset = (queryDto.page - 1) * queryDto.limit;
 
   // WHERE 句の基本条件をここに積み上げ、最後に findAndCountAll へ渡します。
@@ -152,7 +163,10 @@ export async function findBooksWithPagination(queryDto: ListBooksQueryDto) {
  * @param bookId - 書籍 ID
  * @returns 書籍。存在しない場合は null
  */
-export async function findBookById(bookId: number, options?: FindOptions) {
+export async function findBookById(
+  bookId: number,
+  options?: FindOptions
+): Promise<BookInstance | null> {
   return Book.findByPk(bookId, options);
 }
 
@@ -162,7 +176,7 @@ export async function findBookById(bookId: number, options?: FindOptions) {
  * @param isbn - ISBN
  * @returns 書籍。存在しない場合は null
  */
-export async function findBookByIsbn(isbn: string) {
+export async function findBookByIsbn(isbn: string): Promise<BookInstance | null> {
   return Book.findOne({ where: { ISBN: isbn } });
 }
 
@@ -172,7 +186,7 @@ export async function findBookByIsbn(isbn: string) {
  * @param data - 作成データ
  * @returns 作成済み書籍
  */
-export async function createBook(data: CreateBookDto) {
+export async function createBook(data: CreateBookDto): Promise<BookInstance> {
   return Book.create(data);
 }
 
@@ -183,7 +197,7 @@ export async function createBook(data: CreateBookDto) {
  * @param data - 更新データ
  * @returns 更新後の書籍
  */
-export async function updateBook(book: BookInstance, data: UpdateBookDto) {
+export async function updateBook(book: BookInstance, data: UpdateBookDto): Promise<BookInstance> {
   await book.update(data);
   return book;
 }
@@ -194,7 +208,10 @@ export async function updateBook(book: BookInstance, data: UpdateBookDto) {
  * @param bookId - 書籍 ID
  * @returns レビュー件数
  */
-export async function countBookReviews(bookId: number, options?: { transaction?: Transaction }) {
+export async function countBookReviews(
+  bookId: number,
+  options?: { transaction?: Transaction }
+): Promise<number> {
   return Review.count({ where: { bookId }, transaction: options?.transaction });
 }
 
@@ -204,7 +221,10 @@ export async function countBookReviews(bookId: number, options?: { transaction?:
  * @param bookId - 書籍 ID
  * @returns お気に入り件数
  */
-export async function countBookFavorites(bookId: number, options?: { transaction?: Transaction }) {
+export async function countBookFavorites(
+  bookId: number,
+  options?: { transaction?: Transaction }
+): Promise<number> {
   return Favorite.count({ where: { bookId }, transaction: options?.transaction });
 }
 
@@ -213,6 +233,6 @@ export async function countBookFavorites(bookId: number, options?: { transaction
  *
  * @param book - 削除対象の書籍
  */
-export async function deleteBook(book: BookInstance, options?: DestroyOptions) {
+export async function deleteBook(book: BookInstance, options?: DestroyOptions): Promise<void> {
   await book.destroy(options);
 }
