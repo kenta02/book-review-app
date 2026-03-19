@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ERROR_MESSAGES } from '../src/constants/error-messages';
 import { ApiError } from '../src/errors/ApiError';
+import { logger } from '../src/utils/logger';
 import { createComment, listComments } from '../src/controllers/comment.controller';
 import * as commentService from '../src/services/comment.service';
 
@@ -18,11 +19,13 @@ type MockResponse = Response & {
 
 type TestRequest = Request & { userId?: number };
 
-function makeRequest(input: {
-  params?: Record<string, string>;
-  body?: unknown;
-  userId?: number;
-} = {}): TestRequest {
+function makeRequest(
+  input: {
+    params?: Record<string, string>;
+    body?: unknown;
+    userId?: number;
+  } = {}
+): TestRequest {
   return {
     params: input.params ?? {},
     body: input.body ?? {},
@@ -68,6 +71,41 @@ describe('comment.controller', () => {
 
     expect(commentService.listComments).toHaveBeenCalledWith(3);
     expect(res.json).toHaveBeenCalledWith({ success: true, data: { comments } });
+  });
+
+  it('listComments: forwards ApiError', async () => {
+    const req = makeRequest({ params: { reviewId: '3' } });
+    const res = makeResponse();
+    vi.mocked(commentService.listComments).mockRejectedValue(
+      new ApiError(404, 'NOT_FOUND', ERROR_MESSAGES.NOT_FOUND)
+    );
+
+    await listComments(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: {
+        message: ERROR_MESSAGES.NOT_FOUND,
+        code: 'NOT_FOUND',
+      },
+    });
+  });
+
+  it('listComments: returns 500 when service fails', async () => {
+    const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
+    const req = makeRequest({ params: { reviewId: '3' } });
+    const res = makeResponse();
+    vi.mocked(commentService.listComments).mockRejectedValue(new Error('boom'));
+
+    await listComments(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
+    });
+    expect(loggerSpy).toHaveBeenCalledWith('[COMMENTS GET] unexpected error occurred');
   });
 
   it('createComment: returns 401 when unauthenticated', async () => {
@@ -122,5 +160,21 @@ describe('comment.controller', () => {
         details: [{ field: 'parentId', message: ERROR_MESSAGES.PARENT_COMMENT_NOT_FOUND }],
       },
     });
+  });
+
+  it('createComment: returns 500 when service fails', async () => {
+    const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
+    const req = makeRequest({ params: { reviewId: '1' }, body: { content: 'ok' }, userId: 7 });
+    const res = makeResponse();
+    vi.mocked(commentService.createComment).mockRejectedValue(new Error('boom'));
+
+    await createComment(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
+    });
+    expect(loggerSpy).toHaveBeenCalledWith('[COMMENTS POST] unexpected error occurred');
   });
 });
