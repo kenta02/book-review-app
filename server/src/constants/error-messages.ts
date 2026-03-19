@@ -40,7 +40,6 @@ export const ERROR_MESSAGES = {
   RELATED_DATA_EXISTS: 'Cannot delete because related data exists',
 
   // 検索関連
-  INVALID_SORT_FIELD:
-    'sort must be one of: title, author, publicationYear, rating, createdAt',
+  INVALID_SORT_FIELD: 'sort must be one of: title, author, publicationYear, rating, createdAt',
   INVALID_ORDER_VALUE: 'order must be either asc or desc',
 } as const;
