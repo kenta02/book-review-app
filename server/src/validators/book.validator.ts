@@ -289,6 +289,66 @@ export function validateCreateBook(req: Request): ParseResult<CreateBookDto> {
 }
 
 /**
+ * 任意項目（undefined 許容）の入力値を検証し、エラーがあれば `errors` に追加します。
+ *
+ * - `undefined` は検証対象外とし、エラーにはしません。
+ * - 文字列型でかつ trim 後に空文字になる場合もエラーと扱います。
+ *
+ * @param value - 検証対象の入力値
+ * @param field - エラー時に返すフィールド名
+ * @param errors - 収集先のエラー配列
+ * @param message - エラーメッセージ
+ */
+function validateOptionalTrimmedStringField(
+  value: unknown,
+  field: string,
+  errors: ValidationError[],
+  message: string
+) {
+  if (value !== undefined && (typeof value !== 'string' || value.trim() === '')) {
+    errors.push({ field, message });
+  }
+}
+
+/**
+ * 任意項目（undefined 許容）の場合、文字列型であることだけを検証します。
+ *
+ * @param value - 検証対象の入力値
+ * @param field - エラー時に返すフィールド名
+ * @param errors - 収集先のエラー配列
+ * @param message - エラーメッセージ
+ */
+function validateOptionalStringField(
+  value: unknown,
+  field: string,
+  errors: ValidationError[],
+  message: string
+) {
+  if (value !== undefined && typeof value !== 'string') {
+    errors.push({ field, message });
+  }
+}
+
+/**
+ * 任意項目（undefined 許容）の場合、整数であることを検証します。
+ *
+ * @param value - 検証対象の入力値
+ * @param field - エラー時に返すフィールド名
+ * @param errors - 収集先のエラー配列
+ * @param message - エラーメッセージ
+ */
+function validateOptionalIntegerField(
+  value: unknown,
+  field: string,
+  errors: ValidationError[],
+  message: string
+) {
+  if (value !== undefined && !Number.isInteger(value)) {
+    errors.push({ field, message });
+  }
+}
+
+/**
  * 書籍更新のパスパラメータとボディを検証します。
  *
  * 部分更新 API なので、送られてきた項目だけを `data` に残します。
@@ -312,34 +372,26 @@ export function validateUpdateBook(
     });
   }
 
-  if (title !== undefined && (typeof title !== 'string' || title.trim() === '')) {
-    errors.push({ field: 'title', message: ERROR_MESSAGES.INVALID_TITLE_IF_PROVIDED });
-  }
-
-  if (author !== undefined && (typeof author !== 'string' || author.trim() === '')) {
-    errors.push({ field: 'author', message: ERROR_MESSAGES.INVALID_AUTHOR_IF_PROVIDED });
-  }
-
-  if (publicationYear !== undefined && !Number.isInteger(publicationYear)) {
-    errors.push({
-      field: 'publicationYear',
-      message: 'publicationYear must be an integer.',
-    });
-  }
-
-  if (ISBN !== undefined && typeof ISBN !== 'string') {
-    errors.push({
-      field: 'ISBN',
-      message: 'ISBN must be a string.',
-    });
-  }
-
-  if (summary !== undefined && typeof summary !== 'string') {
-    errors.push({
-      field: 'summary',
-      message: 'summary must be a string.',
-    });
-  }
+  validateOptionalTrimmedStringField(
+    title,
+    'title',
+    errors,
+    ERROR_MESSAGES.INVALID_TITLE_IF_PROVIDED
+  );
+  validateOptionalTrimmedStringField(
+    author,
+    'author',
+    errors,
+    ERROR_MESSAGES.INVALID_AUTHOR_IF_PROVIDED
+  );
+  validateOptionalIntegerField(
+    publicationYear,
+    'publicationYear',
+    errors,
+    'publicationYear must be an integer.'
+  );
+  validateOptionalStringField(ISBN, 'ISBN', errors, 'ISBN must be a string.');
+  validateOptionalStringField(summary, 'summary', errors, 'summary must be a string.');
 
   if (errors.length > 0) {
     return { success: false, errors };
