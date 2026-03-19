@@ -67,4 +67,16 @@ describe("useBooks hook", () => {
       screen.getByText(new RegExp(BOOK_LIST_ERROR_MESSAGES.SERVER_ERROR)),
     ).toBeInTheDocument();
   });
+
+  it("shows unknown error when response payload is unexpected", async () => {
+    (
+      apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({ data: {} });
+
+    render(<TestComponent />);
+    await waitFor(() => expect(screen.getByText(/error:/)).toBeInTheDocument());
+    expect(
+      screen.getByText(new RegExp(BOOK_LIST_ERROR_MESSAGES.UNKNOWN)),
+    ).toBeInTheDocument();
+  });
 });

@@ -71,4 +71,27 @@ describe("Header", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(false);
     expect(localStorage.getItem("dark")).toBe(JSON.stringify(false));
   });
+
+  it("does not crash when localStorage throws", () => {
+    const originalLocalStorage = globalThis.localStorage;
+    Object.defineProperty(globalThis, "localStorage", {
+      value: {
+        getItem: () => {
+          throw new Error("no localStorage");
+        },
+        setItem: () => {
+          throw new Error("no localStorage");
+        },
+      },
+      configurable: true,
+    });
+
+    render(<Header />);
+    expect(screen.getByLabelText("ダークモード切り替え")).toBeInTheDocument();
+
+    Object.defineProperty(globalThis, "localStorage", {
+      value: originalLocalStorage,
+      configurable: true,
+    });
+  });
 });
