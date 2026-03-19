@@ -32,11 +32,16 @@ function makeApp(setUserId?: number, setUserRole?: string): express.Application 
   return app;
 }
 
+const originalJwtSecret = process.env.JWT_SECRET;
+
 beforeEach((): void => {
+  // JWT_SECRET を明示的に設定しておく（テスト環境では dotenv が読み込まれないため）
+  process.env.JWT_SECRET = 'test-jwt-secret';
   vi.restoreAllMocks();
 });
 
 afterEach((): void => {
+  process.env.JWT_SECRET = originalJwtSecret;
   vi.clearAllMocks();
 });
 
