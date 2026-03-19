@@ -182,7 +182,7 @@ describe('auth.controller', () => {
     const req = makeRequest({ userId: 7 });
     const res = makeResponse();
     vi.mocked(authService.getMyProfile).mockRejectedValue(
-      new ApiError(403, 'FORBIDDEN', ERROR_MESSAGES.FORBIDDEN)
+      new ApiError(403, 'FORBIDDEN', ERROR_MESSAGES.FORBIDDEN_ADMIN_REQUIRED)
     );
 
     await me(req, res);
@@ -191,7 +191,7 @@ describe('auth.controller', () => {
     expect(res.json).toHaveBeenCalledWith({
       success: false,
       error: {
-        message: ERROR_MESSAGES.FORBIDDEN,
+        message: ERROR_MESSAGES.FORBIDDEN_ADMIN_REQUIRED,
         code: 'FORBIDDEN',
       },
     });
