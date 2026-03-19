@@ -59,6 +59,13 @@ describe("normalizeError", () => {
     expect(result.statusCode).toBe(500);
   });
 
+  it("unknown status codes を UNKNOWN に正規化", () => {
+    const httpError = new ApiHttpError(418, "I'm a teapot");
+    const result = normalizeError(httpError);
+    expect(result.errorCode).toBe(ERROR_CODES.UNKNOWN);
+    expect(result.statusCode).toBe(418);
+  });
+
   it("通信失敗（TypeError）を NETWORK_ERROR に正規化", () => {
     const typeError = new TypeError("fetch failed");
     const result = normalizeError(typeError);
