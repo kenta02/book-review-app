@@ -33,6 +33,17 @@ function parseLegacyPagingValue(
   return parsed || defaultValue;
 }
 
+/**
+ * Optional なクエリパラメータをパースして検証します。
+ *
+ * - 空文字 / undefined / null は `undefined` として扱います。
+ * - 数値でない場合は `INVALID_QUERY_PARAM` エラーを `errors` に追加します。
+ *
+ * @param rawValue - リクエストクエリの生の値
+ * @param field - エラー時に返すフィールド名
+ * @param errors - 収集先のエラー配列
+ * @returns 変換された数値（未指定・空文字の場合は `undefined`）
+ */
 function parseStrictOptionalInteger(
   rawValue: unknown,
   field: string,
@@ -61,43 +72,21 @@ function parseStrictOptionalInteger(
   return Number(normalized);
 }
 
+const VALID_SORT_VALUES = ['rating', 'title', 'author', 'publicationYear', 'createdAt'] as const;
+const VALID_ORDER_VALUES = ['asc', 'desc'] as const;
+
 /**
- * 一覧取得用のクエリを正規化します。
+ * ソート条件（sort/order）の妥当性を検証し、問題があれば `errors` に追加します。
  *
- * validator の責務は「HTTP で受け取った値を、以降の層が扱いやすい DTO へ寄せること」です。
- * ここでは `page` / `limit` の既定値補完と、任意フィルタの未指定判定を行い、
- * repository で不要な条件が生えないようにしています。
- *
- * @param req - Express Request
- * @returns 正規化済みの一覧クエリ
+ * @param rawSort - リクエストから受け取った sort 値（未指定時は undefined）
+ * @param rawOrder - リクエストから受け取った order 値（未指定時は undefined）
+ * @param errors - 収集先のエラー配列
  */
-export function validateListBooksQuery(req: Request): ParseResult<ListBooksQueryDto> {
-  const page = parseLegacyPagingValue(req.query.page, 1);
-  const limit = parseLegacyPagingValue(req.query.limit, 20);
-
-  const rawSort =
-    typeof req.query.sort === 'string' ? req.query.sort.trim() || undefined : undefined;
-  const rawOrder =
-    typeof req.query.order === 'string'
-      ? req.query.order.trim().toLowerCase() || undefined
-      : undefined;
-
-  const VALID_SORT_VALUES = ['rating', 'title', 'author', 'publicationYear', 'createdAt'] as const;
-  const VALID_ORDER_VALUES = ['asc', 'desc'] as const;
-
-  const errors: ValidationError[] = [];
-  const publicationYearFrom = parseStrictOptionalInteger(
-    req.query.publicationYearFrom,
-    'publicationYearFrom',
-    errors
-  );
-  const publicationYearTo = parseStrictOptionalInteger(
-    req.query.publicationYearTo,
-    'publicationYearTo',
-    errors
-  );
-  const ratingMin = parseStrictOptionalInteger(req.query.ratingMin, 'ratingMin', errors);
-
+function validateSortAndOrder(
+  rawSort: string | undefined,
+  rawOrder: string | undefined,
+  errors: ValidationError[]
+) {
   if (rawSort && !VALID_SORT_VALUES.includes(rawSort as (typeof VALID_SORT_VALUES)[number])) {
     errors.push({
       field: 'sort',
@@ -113,7 +102,20 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
       code: 'INVALID_ORDER',
     });
   }
+}
 
+/**
+ * ページング関連の値（page/limit）を検証し、問題があれば `errors` に追加します。
+ *
+ * @param page - 正規化済みの page 値（未指定時は undefined）
+ * @param limit - 正規化済みの limit 値（未指定時は undefined）
+ * @param errors - 収集先のエラー配列
+ */
+function validatePagingValues(
+  page: number | undefined,
+  limit: number | undefined,
+  errors: ValidationError[]
+) {
   if (limit !== undefined && limit > 100) {
     errors.push({
       field: 'limit',
@@ -137,6 +139,44 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
       code: 'INVALID_LIMIT',
     });
   }
+}
+
+/**
+ * 一覧取得用のクエリを正規化します。
+ *
+ * validator の責務は「HTTP で受け取った値を、以降の層が扱いやすい DTO へ寄せること」です。
+ * ここでは `page` / `limit` の既定値補完と、任意フィルタの未指定判定を行い、
+ * repository で不要な条件が生えないようにしています。
+ *
+ * @param req - Express Request
+ * @returns 正規化済みの一覧クエリ
+ */
+export function validateListBooksQuery(req: Request): ParseResult<ListBooksQueryDto> {
+  const page = parseLegacyPagingValue(req.query.page, 1);
+  const limit = parseLegacyPagingValue(req.query.limit, 20);
+
+  const rawSort =
+    typeof req.query.sort === 'string' ? req.query.sort.trim() || undefined : undefined;
+  const rawOrder =
+    typeof req.query.order === 'string'
+      ? req.query.order.trim().toLowerCase() || undefined
+      : undefined;
+
+  const errors: ValidationError[] = [];
+  const publicationYearFrom = parseStrictOptionalInteger(
+    req.query.publicationYearFrom,
+    'publicationYearFrom',
+    errors
+  );
+  const publicationYearTo = parseStrictOptionalInteger(
+    req.query.publicationYearTo,
+    'publicationYearTo',
+    errors
+  );
+  const ratingMin = parseStrictOptionalInteger(req.query.ratingMin, 'ratingMin', errors);
+
+  validateSortAndOrder(rawSort, rawOrder, errors);
+  validatePagingValues(page, limit, errors);
 
   if (errors.length > 0) {
     return { success: false, errors };
