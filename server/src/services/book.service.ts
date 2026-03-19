@@ -3,6 +3,7 @@ import { ForeignKeyConstraintError, UniqueConstraintError, ValidationErrorItem }
 import { ERROR_MESSAGES } from '../constants/error-messages';
 import { ApiError } from '../errors/ApiError';
 import * as bookRepository from '../repositories/book.repository';
+import type { BookInstance } from '../repositories/book.repository';
 import { sequelize } from '../sequelize';
 import * as reviewService from './review.service';
 import { CreateBookDto, ListBooksQueryDto, UpdateBookDto } from '../modules/book/dto/book.dto';
@@ -105,7 +106,15 @@ function isIsbnUniqueConstraintError(error: unknown): boolean {
  * @param queryDto - 一覧取得クエリ
  * @returns 書籍一覧とページング情報
  */
-export async function listBooks(queryDto: ListBooksQueryDto) {
+export async function listBooks(queryDto: ListBooksQueryDto): Promise<{
+  books: ReturnType<typeof normalizeListBook>[];
+  pagination: {
+    currentPage: number;
+    totalItems: number;
+    totalPages: number;
+    itemsPerPage: number;
+  };
+}> {
   try {
     const { page, limit } = queryDto;
 
@@ -146,7 +155,7 @@ export async function listBooks(queryDto: ListBooksQueryDto) {
  * @returns 取得した書籍
  * @throws ApiError 書籍が存在しない場合
  */
-export async function getBookDetail(bookId: number) {
+export async function getBookDetail(bookId: number): Promise<BookInstance> {
   const book = await bookRepository.findBookById(bookId);
 
   if (!book) {
@@ -165,7 +174,7 @@ export async function getBookDetail(bookId: number) {
  * @returns 作成済み書籍
  * @throws ApiError ISBN が重複している場合
  */
-export async function createBook(input: CreateBookDto) {
+export async function createBook(input: CreateBookDto): Promise<BookInstance> {
   try {
     return await bookRepository.createBook(input);
   } catch (error) {
@@ -186,7 +195,7 @@ export async function createBook(input: CreateBookDto) {
  * @returns 更新後の書籍
  * @throws ApiError 書籍が存在しない、または ISBN が重複している場合
  */
-export async function updateBook(bookId: number, input: UpdateBookDto) {
+export async function updateBook(bookId: number, input: UpdateBookDto): Promise<BookInstance> {
   const book = await bookRepository.findBookById(bookId);
 
   if (!book) {
@@ -213,7 +222,9 @@ export async function updateBook(bookId: number, input: UpdateBookDto) {
  * @returns レビュー一覧とページング情報
  * @throws ApiError 書籍が存在しない場合
  */
-export async function listBookReviews(input: ListBookReviewsInput) {
+export async function listBookReviews(
+  input: ListBookReviewsInput
+): Promise<Awaited<ReturnType<typeof reviewService.listReviews>>> {
   const book = await bookRepository.findBookById(input.bookId);
 
   if (!book) {
@@ -232,7 +243,7 @@ export async function listBookReviews(input: ListBookReviewsInput) {
  * @param bookId - 書籍 ID
  * @throws ApiError 書籍が存在しない、または関連データが残っている場合
  */
-export async function deleteBook(bookId: number) {
+export async function deleteBook(bookId: number): Promise<void> {
   await sequelize.transaction(async (transaction) => {
     // 削除可否判定と実削除を同一トランザクションに載せ、競合時の不整合を避けます。
     const book = await bookRepository.findBookById(bookId, {
