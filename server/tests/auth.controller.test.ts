@@ -116,7 +116,7 @@ describe('auth.controller', () => {
   it('login: returns 200 on success', async () => {
     const req = makeRequest({ body: { email: 'a@example.com', password: 'password123' } });
     const res = makeResponse();
-    const data = { token: 'token', user: { id: 1, email: 'a@example.com' } };
+    const data = { token: 'token', user: { id: 1, username: 'alice', email: 'a@example.com' } };
     vi.mocked(authService.login).mockResolvedValue(data);
 
     await login(req, res);
