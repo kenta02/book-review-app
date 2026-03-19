@@ -36,7 +36,7 @@ function sendAuthenticationRequired(res: Response) {
  * @param res - Express Response
  * @returns レビュー一覧
  */
-export async function listReviews(req: Request, res: Response) {
+export async function listReviews(req: Request, res: Response): Promise<Response> {
   try {
     const parseResult = validateListReviewsQuery(req);
 
@@ -77,7 +77,7 @@ export async function listReviews(req: Request, res: Response) {
  * @param res - Express Response
  * @returns レビュー詳細
  */
-export async function getReviewDetail(req: Request, res: Response) {
+export async function getReviewDetail(req: Request, res: Response): Promise<Response> {
   try {
     const parseResult = validateGetReviewDetail(req);
 
@@ -116,7 +116,7 @@ export async function getReviewDetail(req: Request, res: Response) {
  * @param res - Express Response
  * @returns 204 No Content
  */
-export async function deleteReview(req: Request, res: Response) {
+export async function deleteReview(req: Request, res: Response): Promise<Response> {
   try {
     const userId = req.userId;
     if (!userId) {
@@ -167,7 +167,7 @@ export async function deleteReview(req: Request, res: Response) {
  * @param res - Express Response
  * @returns 更新後レビュー
  */
-export async function updateReview(req: Request, res: Response) {
+export async function updateReview(req: Request, res: Response): Promise<Response> {
   try {
     const userId = req.userId;
     if (!userId) {
@@ -219,7 +219,7 @@ export async function updateReview(req: Request, res: Response) {
  * @param res - Express Response
  * @returns 作成後レビュー
  */
-export async function createReview(req: Request, res: Response) {
+export async function createReview(req: Request, res: Response): Promise<Response> {
   try {
     const userId = req.userId;
     if (!userId) {
