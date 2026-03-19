@@ -38,6 +38,7 @@ jobs:
         if: ${{ !github.event.pull_request.head.repo.fork && env.COPILOT_GITHUB_TOKEN != '' }}
         env:
           COPILOT_GITHUB_TOKEN: ${{ env.COPILOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           gh pr diff ${{ github.event.pull_request.number }} > pr.diff
