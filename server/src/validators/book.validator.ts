@@ -292,7 +292,28 @@ export function validateCreateBook(req: Request): ParseResult<CreateBookDto> {
  * 任意項目（undefined 許容）の入力値を検証し、エラーがあれば `errors` に追加します。
  *
  * - `undefined` は検証対象外とし、エラーにはしません。
- * - 文字列型でかつ trim 後に空文字になる場合もエラーと扱います。
+ * - バリデータは `isValid` で判定を行います。
+ *
+ * @param value - 検証対象の入力値
+ * @param field - エラー時に返すフィールド名
+ * @param errors - 収集先のエラー配列
+ * @param message - エラーメッセージ
+ * @param isValid - 検証関数（true なら問題なし）
+ */
+function validateOptionalField(
+  value: unknown,
+  field: string,
+  errors: ValidationError[],
+  message: string,
+  isValid: (value: unknown) => boolean
+) {
+  if (value !== undefined && !isValid(value)) {
+    errors.push({ field, message });
+  }
+}
+
+/**
+ * 任意項目（undefined 許容）の場合、文字列型かつ trim 後に空文字でないことを検証します。
  *
  * @param value - 検証対象の入力値
  * @param field - エラー時に返すフィールド名
@@ -305,9 +326,13 @@ function validateOptionalTrimmedStringField(
   errors: ValidationError[],
   message: string
 ) {
-  if (value !== undefined && (typeof value !== 'string' || value.trim() === '')) {
-    errors.push({ field, message });
-  }
+  validateOptionalField(
+    value,
+    field,
+    errors,
+    message,
+    (v) => typeof v === 'string' && v.trim() !== ''
+  );
 }
 
 /**
@@ -324,9 +349,7 @@ function validateOptionalStringField(
   errors: ValidationError[],
   message: string
 ) {
-  if (value !== undefined && typeof value !== 'string') {
-    errors.push({ field, message });
-  }
+  validateOptionalField(value, field, errors, message, (v) => typeof v === 'string');
 }
 
 /**
@@ -343,9 +366,7 @@ function validateOptionalIntegerField(
   errors: ValidationError[],
   message: string
 ) {
-  if (value !== undefined && !Number.isInteger(value)) {
-    errors.push({ field, message });
-  }
+  validateOptionalField(value, field, errors, message, (v) => Number.isInteger(v));
 }
 
 /**
