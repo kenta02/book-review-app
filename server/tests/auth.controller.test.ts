@@ -40,7 +40,7 @@ describe('auth.controller', () => {
   });
 
   it('register: returns 400 when validation fails', async () => {
-    const req = makeRequest({ body: { username: 'a', email: 'bad', password: '123' } });
+    const req = makeRequest({ body: { username: 'a', email: 'bad', password: '123' } }); // NOSONAR
     const res = makeResponse();
 
     await register(req, res);
@@ -57,7 +57,7 @@ describe('auth.controller', () => {
 
   it('register: returns 201 on success', async () => {
     const req = makeRequest({
-      body: { username: 'alice', email: 'alice@example.com', password: 'password123' },
+      body: { username: 'alice', email: 'alice@example.com', password: 'password123' }, // NOSONAR
     });
     const res = makeResponse();
     const data = {
@@ -71,7 +71,7 @@ describe('auth.controller', () => {
     expect(authService.register).toHaveBeenCalledWith({
       username: 'alice',
       email: 'alice@example.com',
-      password: 'password123',
+      password: 'password123', // NOSONAR
     });
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({ success: true, data });
@@ -79,7 +79,7 @@ describe('auth.controller', () => {
 
   it('register: forwards ApiError when service throws ApiError', async () => {
     const req = makeRequest({
-      body: { username: 'alice', email: 'alice@example.com', password: 'password123' },
+      body: { username: 'alice', email: 'alice@example.com', password: 'password123' }, // NOSONAR
     });
     const res = makeResponse();
     vi.mocked(authService.register).mockRejectedValue(
@@ -114,7 +114,7 @@ describe('auth.controller', () => {
   });
 
   it('login: returns 200 on success', async () => {
-    const req = makeRequest({ body: { email: 'a@example.com', password: 'password123' } });
+    const req = makeRequest({ body: { email: 'a@example.com', password: 'password123' } }); // NOSONAR
     const res = makeResponse();
     const data = { token: 'token', user: { id: 1, username: 'alice', email: 'a@example.com' } };
     vi.mocked(authService.login).mockResolvedValue(data);
@@ -126,7 +126,7 @@ describe('auth.controller', () => {
   });
 
   it('login: returns ApiError as-is even when details are present', async () => {
-    const req = makeRequest({ body: { email: 'a@example.com', password: 'password123' } });
+    const req = makeRequest({ body: { email: 'a@example.com', password: 'password123' } }); // NOSONAR
     const res = makeResponse();
     vi.mocked(authService.login).mockRejectedValue(
       new ApiError(400, 'TEST_ERROR', 'test error', [{ field: 'email', message: 'invalid' }])
@@ -219,7 +219,7 @@ describe('auth.controller', () => {
   it('register: returns 500 when unexpected error occurs', async () => {
     const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
     const req = makeRequest({
-      body: { username: 'alice', email: 'alice@example.com', password: 'password123' },
+      body: { username: 'alice', email: 'alice@example.com', password: 'password123' }, // NOSONAR
     });
     const res = makeResponse();
     vi.mocked(authService.register).mockRejectedValue(new Error('boom'));
@@ -239,7 +239,7 @@ describe('auth.controller', () => {
 
   it('login: returns 500 when unexpected error occurs', async () => {
     const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
-    const req = makeRequest({ body: { email: 'a@example.com', password: 'password123' } });
+    const req = makeRequest({ body: { email: 'a@example.com', password: 'password123' } }); // NOSONAR
     const res = makeResponse();
     vi.mocked(authService.login).mockRejectedValue(new Error('boom'));
 
@@ -257,7 +257,7 @@ describe('auth.controller', () => {
   });
 
   it('login: returns ApiError as-is even when details are present', async () => {
-    const req = makeRequest({ body: { email: 'a@example.com', password: 'password123' } });
+    const req = makeRequest({ body: { email: 'a@example.com', password: 'password123' } }); // NOSONAR
     const res = makeResponse();
     vi.mocked(authService.login).mockRejectedValue(
       new ApiError(400, 'TEST_ERROR', 'test error', [{ field: 'email', message: 'invalid' }])
