@@ -396,14 +396,14 @@ export function validateGetBookReviews(
   if (rawPage !== undefined && Number.isInteger(rawParsedPage) && rawParsedPage <= 0) {
     errors.push({
       field: 'page',
-      message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
+      message: ERROR_MESSAGES.PAGE_MUST_BE_POSITIVE_INT,
       code: 'INVALID_PAGE',
     });
   }
   if (rawLimit !== undefined && Number.isInteger(rawParsedLimit) && rawParsedLimit <= 0) {
     errors.push({
       field: 'limit',
-      message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
+      message: ERROR_MESSAGES.LIMIT_MUST_BE_POSITIVE_INT,
       code: 'INVALID_LIMIT',
     });
   }
