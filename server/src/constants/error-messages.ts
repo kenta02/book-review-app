@@ -25,7 +25,7 @@ export const ERROR_MESSAGES = {
   // 認証/ユーザー関連
   USERNAME_LENGTH: 'Username must be between 2 and 150 characters',
   EMAIL_FORMAT: 'Email must be a valid email address',
-  PASSWORD_MIN_LENGTH: 'Password must be at least 8 characters',
+  PASSWORD_MIN_LENGTH: 'Password must be at least 8 characters', // NOSONAR
   AUTHENTICATION_FAILED: 'Authentication failed. Email or password is incorrect.',
 
   // 権限/禁止関連
