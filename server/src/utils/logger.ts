@@ -22,9 +22,13 @@ function sanitize(arg: unknown): string {
     str = String(arg);
   }
 
-  // 改行・復帰を除去し、端末制御文字（ANSIエスケープシーケンス）でもログに埋め込まれないようにする
-  const ESC = String.fromCharCode(27);
-  return str.replace(/\r|\n/g, '').split(ESC).join('');
+  // 改行・復帰・Unicode 行区切りをスペースに置換し、端末制御文字（ANSIエスケープシーケンス）でもログに埋め込まれないようにする
+  // - U+0085: NEL
+  // - U+2028: 行区切り
+  // - U+2029: 段落区切り
+  const ESC = String.fromCodePoint(27);
+  const sanitized = str.replaceAll(/[\r\n\u0085\u2028\u2029]+/g, ' ');
+  return sanitized.replaceAll(ESC, '');
 }
 
 function logWithSanitization(method: 'info' | 'debug' | 'error', ...args: unknown[]): void {
