@@ -34,16 +34,32 @@ jobs:
         run: |
           set -euo pipefail
 
+          PR_NUMBER=""
+
           # 既存の open な PR があればそれを使う
-          PR_NUMBER=$(gh pr list --base develop --head main --state open --json number --jq '.[0].number // ""')
+          if gh pr list --base develop --head main --state open --limit 1 > /tmp/pr_list.txt 2>&1; then
+            PR_NUMBER=$(grep -Eo '/pull/[0-9]+' /tmp/pr_list.txt | head -n 1 | sed 's#.*/pull/##')
+          fi
 
           if [ -n "$PR_NUMBER" ]; then
             echo "Found existing PR #$PR_NUMBER"
           else
             echo "Creating new sync PR (main → develop)"
-            PR_NUMBER=$(gh pr create --base develop --head main --title "Sync main → develop" \
+            OUTPUT=$(gh pr create --base develop --head main --title "Sync main → develop" \
               --body "Auto-sync main into develop (triggered by push to main)." \
-              --label "sync" --json number --jq '.number')
+              --label "sync" 2>&1)
+            echo "$OUTPUT"
+
+            PR_NUMBER=$(echo "$OUTPUT" | grep -Eo 'https://github.com/.*/pull/[0-9]+' | head -n 1 | sed 's#.*/pull/##')
+            if [ -z "$PR_NUMBER" ]; then
+              PR_NUMBER=$(echo "$OUTPUT" | grep -Eo '#[0-9]+' | head -n 1 | tr -d '#')
+            fi
+
+            if [ -z "$PR_NUMBER" ]; then
+              echo "Failed to determine PR number from gh output"
+              exit 1
+            fi
+
             echo "Created PR #$PR_NUMBER"
           fi
 
