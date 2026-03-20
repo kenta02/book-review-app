@@ -1,8 +1,8 @@
 name: Sync main → develop (create PR)
 
-# mainブランチに push があったときに、develop への同期用 PR を作成します。
-# 既存の PR があれば再利用し、新規 PR の自動マージ（auto-merge）を有効化します。
-# auto-merge の有効化に失敗してもジョブ自体は成功（緑）のままにします。
+# main への push 時に develop への同期用 PR を自動作成します。
+# コンフリクトがある場合は PR が作成されるので手動でマージしてください。
+# PR がすでに存在する場合は何もしません。
 
 on:
   push:
@@ -20,57 +20,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: develop
           fetch-depth: 0
 
-      - name: Configure Git
+      - name: Merge main into develop (local)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git merge origin/main --no-edit || true
 
-      - name: Ensure sync PR exists
-        id: create_pr
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
+      - name: Create sync PR (main → develop)
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: develop
+          branch: sync/main-to-develop
+          title: "Sync main → develop"
+          body: |
+            main への変更を develop に取り込みます。
 
-          PR_NUMBER=""
-
-          # 既存の open な PR があればそれを使う
-          if gh pr list --base develop --head main --state open --limit 1 > /tmp/pr_list.txt 2>&1; then
-            PR_NUMBER=$(grep -Eo '/pull/[0-9]+' /tmp/pr_list.txt | head -n 1 | sed 's#.*/pull/##')
-          fi
-
-          if [ -n "$PR_NUMBER" ]; then
-            echo "Found existing PR #$PR_NUMBER"
-          else
-            echo "Creating new sync PR (main → develop)"
-            OUTPUT=$(gh pr create --base develop --head main --title "Sync main → develop" \
-              --body "Auto-sync main into develop (triggered by push to main)." \
-              --label "sync" 2>&1)
-            echo "$OUTPUT"
-
-            PR_NUMBER=$(echo "$OUTPUT" | grep -Eo 'https://github.com/.*/pull/[0-9]+' | head -n 1 | sed 's#.*/pull/##')
-            if [ -z "$PR_NUMBER" ]; then
-              PR_NUMBER=$(echo "$OUTPUT" | grep -Eo '#[0-9]+' | head -n 1 | tr -d '#')
-            fi
-
-            if [ -z "$PR_NUMBER" ]; then
-              echo "Failed to determine PR number from gh output"
-              exit 1
-            fi
-
-            echo "Created PR #$PR_NUMBER"
-          fi
-
-          echo "pull_request_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-
-      - name: Enable auto-merge for sync PR (non-blocking)
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR_NUMBER=${{ steps.create_pr.outputs.pull_request_number }}
-          echo "Enabling auto-merge for PR #$PR_NUMBER"
-          gh pr merge "$PR_NUMBER" --auto --merge
-          echo "Requested auto-merge for PR #$PR_NUMBER (if allowed)."
+            コンフリクトがある場合はこの PR を手動でマージしてください。
+          labels: sync
+          delete-branch: true
