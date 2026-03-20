@@ -1,6 +1,6 @@
 import { Request } from 'express';
 
-import { CreateReviewDto, UpdateReviewDto, ListReviewsQueryDto } from '../types/dto';
+import { CreateReviewDto, UpdateReviewDto, ListReviewsQueryDto } from '../modules/review/dto/review.dto';
 import { ValidationMessages } from './messages';
 
 /**

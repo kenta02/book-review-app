@@ -1,6 +1,6 @@
 import app from './app';
 import { sequelize } from './sequelize';
-// ensure model definitions & associations are registered
+// モデル定義と関連付けを確実に読み込む
 import './models';
 
 const port = process.env.PORT || 3000;

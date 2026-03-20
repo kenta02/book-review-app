@@ -2,58 +2,73 @@ import { DataTypes } from 'sequelize';
 
 import { sequelize } from '../sequelize';
 
-const Review = sequelize.define('Review', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  },
-
-  bookId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'Books',
-      key: 'id',
+const Review = sequelize.define(
+  'Review',
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
     },
-    onDelete: 'RESTRICT',
-  },
 
-  userId: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    references: {
-      model: 'Users',
-      key: 'id',
+    bookId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'Books',
+        key: 'id',
+      },
+      onDelete: 'RESTRICT',
     },
-    onDelete: 'SET NULL',
-  },
 
-  content: {
-    type: DataTypes.TEXT,
-    allowNull: false,
-  },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Users',
+        key: 'id',
+      },
+      onDelete: 'SET NULL',
+    },
 
-  rating: {
-    type: DataTypes.TINYINT,
-    allowNull: false,
-    validate: {
-      min: 1,
-      max: 5,
+    content: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+
+    rating: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
+      validate: {
+        min: 1,
+        max: 5,
+      },
+    },
+
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
     },
   },
-
-  createdAt: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW,
-  },
-
-  updatedAt: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW,
-  },
-});
+  {
+    indexes: [
+      {
+        name: 'idx_reviews_book_id',
+        fields: ['bookId'],
+      },
+      {
+        name: 'idx_reviews_book_id_rating',
+        fields: ['bookId', 'rating'],
+      },
+    ],
+  }
+);
 
 export default Review;

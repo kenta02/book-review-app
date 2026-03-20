@@ -221,4 +221,30 @@ describe('GET /api/books/:bookId/reviews', () => {
       })
     );
   });
+
+  it('page が 0 以下の場合は 400 を返す', async () => {
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+
+    const res = await request(app)
+      .get('/api/books/1/reviews')
+      .query({ page: -1 })
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('INVALID_PAGE');
+    expect(reviewServiceSpy).not.toHaveBeenCalled();
+  });
+
+  it('limit が 0 以下の場合は 400 を返す', async () => {
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+
+    const res = await request(app)
+      .get('/api/books/1/reviews')
+      .query({ limit: 0 })
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('INVALID_LIMIT');
+    expect(reviewServiceSpy).not.toHaveBeenCalled();
+  });
 });

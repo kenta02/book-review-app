@@ -4,7 +4,7 @@ import * as commentService from '../src/services/comment.service';
 import Review from '../src/models/Review';
 import Comment from '../src/models/Comment';
 import { logger } from '../src/utils/logger';
-import type { CreateCommentServiceDto } from '../src/types/dto';
+import type { CreateCommentServiceDto } from '../src/modules/comment/dto/comment.dto';
 
 // Sequelize インスタンス型を定義
 type CommentInstance = InstanceType<typeof Comment>;

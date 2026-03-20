@@ -15,6 +15,7 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:ci": "vitest --run",
+    "test:ci-parity": "DB_NAME=test_db DB_USER=test_user DB_PASS=test_pass DB_HOST=127.0.0.1 DB_PORT=1 JWT_SECRET=test-jwt-secret vitest --run --coverage",
     "coverage": "vitest --coverage",
     "coverage:ci": "vitest --run --coverage",
     "lint": "eslint 'src/**/*.{ts,tsx}' --ext .ts",

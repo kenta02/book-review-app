@@ -2,7 +2,11 @@ name: Copilot PR Review
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, develop]
+
+concurrency:
+  group: copilot-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -24,20 +28,41 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install Copilot CLI
+      - name: Install GitHub Copilot CLI
+        env:
+          # Copilot CLI の認証には COPILOT_GITHUB_TOKEN / GH_TOKEN / GITHUB_TOKEN が使える。
+          GITHUB_TOKEN: ${{ github.token }}
         run: npm install -g @github/copilot
 
       - name: Run Copilot Review
         if: ${{ !github.event.pull_request.head.repo.fork && env.COPILOT_GITHUB_TOKEN != '' }}
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ env.COPILOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          copilot -p "このPRの変更点を確認し、以下の観点でレビューしてください:
-          1. セキュリティ上の問題（認証情報の漏洩、インジェクション等）
-          2. コードの品質（可読性、重複、命名）
-          3. 潜在的なバグ
-          問題があれば具体的に指摘し、修正案も提示してください。" > copilot-review-comment.md
+          set -euo pipefail
+          gh pr diff ${{ github.event.pull_request.number }} > pr.diff
 
-      - name: Post Copilot Review
+          copilot -p "Read ./pr.diff via the shell tool and write a concise markdown pull request review comment. Start the response with '## Copilot Review'. Focus on actionable risks, regressions, and missing tests. If there are no material issues, say so briefly." \
+            --allow-tool 'shell(cat)' \
+            > copilot-review-comment.md
+
+      - name: Post or update Copilot Review
         if: ${{ !github.event.pull_request.head.repo.fork && env.COPILOT_GITHUB_TOKEN != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh pr comment ${{ github.event.pull_request.number }} --body-file copilot-review-comment.md
+        run: |
+          COMMENT_ID=$(
+            gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+              --jq '.[] | select(.user.type == "Bot" and (.body | startswith("## Copilot Review"))) | .id' \
+              | head -n 1
+          )
+
+          if [ -n "$COMMENT_ID" ]; then
+            gh api \
+              --method PATCH \
+              "repos/${{ github.repository }}/issues/comments/$COMMENT_ID" \
+              --field body="$(cat copilot-review-comment.md)"
+          else
+            gh pr comment ${{ github.event.pull_request.number }} --body-file copilot-review-comment.md
+          fi

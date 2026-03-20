@@ -5,7 +5,7 @@ import {
   UpdateReviewServiceDto,
   DeleteReviewServiceDto,
   ListReviewsQueryDto,
-} from '../types/dto';
+} from '../modules/review/dto/review.dto';
 import { logger } from '../utils/logger';
 import { ApiError } from '../errors/ApiError';
 import { ERROR_MESSAGES } from '../constants/error-messages';
@@ -157,14 +157,15 @@ export async function createReview(serviceDto: CreateReviewServiceDto): Promise<
  * @returns 更新済みレビュー
  */
 export async function updateReview(serviceDto: UpdateReviewServiceDto): Promise<ReviewDto> {
-  const { reviewId, content, userId } = serviceDto;
+  const { reviewId, content, userId, requesterRole } = serviceDto;
 
   const review = await reviewRepository.findReviewById(reviewId);
   if (!review) {
     throw new ApiError(404, 'REVIEW_NOT_FOUND', ERROR_MESSAGES.REVIEW_NOT_FOUND);
   }
 
-  if (Number(review.get('userId')) !== Number(userId)) {
+  const isAdmin = requesterRole === 'admin';
+  if (!isAdmin && Number(review.get('userId')) !== Number(userId)) {
     throw new ApiError(403, 'FORBIDDEN', ERROR_MESSAGES.FORBIDDEN_REVIEW_UPDATE);
   }
 
@@ -181,14 +182,15 @@ export async function updateReview(serviceDto: UpdateReviewServiceDto): Promise<
  * @param serviceDto - 削除入力
  */
 export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<void> {
-  const { reviewId, userId } = serviceDto;
+  const { reviewId, userId, requesterRole } = serviceDto;
 
   const review = await reviewRepository.findReviewById(reviewId);
   if (!review) {
     throw new ApiError(404, 'REVIEW_NOT_FOUND', ERROR_MESSAGES.REVIEW_NOT_FOUND);
   }
 
-  if (Number(review.get('userId')) !== Number(userId)) {
+  const isAdmin = requesterRole === 'admin';
+  if (!isAdmin && Number(review.get('userId')) !== Number(userId)) {
     throw new ApiError(403, 'FORBIDDEN', ERROR_MESSAGES.FORBIDDEN_REVIEW_DELETE);
   }
 
@@ -197,7 +199,6 @@ export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<
     const hasComments = await reviewRepository.findAnyCommentByReviewId(reviewId, transaction);
 
     if (hasComments) {
-      await transaction.rollback();
       throw new ApiError(409, 'RELATED_DATA_EXISTS', ERROR_MESSAGES.RELATED_DATA_EXISTS);
     }
 

@@ -6,7 +6,9 @@ import Review from '../models/Review';
 import User from '../models/Users';
 import { sequelize } from '../sequelize';
 
-export type ReviewInstance = NonNullable<Awaited<ReturnType<typeof Review.findByPk>>>;
+export type ReviewInstance = InstanceType<typeof Review>;
+export type BookInstance = InstanceType<typeof Book>;
+export type CommentInstance = InstanceType<typeof Comment>;
 
 export type FindReviewsWithPaginationInput = {
   where: Record<string, unknown>;
@@ -27,14 +29,27 @@ export type CreateReviewRepositoryInput = {
  * @param input - where, limit, offset
  * @returns rows と count
  */
-export async function findReviewsWithPagination(input: FindReviewsWithPaginationInput) {
-  return Review.findAndCountAll({
+export type FindReviewsWithPaginationResult = {
+  rows: ReviewInstance[];
+  count: number;
+};
+
+export async function findReviewsWithPagination(
+  input: FindReviewsWithPaginationInput
+): Promise<FindReviewsWithPaginationResult> {
+  const result = await Review.findAndCountAll({
     where: input.where,
     attributes: ['id', 'bookId', 'userId', 'content', 'rating', 'createdAt', 'updatedAt'],
     order: [['createdAt', 'DESC']],
     limit: input.limit,
     offset: input.offset,
   });
+
+  // `group` を指定していないため、`count` は数値（number）として返されます。
+  return {
+    rows: result.rows,
+    count: result.count,
+  };
 }
 
 /**
@@ -43,7 +58,7 @@ export async function findReviewsWithPagination(input: FindReviewsWithPagination
  * @param reviewId - レビュー ID
  * @returns レビュー、未存在時は null
  */
-export async function findReviewDetailById(reviewId: number) {
+export async function findReviewDetailById(reviewId: number): Promise<ReviewInstance | null> {
   return Review.findByPk(reviewId, {
     include: [
       { model: User, attributes: ['id', 'username'] },
@@ -58,7 +73,7 @@ export async function findReviewDetailById(reviewId: number) {
  * @param reviewId - レビュー ID
  * @returns レビュー、未存在時は null
  */
-export async function findReviewById(reviewId: number) {
+export async function findReviewById(reviewId: number): Promise<ReviewInstance | null> {
   return Review.findByPk(reviewId);
 }
 
@@ -68,7 +83,7 @@ export async function findReviewById(reviewId: number) {
  * @param bookId - 本 ID
  * @returns 本、未存在時は null
  */
-export async function findBookById(bookId: number) {
+export async function findBookById(bookId: number): Promise<BookInstance | null> {
   return Book.findByPk(bookId);
 }
 
@@ -78,7 +93,7 @@ export async function findBookById(bookId: number) {
  * @param data - 作成データ
  * @returns 作成されたレビュー
  */
-export async function createReview(data: CreateReviewRepositoryInput) {
+export async function createReview(data: CreateReviewRepositoryInput): Promise<ReviewInstance> {
   return Review.create(data);
 }
 
@@ -89,7 +104,10 @@ export async function createReview(data: CreateReviewRepositoryInput) {
  * @param content - 新しい本文
  * @returns 更新後レビュー
  */
-export async function updateReviewContent(review: ReviewInstance, content: string) {
+export async function updateReviewContent(
+  review: ReviewInstance,
+  content: string
+): Promise<ReviewInstance> {
   return review.update({ content });
 }
 
@@ -100,7 +118,10 @@ export async function updateReviewContent(review: ReviewInstance, content: strin
  * @param transaction - 参照するトランザクション
  * @returns コメント 1 件（なければ null）
  */
-export async function findAnyCommentByReviewId(reviewId: number, transaction: Transaction) {
+export async function findAnyCommentByReviewId(
+  reviewId: number,
+  transaction: Transaction
+): Promise<CommentInstance | null> {
   return Comment.findOne({
     where: { reviewId },
     attributes: ['id'],
@@ -114,7 +135,10 @@ export async function findAnyCommentByReviewId(reviewId: number, transaction: Tr
  * @param review - 削除対象レビュー
  * @param transaction - 使用するトランザクション
  */
-export async function deleteReview(review: ReviewInstance, transaction: Transaction) {
+export async function deleteReview(
+  review: ReviewInstance,
+  transaction: Transaction
+): Promise<void> {
   await review.destroy({ transaction });
 }
 
@@ -123,6 +147,6 @@ export async function deleteReview(review: ReviewInstance, transaction: Transact
  *
  * @returns Sequelize transaction
  */
-export async function createTransaction() {
+export async function createTransaction(): Promise<Transaction> {
   return sequelize.transaction();
 }

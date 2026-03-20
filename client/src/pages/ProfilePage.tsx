@@ -2,30 +2,43 @@ import { useEffect, useState } from "react";
 import { ProfileCard } from "../components/user/ProfileCard";
 import type { ApiResponse, User } from "../types";
 import { apiClient } from "../api/apiClient";
+import type { ErrorCode } from "../errors/errorCodes";
+import { normalizeError } from "../errors/normalizeError";
 
 export function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<ErrorCode | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // ユーザーデータ取得開始
-    setLoading(true);
-    // APIクライアントを呼び出してユーザーデータを取得
-    apiClient
-      .getUserById(1)
-      // .then((response: { data: User }) => {
-      .then((response: ApiResponse<User>) => {
-        // 成功したら：user をセット、loading を false に
-        setUser(response.data);
-        setLoading(false);
-      })
-      .catch((err: { message: string }) => {
-        // 失敗したら：error をセット、loading を false に
-        setError(err.message);
-        setLoading(false);
-      });
+    // アンマウント後の setState を防ぐフラグ
+    let mounted = true;
+
+    const fetchUser = async () => {
+      setLoading(true);
+
+      try {
+        const response: ApiResponse<User> = await apiClient.getUserById(1);
+        if (mounted) {
+          setUser(response.data);
+        }
+      } catch (error) {
+        if (mounted) {
+          setErrorCode(normalizeError(error).errorCode);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchUser();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  return <ProfileCard user={user} loading={loading} error={error} />;
+  return <ProfileCard user={user} loading={loading} errorCode={errorCode} />;
 }

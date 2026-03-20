@@ -2,6 +2,8 @@ import "@testing-library/jest-dom";
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "../api/apiClient";
+import { ApiHttpError } from "../errors/AppError";
+import { BOOK_LIST_ERROR_MESSAGES } from "../constants/messages";
 import { useBooks } from "./useBooks";
 import type { Book } from "../types";
 
@@ -28,9 +30,9 @@ const dummyBooks: Book[] = [
 
 // helper component that uses the hook
 function TestComponent() {
-  const { books, loading, error } = useBooks();
+  const { books, loading, errorCode } = useBooks();
   if (loading) return <div>loading</div>;
-  if (error) return <div>error: {error}</div>;
+  if (errorCode) return <div>error: {BOOK_LIST_ERROR_MESSAGES[errorCode]}</div>;
   return <div>{books.map((b) => b.title).join(",")}</div>;
 }
 
@@ -57,9 +59,24 @@ describe("useBooks hook", () => {
   it("shows error when api fails", async () => {
     (
       apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
-    ).mockRejectedValue(new Error("fail"));
+    ).mockRejectedValue(new ApiHttpError(500, "server error"));
 
     render(<TestComponent />);
     await waitFor(() => expect(screen.getByText(/error:/)).toBeInTheDocument());
+    expect(
+      screen.getByText(new RegExp(BOOK_LIST_ERROR_MESSAGES.SERVER_ERROR)),
+    ).toBeInTheDocument();
+  });
+
+  it("shows unknown error when response payload is unexpected", async () => {
+    (
+      apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({ data: {} });
+
+    render(<TestComponent />);
+    await waitFor(() => expect(screen.getByText(/error:/)).toBeInTheDocument());
+    expect(
+      screen.getByText(new RegExp(BOOK_LIST_ERROR_MESSAGES.UNKNOWN)),
+    ).toBeInTheDocument();
   });
 });

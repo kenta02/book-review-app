@@ -4,11 +4,9 @@ on:
   push:
     branches:
       - main
-      - develop
-  # pull_request:
-  #   branches:
-  #     - main
-  #     - develop
+  pull_request:
+    branches:
+      - main
 
 jobs:
   sonarcloud:
@@ -16,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [22]
+        node-version: [24]
     # GitHub は 2026/6 から Node.js 24 をデフォルトにする予定なので
     # actions/checkout・actions/setup-node 等は適宜バージョンアップしてください。
     # FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 環境変数で先行切り替えも可能。

@@ -1,4 +1,5 @@
 import type { ApiResponse, User } from "../types";
+import { ApiHttpError } from "../errors/AppError";
 
 const mockUsers: Record<number, User> = {
   1: {
@@ -28,7 +29,7 @@ export const mockUserApi = {
     const user = mockUsers[userId];
 
     if (!user) {
-      throw new Error(`User ${userId} not found`);
+      throw new ApiHttpError(404, `User ${userId} not found`);
     }
 
     return {

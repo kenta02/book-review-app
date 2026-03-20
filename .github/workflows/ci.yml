@@ -1,0 +1,79 @@
+name: CI
+
+# このワークフローは push と pull_request に反応し、
+# メインの開発ブランチ（main/develop）で実行されます。
+# テスト、lint、型チェックを両方のパッケージ（server/client）に対して行います。
+
+# run on push and pull request for primary development branches
+# （プッシュとプルリクエスト時に動作）
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22, 24]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      # ----- backend -----
+      # サーバーサイド（./server）に対するステップ
+
+      - name: Install server dependencies
+        working-directory: ./server
+        run: |
+          npm ci
+          # rollup optional dependency bug workaround (see sonarcloud.yml)
+          npm install --no-save @rollup/rollup-linux-x64-gnu@4.59.0 || true
+
+      - name: Lint server
+        working-directory: ./server
+        run: npm run lint
+
+      - name: Type‑check server
+        working-directory: ./server
+        run: npm run check-types
+
+      - name: Run server unit tests
+        working-directory: ./server
+        run: npm run test:ci-parity
+
+      # ----- frontend -----
+      # クライアントサイド（./client）に対するステップ
+
+      - name: Install client dependencies
+        working-directory: ./client
+        env:
+          npm_config_os: linux
+          npm_config_cpu: x64
+        run: npm ci
+
+      - name: Lint client
+        working-directory: ./client
+        run: npm run lint
+
+      - name: Run client unit tests
+        working-directory: ./client
+        run: npx vitest --run
+
+      - name: Type‑check client
+        working-directory: ./client
+        run: npx tsc --noEmit

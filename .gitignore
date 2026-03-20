@@ -9,6 +9,8 @@ pnpm-debug.log*
 
 # lockファイル（使うパッケージマネージャ1つだけ残す）
 package-lock.json
+!server/package-lock.json
+!client/package-lock.json
 
 
 # ========================================
@@ -81,7 +83,6 @@ tmp/
 temp/
 .cache/
 kadai.txt
-.gitignore
 
 
 # ドキュメント類
@@ -112,4 +113,13 @@ PROJECT_MEMORY.md
 .github/hooks/
 .github/mcp/
 .github/skills/
-  
+
+# Track only shared skill docs used for CI parity workflow.
+!.github/skills/
+.github/skills/*
+!.github/skills/README.md
+!.github/skills/test-ci-parity/
+!.github/skills/test-ci-parity/SKILL.md
+.github/skills/README.md
+AGENTS.md
+.envrc

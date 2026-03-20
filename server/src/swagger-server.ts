@@ -9,15 +9,14 @@ import yaml from 'yaml';
 import swaggerUi from 'swagger-ui-express';
 
 const app = express();
-// apply basic security headers to Swagger UI as well
+// Swagger UI 側にも基本的なセキュリティヘッダーを適用
 app.use(helmet());
 app.use(cors());
-// NOTE: we do *not* add express.json() here.  Swagger UI proxies requests
-// directly to the API server; parsing the JSON body in this server would
-// consume the request stream and leave nothing for the proxy, causing the
-// backend to hang waiting for a body (spinner that never stops).
-// The only JSON data this process handles are in the OpenAPI spec responses,
-// which are served via `res.json`/`res.type()` calls rather than middleware.
+// 注意: ここでは express.json() を追加しない。
+// Swagger UI はリクエストを API サーバーへプロキシするため、
+// このサーバーで JSON ボディを先に消費するとプロキシ先へ渡せなくなる。
+// OpenAPI 仕様の JSON 応答は `res.json` / `res.type()` で返すため、
+// JSON パーサーミドルウェアは不要。
 
 // Swagger UI設定
 const swaggerFilePath = (() => {
@@ -54,11 +53,12 @@ app.get('/openapi.yaml', (_req: Request, res: Response) => {
 
 // APIプロキシ: Swagger UIからのリクエストをメインサーバーにフォワード
 app.use('/api', (req: Request, res: Response) => {
-  const apiPath = req.path.replace(/^\/api/, '');
   const options = {
     hostname: 'localhost',
     port: 3000,
-    path: `/api${apiPath}`,
+    // `req.path` だと query string が落ちるため、Swagger からの
+    // sort / filter / pagination パラメータをそのまま転送できない。
+    path: req.originalUrl,
     method: req.method,
     headers: req.headers,
   };

@@ -3,9 +3,10 @@ import { ForeignKeyConstraintError, UniqueConstraintError, ValidationErrorItem }
 import { ERROR_MESSAGES } from '../constants/error-messages';
 import { ApiError } from '../errors/ApiError';
 import * as bookRepository from '../repositories/book.repository';
+import type { BookInstance } from '../repositories/book.repository';
 import { sequelize } from '../sequelize';
 import * as reviewService from './review.service';
-import { CreateBookDto, ListBooksQueryDto, UpdateBookDto } from '../types/dto';
+import { CreateBookDto, ListBooksQueryDto, UpdateBookDto } from '../modules/book/dto/book.dto';
 import { logger } from '../utils/logger';
 
 type ListBookReviewsInput = {
@@ -14,6 +15,62 @@ type ListBookReviewsInput = {
   limit: number;
 };
 
+type BookListRow = {
+  toJSON?: () => Record<string, unknown>;
+  get?: (key: string) => unknown;
+};
+
+/**
+ * 集計列に混在しうる値を有限数へ寄せます。
+ *
+ * @param value - DB / Sequelize から返る生値
+ * @returns 有限数なら number、そうでなければ null
+ */
+function toFiniteNumber(value: unknown): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : null;
+}
+
+/**
+ * 書籍一覧クエリの 1 行を API レスポンス形式へ正規化します。
+ *
+ * Sequelize の一覧結果は、モデルインスタンス経由で集計列を持つ場合と
+ * plain object に近い shape で扱う場合があるため、ここで吸収します。
+ * 集計列は API 契約に合わせて `averageRating` は `number | null`、
+ * `reviewCount` は未評価時でも `0` へ揃えます。
+ *
+ * @param row - repository から返された書籍一覧の 1 行
+ * @returns API レスポンスへ載せる正規化済み書籍データ
+ */
+function normalizeListBook(row: BookListRow) {
+  const raw = typeof row.toJSON === 'function' ? row.toJSON() : (row as Record<string, unknown>);
+  const averageRatingValue =
+    raw.averageRating ?? (typeof row.get === 'function' ? row.get('averageRating') : undefined);
+  const reviewCountValue =
+    raw.reviewCount ?? (typeof row.get === 'function' ? row.get('reviewCount') : undefined);
+  const averageRating = toFiniteNumber(averageRatingValue);
+  const reviewCount = toFiniteNumber(reviewCountValue);
+
+  return {
+    ...raw,
+    averageRating,
+    reviewCount: reviewCount ?? 0,
+  };
+}
+
+/**
+ * Sequelize の一意制約違反が「ISBN 重複」または「title + author 重複」に該当するか判定します。
+ *
+ * `UniqueConstraintError` は DB 方言やモック方法によって shape が少しぶれるため、
+ * service 層で吸収して API 向けの 409 エラーへ寄せています。
+ *
+ * @param error - repository 層から送出された例外
+ * @returns 重複エラーとして扱うべき場合は true
+ */
 function isIsbnUniqueConstraintError(error: unknown): boolean {
   const hasDuplicateFields = (paths: string[]) => {
     const hasIsbn = paths.includes('ISBN');
@@ -49,25 +106,46 @@ function isIsbnUniqueConstraintError(error: unknown): boolean {
  * @param queryDto - 一覧取得クエリ
  * @returns 書籍一覧とページング情報
  */
-export async function listBooks(queryDto: ListBooksQueryDto) {
-  const { page, limit } = queryDto;
-  const { count, rows } = await bookRepository.findBooksWithPagination(page, limit);
-
-  logger.info('[BOOKS SERVICE] books fetched', {
-    page,
-    limit,
-    totalItems: count,
-  });
-
-  return {
-    books: rows,
-    pagination: {
-      currentPage: page,
-      totalItems: count,
-      totalPages: Math.ceil(count / limit),
-      itemsPerPage: limit,
-    },
+export async function listBooks(queryDto: ListBooksQueryDto): Promise<{
+  books: ReturnType<typeof normalizeListBook>[];
+  pagination: {
+    currentPage: number;
+    totalItems: number;
+    totalPages: number;
+    itemsPerPage: number;
   };
+}> {
+  try {
+    const { page, limit } = queryDto;
+
+    const { count: rawCount, rows } = await bookRepository.findBooksWithPagination(queryDto);
+    // `findAndCountAll` は group なしでは number、group ありでは配列を返すため、
+    // pagination 用の総件数へここで正規化します。
+    const totalItems = Array.isArray(rawCount) ? rawCount.length : rawCount;
+
+    logger.info('[BOOKS SERVICE] books fetched', {
+      page,
+      limit,
+      totalItems: totalItems,
+    });
+
+    return {
+      books: rows.map((row) => normalizeListBook(row)),
+      pagination: {
+        currentPage: page,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        itemsPerPage: limit,
+      },
+    };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    logger.error('[BOOKS SERVICE] failed to fetch books', error);
+    throw new ApiError(500, 'INTERNAL_SERVER_ERROR', ERROR_MESSAGES.INTERNAL_SERVER_ERROR);
+  }
 }
 
 /**
@@ -77,7 +155,7 @@ export async function listBooks(queryDto: ListBooksQueryDto) {
  * @returns 取得した書籍
  * @throws ApiError 書籍が存在しない場合
  */
-export async function getBookDetail(bookId: number) {
+export async function getBookDetail(bookId: number): Promise<BookInstance> {
   const book = await bookRepository.findBookById(bookId);
 
   if (!book) {
@@ -96,7 +174,7 @@ export async function getBookDetail(bookId: number) {
  * @returns 作成済み書籍
  * @throws ApiError ISBN が重複している場合
  */
-export async function createBook(input: CreateBookDto) {
+export async function createBook(input: CreateBookDto): Promise<BookInstance> {
   try {
     return await bookRepository.createBook(input);
   } catch (error) {
@@ -117,7 +195,7 @@ export async function createBook(input: CreateBookDto) {
  * @returns 更新後の書籍
  * @throws ApiError 書籍が存在しない、または ISBN が重複している場合
  */
-export async function updateBook(bookId: number, input: UpdateBookDto) {
+export async function updateBook(bookId: number, input: UpdateBookDto): Promise<BookInstance> {
   const book = await bookRepository.findBookById(bookId);
 
   if (!book) {
@@ -144,7 +222,9 @@ export async function updateBook(bookId: number, input: UpdateBookDto) {
  * @returns レビュー一覧とページング情報
  * @throws ApiError 書籍が存在しない場合
  */
-export async function listBookReviews(input: ListBookReviewsInput) {
+export async function listBookReviews(
+  input: ListBookReviewsInput
+): Promise<Awaited<ReturnType<typeof reviewService.listReviews>>> {
   const book = await bookRepository.findBookById(input.bookId);
 
   if (!book) {
@@ -163,8 +243,9 @@ export async function listBookReviews(input: ListBookReviewsInput) {
  * @param bookId - 書籍 ID
  * @throws ApiError 書籍が存在しない、または関連データが残っている場合
  */
-export async function deleteBook(bookId: number) {
+export async function deleteBook(bookId: number): Promise<void> {
   await sequelize.transaction(async (transaction) => {
+    // 削除可否判定と実削除を同一トランザクションに載せ、競合時の不整合を避けます。
     const book = await bookRepository.findBookById(bookId, {
       transaction,
       lock: transaction.LOCK.UPDATE,

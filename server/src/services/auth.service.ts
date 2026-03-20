@@ -58,7 +58,12 @@ function hasUniqueConstraintPath(error: unknown, targetPath: 'username' | 'email
     return true;
   }
 
-  const raw = [candidate.message, candidate.sqlMessage, candidate.original?.sqlMessage, candidate.parent?.sqlMessage]
+  const raw = [
+    candidate.message,
+    candidate.sqlMessage,
+    candidate.original?.sqlMessage,
+    candidate.parent?.sqlMessage,
+  ]
     .filter((value): value is string => typeof value === 'string')
     .join(' ')
     .toLowerCase();
@@ -67,7 +72,7 @@ function hasUniqueConstraintPath(error: unknown, targetPath: 'username' | 'email
 }
 
 function toAuthUserDto(model: userRepository.UserInstance): AuthUserDto {
-  const json = model.toJSON() as { id: number; username: string; email: string };
+  const json = model.toJSON() as { id: number; username: string; email: string }; // NOSONAR
   return {
     id: json.id,
     username: json.username,

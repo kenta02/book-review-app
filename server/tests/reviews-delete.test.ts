@@ -17,13 +17,14 @@ type ReviewInstance = InstanceType<typeof Review>;
 type CommentInstance = InstanceType<typeof Comment>;
 
 // Helper to mount router with optional auth middleware
-type TestRequest = express.Request & { userId?: number };
-function makeApp(setUserId?: number) {
+type TestRequest = express.Request & { userId?: number; userRole?: string };
+function makeApp(setUserId?: number, setUserRole?: string) {
   const app = express();
   app.use(express.json());
   // テスト用ミドルウェア：req.userId を設定して認証状態を模擬
   app.use((req: TestRequest, _res: express.Response, next: express.NextFunction) => {
     if (setUserId !== undefined) req.userId = setUserId;
+    if (setUserRole !== undefined) req.userRole = setUserRole;
     next();
   });
   app.use('/api', reviewRouter);
@@ -33,7 +34,7 @@ function makeApp(setUserId?: number) {
 let app: express.Express;
 
 beforeEach(() => {
-  app = makeApp(2); // default: authenticated userId = 2
+  app = makeApp(2, 'user'); // default: authenticated userId = 2
   vi.restoreAllMocks();
 });
 
@@ -77,6 +78,27 @@ describe('DELETE /api/reviews/:reviewId', () => {
     const res = await request(app).delete('/api/reviews/5');
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
+  it('allows admin to delete non-owned review', async () => {
+    const adminApp = makeApp(2, 'admin');
+    type FakeReviewWithDestroy = {
+      get: (key: string) => number | null;
+      destroy: ReturnType<typeof vi.fn>;
+    };
+    const fakeReview: FakeReviewWithDestroy = {
+      get: (k: string) => (k === 'userId' ? 99 : null),
+      destroy: vi.fn().mockResolvedValue(undefined),
+    };
+    const fakeTransaction = { commit: vi.fn(), rollback: vi.fn() };
+    vi.spyOn(Review, 'findByPk').mockResolvedValue(fakeReview as unknown as ReviewInstance);
+    vi.spyOn(sequelize, 'transaction').mockResolvedValue(fakeTransaction as unknown as Transaction);
+    vi.spyOn(Comment, 'findOne').mockResolvedValue(null);
+
+    const res = await request(adminApp).delete('/api/reviews/8');
+    expect(res.status).toBe(204);
+    expect(fakeReview.destroy).toHaveBeenCalledWith({ transaction: fakeTransaction });
+    expect(fakeTransaction.commit).toHaveBeenCalled();
   });
 
   // 関連コメントが存在する場合の競合のテスト

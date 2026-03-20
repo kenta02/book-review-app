@@ -1,0 +1,44 @@
+# PRの変更内容に応じて自動的にラベル付けを行う設定
+# https://github.com/actions/labeler
+
+# 例: 変更ファイルが `client/` 内なら `frontend` を付与
+frontend:
+  - changed-files:
+      - any-glob-to-any-file: "client/**"
+
+backend:
+  - changed-files:
+      - any-glob-to-any-file: "server/**"
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "*.md"
+          - "**/*.md"
+
+chore:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - "scripts/**"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "package.json"
+          - "package-lock.json"
+          - "yarn.lock"
+          - "client/package.json"
+          - "client/package-lock.json"
+          - "client/yarn.lock"
+          - "server/package.json"
+          - "server/package-lock.json"
+          - "server/yarn.lock"
+
+test:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/__tests__/**"
+          - "**/*.test.*"
+          - "**/*.spec.*"

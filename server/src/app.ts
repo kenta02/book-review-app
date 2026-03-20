@@ -51,7 +51,9 @@ app.use('/api/auth', authRouter);
 // 一時的デバッグミドルウェア: /apiへのリクエストパスのみをログ
 // 認証ヘッダー（ユーザー制御/機密）はログに記録しない
 app.use('/api', (req: Request, _res: Response, next) => {
-  logger.info('[AUTH-DEBUG] path=', req.path);
+  // req.path はユーザー制御値のため、ログインジェクション対策として改行を除去して記録する
+  const safePath = req.path.split('\r').join('').split('\n').join('');
+  logger.info('[AUTH-DEBUG] path=', safePath);
   next();
 });
 

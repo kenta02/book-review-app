@@ -1,6 +1,6 @@
 import { Request } from 'express';
 
-import { CreateCommentDto } from '../types/dto';
+import { CreateCommentDto } from '../modules/comment/dto/comment.dto';
 import { ValidationError, ParseResult } from './review.validator';
 import { ValidationMessages } from './messages';
 

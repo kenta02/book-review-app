@@ -1,6 +1,6 @@
 import { commentModelToDto } from '../utils/mapper';
 import { logger } from '../utils/logger';
-import type { CommentDto, CreateCommentServiceDto } from '../types/dto';
+import type { CommentDto, CreateCommentServiceDto } from '../modules/comment/dto/comment.dto';
 import { ApiError } from '../errors/ApiError';
 import { ERROR_MESSAGES } from '../constants/error-messages';
 import * as commentRepository from '../repositories/comment.repository';

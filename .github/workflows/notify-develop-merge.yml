@@ -1,0 +1,30 @@
+name: Notify when develop is merged
+
+# develop に PR がマージされたタイミングで通知（例: PR にコメント追加）
+# - 設計としては「develop へのマージ完了をトリガーに何かを動かしたい」場面に使えます。
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - develop
+
+jobs:
+  notify-develop-merge:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+
+    steps:
+      - name: Notify merge completion via PR comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const message = `🎉 develop にマージされました！\n\n- PR: #${pr.number} (${pr.html_url})\n- タイトル: ${pr.title}\n- マージコミット: ${pr.merge_commit_sha}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: message,
+            });

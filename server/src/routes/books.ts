@@ -1,5 +1,6 @@
 import express from 'express';
 
+import { authenticateToken, requireAdmin } from '../middleware/auth';
 import {
   createBook,
   deleteBook,
@@ -15,9 +16,9 @@ const router = express.Router();
 // 入力検証や業務ロジックは controller 以下へ委譲する。
 router.get('/', listBooks);
 router.get('/:id', getBookDetail);
-router.post('/', createBook);
-router.put('/:id', updateBook);
+router.post('/', authenticateToken, requireAdmin, createBook);
+router.put('/:id', authenticateToken, requireAdmin, updateBook);
 router.get('/:bookId/reviews', listBookReviews);
-router.delete('/:id', deleteBook);
+router.delete('/:id', authenticateToken, requireAdmin, deleteBook);
 
 export default router;

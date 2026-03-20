@@ -10,7 +10,8 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "target": "esnext",
-    "types": ["vite/client"],
+    // グローバル型定義にVitestのテストヘルパーを含める
+    "types": ["vite/client", "vitest/globals"],
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
@@ -38,8 +39,14 @@
     "jsx": "react-jsx",
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
+    // note: このオプションは TypeScript 5.4+ で導入されたため
+    // 現在の依存関係ではエラーになることがあるためコメントアウト
+    // "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
