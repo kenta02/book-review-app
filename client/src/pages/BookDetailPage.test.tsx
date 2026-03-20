@@ -131,7 +131,9 @@ describe("BookDetailPage", () => {
     render(<BookDetailPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/レビューの取得に失敗しました。/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/レビューの取得に失敗しました。/),
+      ).toBeInTheDocument();
     });
   });
 
