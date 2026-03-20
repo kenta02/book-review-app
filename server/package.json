@@ -41,6 +41,7 @@
     "yaml": "^2.4.1"
   },
   "devDependencies": {
+    "@eslint/js": "^8.57.1",
     "@types/bcrypt": "6.0.0",
     "@types/cors": "2.8.19",
     "@types/express": "^5.0.5",
@@ -50,7 +51,7 @@
     "@typescript-eslint/eslint-plugin": "6.10.0",
     "@typescript-eslint/parser": "6.10.0",
     "@vitest/coverage-v8": "^4.0.18",
-    "eslint": "^8.47.0",
+    "eslint": "^8.57.1",
     "eslint-config-prettier": "^8.8.0",
     "eslint-import-resolver-typescript": "^2.7.1",
     "eslint-plugin-import": "^2.27.5",
