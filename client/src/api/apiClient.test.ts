@@ -108,4 +108,145 @@ describe("apiClient", () => {
       new ApiHttpError(500, "Internal Server Error"),
     );
   });
+
+  it("getUserById/getReviewById/getBookById should return resource", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        text: async () => JSON.stringify({ data: { id: 42, username: "hey" } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        text: async () => JSON.stringify({ data: { id: 123, rating: 4, content: "ok", bookId: 1, userId: 1, createdAt: "" } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        text: async () => JSON.stringify({ data: { id: 1, title: "title", author: "author", publicationYear: 2020, ISBN: "000", summary: "s", createdAt: "", updatedAt: "" } }),
+      });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (global as any).fetch = fetchMock;
+
+    const user = await apiClient.getUserById(42);
+    expect(user.data.username).toBe("hey");
+
+    const review = await apiClient.getReviewById(123);
+    expect(review.data.rating).toBe(4);
+
+    const book = await apiClient.getBookById(1);
+    expect(book.data.title).toBe("title");
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/users/42", undefined);
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/reviews/123", undefined);
+    expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/books/1", undefined);
+  });
+
+  it("getReviews (all and specific) should work", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        text: async () => JSON.stringify({ data: { reviews: [{ id: 1, bookId: 2, userId: 1, rating: 5, content: "ok", createdAt: "" }], pagination: { currentPage: 1, totalPages: 1, totalItems: 1, itemsPerPage: 20 } } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        text: async () => JSON.stringify({ data: { reviews: [], pagination: { currentPage: 1, totalPages: 1, totalItems: 0, itemsPerPage: 20 } } }),
+      });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (global as any).fetch = fetchMock;
+
+    const allReviews = await apiClient.getReviews();
+    expect(allReviews.data.reviews.length).toBe(1);
+
+    const filteredReviews = await apiClient.getReviews(2);
+    expect(filteredReviews.data.reviews.length).toBe(0);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/reviews", undefined);
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/reviews?bookId=2", undefined);
+  });
+
+  it("create/update review and book endpoints call correct HTTP verb", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        statusText: "Created",
+        text: async () => JSON.stringify({ data: { id: 5, bookId: 1, userId: 1, rating: 5, content: "nice", createdAt: "" } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        text: async () => JSON.stringify({ data: { id: 5, bookId: 1, userId: 1, rating: 4, content: "meh", createdAt: "" } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        statusText: "Created",
+        text: async () => JSON.stringify({ data: { id: 10, title: "new", author: "author", publicationYear: 2022, ISBN: "123", summary: "x", createdAt: "", updatedAt: "" } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        text: async () => JSON.stringify({ data: { id: 10, title: "update", author: "author", publicationYear: 2022, ISBN: "123", summary: "x", createdAt: "", updatedAt: "" } }),
+      });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (global as any).fetch = fetchMock;
+
+    const createdReview = await apiClient.createReview({ bookId: 1, rating: 5, content: "nice" });
+    expect(createdReview.data.id).toBe(5);
+
+    const updatedReview = await apiClient.updateReview({ reviewId: 5, rating: 4, content: "meh" });
+    expect(updatedReview.data.rating).toBe(4);
+
+    const createdBook = await apiClient.createBook({ title: "new", author: "author", ISBN: "123", publicationYear: 2022, summary: "x" });
+    expect(createdBook.data.title).toBe("new");
+
+    const updatedBook = await apiClient.updateBook(10, { title: "update" });
+    expect(updatedBook.data.title).toBe("update");
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/reviews", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ bookId: 1, rating: 5, content: "nice" }),
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/reviews/5", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ reviewId: 5, rating: 4, content: "meh" }),
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/books", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title: "new", author: "author", ISBN: "123", publicationYear: 2022, summary: "x" }),
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(4, "/api/books/10", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title: "update" }),
+    });
+  });
 });

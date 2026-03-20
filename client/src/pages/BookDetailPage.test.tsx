@@ -5,13 +5,14 @@ import { BookDetailPage } from "./BookDetailPage";
 import { apiClient } from "../api/apiClient";
 
 const mockNavigate = vi.fn();
+const mockUseParams = vi.fn().mockReturnValue({ bookId: "1" });
 
 vi.mock("react-router-dom", async () => {
   const actual = (await vi.importActual("react-router-dom")) as any;
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useParams: () => ({ bookId: "1" }),
+    useParams: () => mockUseParams(),
   };
 });
 
@@ -116,6 +117,32 @@ describe("BookDetailPage", () => {
       expect(
         screen.queryByText(/レビューを読み込み中/),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows error when review fetch fails", async () => {
+    (
+      apiClient.getBookById as unknown as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({ data: book });
+    (
+      apiClient.getReviews as unknown as ReturnType<typeof vi.fn>
+    ).mockRejectedValue(new Error("fail reviews"));
+
+    render(<BookDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/レビューの取得に失敗しました。/)).toBeInTheDocument();
+    });
+  });
+
+  it("does not call APIs when bookId is missing", async () => {
+    mockUseParams.mockReturnValue({ bookId: undefined });
+    render(<BookDetailPage />);
+
+    await waitFor(() => {
+      expect(apiClient.getBookById).not.toHaveBeenCalled();
+      expect(apiClient.getReviews).not.toHaveBeenCalled();
+      expect(screen.getByText(/レビューを読み込み中/)).toBeInTheDocument();
     });
   });
 });
