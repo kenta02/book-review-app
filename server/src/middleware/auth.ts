@@ -61,8 +61,7 @@ export const authenticateToken = async (
 
   // Authorization header は攻撃者が操作可能なため、ログインジェクションを防ぐためトークン本体を出力しない。
   const sanitizedHeader = authHeader ? authHeader.split('\r').join('').split('\n').join('') : '';
-  const maskedAuthHeader =
-    sanitizedHeader.replace(/^Bearer\s+.+$/, 'Bearer <redacted>') || '(none)';
+  const maskedAuthHeader = sanitizedHeader.startsWith('Bearer ') ? 'Bearer <redacted>' : '(none)';
   logger.info('[AUTH-MW] authorization header=', maskedAuthHeader);
 
   if (!authHeader?.startsWith('Bearer ')) {
