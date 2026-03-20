@@ -1,6 +1,6 @@
-import path from 'path';
-import fs from 'fs';
-import http from 'http';
+import path from 'node:path';
+import fs from 'node:fs';
+import http from 'node:http';
 
 import express, { Request, Response } from 'express';
 import cors from 'cors';
