@@ -6,6 +6,7 @@ import {
   GroupedCountResultItem,
   Op,
   Order,
+  ProjectionAlias,
   Transaction,
   where as sequelizeWhere,
 } from 'sequelize';
@@ -44,41 +45,30 @@ function escapeLikePattern(value: string): string {
 }
 
 /**
- * 書籍一覧をページング付きで取得します。
+ * 書籍検索用の WHERE 句を生成します。
  *
- * 一覧では常にレビュー集計を付与し、
- * `averageRating` / `reviewCount` をレスポンスに載せられるようにします。
- * `sort=rating` または `ratingMin` が指定されたときは、
- * 同じ集計列を ORDER BY / HAVING にも使います。
+ * フィルタ条件をDtoから取り出し、Sequelizeで扱えるオブジェクトに変換します。
+ * - author: 部分一致検索
+ * - publicationYearFrom/To: 範囲検索
+ * - keyword: title/author/summary の横断検索
  *
- * @param queryDto - 一覧取得クエリ
- * @returns 総件数と該当ページの書籍一覧
+ * @param queryDto - リクエストで受け取ったクエリパラメータ
+ * @returns Sequelize `where` オブジェクト
  */
-export async function findBooksWithPagination(
-  queryDto: ListBooksQueryDto
-): Promise<FindBooksWithPaginationResult> {
-  const offset = (queryDto.page - 1) * queryDto.limit;
-
-  // WHERE 句の基本条件をここに積み上げ、最後に findAndCountAll へ渡します。
+function createBooksWhereClause(queryDto: ListBooksQueryDto): Record<string | symbol, unknown> {
   const where: Record<string | symbol, unknown> = {};
-  // 並び順は createdAt DESC を既定とし、指定がある場合だけ上書きします。
-  const orderClause: Order = [['createdAt', 'DESC']];
 
-  // ソート順はascのみASC、それ以外はDESCとする
-  const sortOrder: 'ASC' | 'DESC' = queryDto.order === 'asc' ? 'ASC' : 'DESC';
-
+  // 項目ごとに既存の値をエスケープしてLIKE検索に利用
   const escapedAuthor = queryDto.author ? escapeLikePattern(queryDto.author) : undefined;
   const escapedKeyword = queryDto.keyword ? escapeLikePattern(queryDto.keyword) : undefined;
 
-  // 著者名の部分一致検索
+  // 著者名を部分一致検索（大文字小文字区別は DB 側の照合順序に依存）
   if (escapedAuthor) {
     where.author = { [Op.like]: `%${escapedAuthor}%` };
   }
 
-  // 出版年の範囲検索
-  //
+  // 出版年の範囲検索条件を組み立て
   if (queryDto.publicationYearFrom !== undefined || queryDto.publicationYearTo !== undefined) {
-    // where.publicationYear は unknown 扱いになるため、条件オブジェクトを先に組み立ててから代入する
     const publicationYearCondition: Record<string | symbol, number> = {};
 
     if (queryDto.publicationYearFrom !== undefined) {
@@ -91,8 +81,8 @@ export async function findBooksWithPagination(
     where.publicationYear = publicationYearCondition;
   }
 
+  // フリーワード検索（タイトル・著者・要約）
   if (escapedKeyword) {
-    // keyword は単一フィールドではなく、主要なテキスト列を横断して検索します。
     where[Op.or] = [
       { title: { [Op.like]: `%${escapedKeyword}%` } },
       { author: { [Op.like]: `%${escapedKeyword}%` } },
@@ -100,37 +90,77 @@ export async function findBooksWithPagination(
     ];
   }
 
-  // レビュー本体は返さず、集計値だけに使います。
-  const include = [{ model: Review, attributes: [] }];
+  return where;
+}
 
+/**
+ * ソート順を決定し、ORDER句を構築します。
+ *
+ * sort 指定がない場合は `createdAt` 降順がデフォルト。
+ * rating のときは集計値 `AVG(Reviews.rating)` をソートキーとします。
+ */
+function createBooksOrderClause(
+  queryDto: ListBooksQueryDto,
+  sortOrder: 'ASC' | 'DESC',
+  avgRatingExpression: ReturnType<typeof fn>
+): Order {
+  const orderClause: Order = [['createdAt', 'DESC']];
+
+  const sortMap: Record<string, [string | ReturnType<typeof fn>, 'ASC' | 'DESC']> = {
+    rating: [avgRatingExpression, sortOrder],
+    title: ['title', sortOrder],
+    author: ['author', sortOrder],
+    publicationYear: ['publicationYear', sortOrder],
+    createdAt: ['createdAt', sortOrder],
+  };
+
+  if (queryDto.sort && queryDto.sort in sortMap) {
+    orderClause[0] = sortMap[queryDto.sort];
+  }
+
+  return orderClause;
+}
+
+/**
+ * 書籍一覧をページング付きで取得します。
+ *
+ * 一覧では常にレビュー集計を付与し、
+ * `averageRating` / `reviewCount` をレスポンスに載せられるようにします。
+ * `sort=rating` または `ratingMin` が指定されたときは、
+ * 同じ集計列を ORDER BY / HAVING にも使います。
+ *
+ * @param queryDto - 一覧取得クエリ
+ * @returns 総件数と該当ページの書籍一覧
+ */
+/**
+ * ページング付き書籍一覧取得
+ *
+ * - レビュー集計（averageRating, reviewCount）を追加
+ * - 絞り込み条件・ソート条件・ページ情報を統合
+ * - ratingMin がある場合は HAVING 句でフィルタ
+ */
+export async function findBooksWithPagination(
+  queryDto: ListBooksQueryDto
+): Promise<FindBooksWithPaginationResult> {
+  const offset = (queryDto.page - 1) * queryDto.limit;
+  const sortOrder: 'ASC' | 'DESC' = queryDto.order === 'asc' ? 'ASC' : 'DESC';
+
+  // WHERE句を生成
+  const where = createBooksWhereClause(queryDto);
+
+  // Reviewsを集計対象として結合（個別行は取得しない）
+  const include = [{ model: Review, attributes: [] }];
   const avgRatingExpression = fn('AVG', col('Reviews.rating'));
   const reviewCountExpression = fn('COUNT', col('Reviews.id'));
 
-  const averageRatingAttribute: [ReturnType<typeof fn>, string] = [
-    avgRatingExpression,
-    'averageRating',
-  ];
-  const reviewCountAttribute: [ReturnType<typeof fn>, string] = [
-    reviewCountExpression,
-    'reviewCount',
-  ];
-
-  const attributes = {
-    include: [averageRatingAttribute, reviewCountAttribute],
+  const attributes: { include: (string | ProjectionAlias)[] } = {
+    include: [
+      [avgRatingExpression, 'averageRating'] as ProjectionAlias,
+      [reviewCountExpression, 'reviewCount'] as ProjectionAlias,
+    ],
   };
 
-  // sort=rating のときだけ集計列で並べ替え、それ以外は通常カラムのソートを使います。
-  if (queryDto.sort === 'rating') {
-    orderClause[0] = [avgRatingExpression, sortOrder];
-  } else if (queryDto.sort === 'title') {
-    orderClause[0] = ['title', sortOrder];
-  } else if (queryDto.sort === 'author') {
-    orderClause[0] = ['author', sortOrder];
-  } else if (queryDto.sort === 'publicationYear') {
-    orderClause[0] = ['publicationYear', sortOrder];
-  } else if (queryDto.sort === 'createdAt') {
-    orderClause[0] = ['createdAt', sortOrder];
-  }
+  const orderClause = createBooksOrderClause(queryDto, sortOrder, avgRatingExpression);
 
   const baseOptions = {
     attributes,
