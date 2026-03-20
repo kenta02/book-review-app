@@ -1,6 +1,6 @@
-import path from 'path';
-import fs from 'fs';
-import http from 'http';
+import path from 'node:path';
+import fs from 'node:fs';
+import http from 'node:http';
 
 import express, { Request, Response } from 'express';
 import cors from 'cors';
@@ -53,18 +53,46 @@ app.get('/openapi.yaml', (_req: Request, res: Response) => {
 
 // APIプロキシ: Swagger UIからのリクエストをメインサーバーにフォワード
 app.use('/api', (req: Request, res: Response) => {
-  const options = {
+  // path はユーザー入力に含まれる可能性があるため、URLオブジェクトで正規化
+  const parsed = new URL(req.originalUrl ?? '', 'http://localhost');
+  const safePath = parsed.pathname + parsed.search;
+
+  // ヘッダーはホワイトリスト方式で受け入れる
+  const allowedHeaders = new Set([
+    'accept',
+    'content-type',
+    'authorization',
+    'x-requested-with',
+    'x-lang',
+    'x-api-version',
+  ]);
+  const safeHeaders: http.OutgoingHttpHeaders = {};
+
+  Object.entries(req.headers).forEach(([key, value]) => {
+    const lowerKey = key.toLowerCase();
+    if (!allowedHeaders.has(lowerKey)) {
+      return;
+    }
+    if (Array.isArray(value)) {
+      safeHeaders[lowerKey] = value.join(',');
+    } else if (value !== undefined) {
+      safeHeaders[lowerKey] = String(value);
+    }
+  });
+
+  // `host` は明示的に外す（外部値を絶対許可しない）
+  delete safeHeaders.host;
+  delete safeHeaders.connection;
+  delete safeHeaders['transfer-encoding'];
+  delete safeHeaders['content-length'];
+
+  const options: http.RequestOptions = {
     hostname: 'localhost',
     port: 3000,
-    // `req.path` だと query string が落ちるため、Swagger からの
-    // sort / filter / pagination パラメータをそのまま転送できない。
-    path: req.originalUrl,
+    path: safePath,
     method: req.method,
-    headers: req.headers,
+    headers: safeHeaders,
   };
-
-  // Content-Lengthを削除（自動設定されるため）
-  delete options.headers.host;
 
   const proxyReq = http.request(options, (proxyRes) => {
     // CORSヘッダーを明示的に設定
