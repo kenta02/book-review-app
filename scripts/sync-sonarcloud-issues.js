@@ -2,7 +2,7 @@
 
 /**
  * SonarCloud Issue を GitHub Issues に自動作成するスクリプト
- * 
+ *
  * 実行環境変数:
  *   - SONAR_TOKEN: SonarCloud API トークン
  *   - GITHUB_TOKEN: GitHub API トークン
@@ -10,25 +10,25 @@
  *   - GH_REPO: GitHubリポジトリ (format: owner/repo)
  */
 
-const https = require('https');
-const http = require('http');
+const https = require("https");
+const http = require("http");
 
 // 環境変数
-const SONAR_TOKEN = process.env.SONAR_TOKEN || '';
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
-const SONAR_HOST_URL = process.env.SONAR_HOST_URL || 'https://sonarcloud.io';
-const GH_REPO = process.env.GH_REPO || 'kenta02/book-review-app';
+const SONAR_TOKEN = process.env.SONAR_TOKEN || "";
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
+const SONAR_HOST_URL = process.env.SONAR_HOST_URL || "https://sonarcloud.io";
+const GH_REPO = process.env.GH_REPO || "kenta02/book-review-app";
 
 // SonarCloud プロジェクトキー
-const SONAR_PROJECT_KEY = 'kenta02_book-review-app';
+const SONAR_PROJECT_KEY = "kenta02_book-review-app";
 
 if (!SONAR_TOKEN) {
-  console.error('❌ Error: SONAR_TOKEN is not set');
+  console.error("❌ Error: SONAR_TOKEN is not set");
   process.exit(1);
 }
 
 if (!GITHUB_TOKEN) {
-  console.error('❌ Error: GITHUB_TOKEN is not set');
+  console.error("❌ Error: GITHUB_TOKEN is not set");
   process.exit(1);
 }
 
@@ -38,30 +38,36 @@ if (!GITHUB_TOKEN) {
 function makeRequest(url, options = {}) {
   return new Promise((resolve, reject) => {
     const requestUrl = new URL(url);
-    const isSecure = requestUrl.protocol === 'https:';
+    const isSecure = requestUrl.protocol === "https:";
     const client = isSecure ? https : http;
 
     const reqOptions = {
       hostname: requestUrl.hostname,
       port: requestUrl.port,
       path: requestUrl.pathname + requestUrl.search,
-      method: options.method || 'GET',
-      headers: Object.assign({
-        'User-Agent': 'sonarcloud-issues-sync/1.0',
-      }, options.headers || {}),
+      method: options.method || "GET",
+      headers: Object.assign(
+        {
+          "User-Agent": "sonarcloud-issues-sync/1.0",
+        },
+        options.headers || {},
+      ),
     };
 
     if (options.body) {
-      const body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
-      reqOptions.headers['Content-Length'] = Buffer.byteLength(body);
+      const body =
+        typeof options.body === "string"
+          ? options.body
+          : JSON.stringify(options.body);
+      reqOptions.headers["Content-Length"] = Buffer.byteLength(body);
     }
 
     const req = client.request(reqOptions, (res) => {
-      let data = '';
-      res.on('data', (chunk) => {
+      let data = "";
+      res.on("data", (chunk) => {
         data += chunk;
       });
-      res.on('end', () => {
+      res.on("end", () => {
         resolve({
           statusCode: res.statusCode,
           headers: res.headers,
@@ -70,10 +76,13 @@ function makeRequest(url, options = {}) {
       });
     });
 
-    req.on('error', reject);
+    req.on("error", reject);
 
     if (options.body) {
-      const body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
+      const body =
+        typeof options.body === "string"
+          ? options.body
+          : JSON.stringify(options.body);
       req.write(body);
     }
 
@@ -85,13 +94,13 @@ function makeRequest(url, options = {}) {
  * SonarCloud API から BLOCKER/CRITICAL Issue を取得
  */
 async function getSonarCloudIssues() {
-  console.log('\n📡 Fetching SonarCloud issues...');
+  console.log("\n📡 Fetching SonarCloud issues...");
 
   const url = `${SONAR_HOST_URL}/api/issues/search?componentKeys=${SONAR_PROJECT_KEY}&severities=BLOCKER,CRITICAL&statuses=OPEN&pageSize=100`;
 
   const headers = {
-    Authorization: `Basic ${Buffer.from(`${SONAR_TOKEN}:`).toString('base64')}`,
-    'Accept': 'application/json',
+    Authorization: `Basic ${Buffer.from(`${SONAR_TOKEN}:`).toString("base64")}`,
+    Accept: "application/json",
   };
 
   try {
@@ -108,7 +117,7 @@ async function getSonarCloudIssues() {
 
     return issues;
   } catch (error) {
-    console.error('❌ Failed to fetch SonarCloud issues:', error.message);
+    console.error("❌ Failed to fetch SonarCloud issues:", error.message);
     return [];
   }
 }
@@ -117,14 +126,14 @@ async function getSonarCloudIssues() {
  * GitHub Issues から既存の SonarCloud Issue を取得（重複防止）
  */
 async function getExistingGitHubIssues() {
-  console.log('\n📋 Fetching existing GitHub issues with sonarcloud label...');
+  console.log("\n📋 Fetching existing GitHub issues with sonarcloud label...");
 
-  const [owner, repo] = GH_REPO.split('/');
+  const [owner, repo] = GH_REPO.split("/");
   const url = `https://api.github.com/repos/${owner}/${repo}/issues?labels=sonarcloud&per_page=100&state=all`;
 
   const headers = {
     Authorization: `Bearer ${GITHUB_TOKEN}`,
-    Accept: 'application/vnd.github.v3+json',
+    Accept: "application/vnd.github.v3+json",
   };
 
   try {
@@ -145,7 +154,7 @@ async function getExistingGitHubIssues() {
     };
 
     issues.forEach((issue) => {
-      const body = issue.body || '';
+      const body = issue.body || "";
 
       const sonarKeyMatch = body.match(/\*\*Key\*\*:\s+([^\s]+)/);
       if (sonarKeyMatch) {
@@ -160,7 +169,7 @@ async function getExistingGitHubIssues() {
 
     return existingKeys;
   } catch (error) {
-    console.error('❌ Failed to fetch GitHub issues:', error.message);
+    console.error("❌ Failed to fetch GitHub issues:", error.message);
     return {
       sonarKeys: new Set(),
       locationKeys: new Set(),
@@ -172,14 +181,17 @@ async function getExistingGitHubIssues() {
  * GitHub Issues に新規 Issue を作成
  */
 async function createGitHubIssue(sonarIssue, existingKeys) {
-  const [owner, repo] = GH_REPO.split('/');
+  const [owner, repo] = GH_REPO.split("/");
   const url = `https://api.github.com/repos/${owner}/${repo}/issues`;
 
   // SonarCloud Issue キー（例: "server:src/auth/login.ts:123"）
-  const locationKey = `${sonarIssue.component}:${sonarIssue.line || 'N/A'}`;
+  const locationKey = `${sonarIssue.component}:${sonarIssue.line || "N/A"}`;
 
   // 重複チェック
-  if (existingKeys.sonarKeys.has(sonarIssue.key) || existingKeys.locationKeys.has(locationKey)) {
+  if (
+    existingKeys.sonarKeys.has(sonarIssue.key) ||
+    existingKeys.locationKeys.has(locationKey)
+  ) {
     console.log(`⏭️  Skipped (already exists): ${sonarIssue.key}`);
     return null;
   }
@@ -199,10 +211,10 @@ ${sonarIssue.message}
 
 ### Location
 - **File**: \`${sonarIssue.component}\`
-- **Line**: ${sonarIssue.line || 'N/A'}
+- **Line**: ${sonarIssue.line || "N/A"}
 
 ### Details
-${sonarIssue.textRange ? `- **Lines**: ${sonarIssue.textRange.startLine} - ${sonarIssue.textRange.endLine}` : ''}
+${sonarIssue.textRange ? `- **Lines**: ${sonarIssue.textRange.startLine} - ${sonarIssue.textRange.endLine}` : ""}
 
 ### Links
 - [View on SonarCloud](${SONAR_HOST_URL}/project/issues?id=${SONAR_PROJECT_KEY}&issues=${sonarIssue.key})
@@ -217,7 +229,7 @@ ${sonarIssue.textRange ? `- **Lines**: ${sonarIssue.textRange.startLine} - ${son
 *Auto-created by SonarCloud sync workflow*
 `;
 
-  const labels = ['sonarcloud', `severity:${sonarIssue.severity}`];
+  const labels = ["sonarcloud", `severity:${sonarIssue.severity}`];
 
   const payload = {
     title,
@@ -227,13 +239,13 @@ ${sonarIssue.textRange ? `- **Lines**: ${sonarIssue.textRange.startLine} - ${son
 
   const headers = {
     Authorization: `Bearer ${GITHUB_TOKEN}`,
-    Accept: 'application/vnd.github.v3+json',
-    'Content-Type': 'application/json',
+    Accept: "application/vnd.github.v3+json",
+    "Content-Type": "application/json",
   };
 
   try {
     const response = await makeRequest(url, {
-      method: 'POST',
+      method: "POST",
       headers,
       body: payload,
     });
@@ -244,11 +256,14 @@ ${sonarIssue.textRange ? `- **Lines**: ${sonarIssue.textRange.startLine} - ${son
       existingKeys.locationKeys.add(locationKey);
       return response.body;
     } else {
-      console.error(`❌ Failed to create issue (${response.statusCode}):`, response.body);
+      console.error(
+        `❌ Failed to create issue (${response.statusCode}):`,
+        response.body,
+      );
       return null;
     }
   } catch (error) {
-    console.error('❌ Failed to create GitHub issue:', error.message);
+    console.error("❌ Failed to create GitHub issue:", error.message);
     return null;
   }
 }
@@ -257,7 +272,7 @@ ${sonarIssue.textRange ? `- **Lines**: ${sonarIssue.textRange.startLine} - ${son
  * メイン処理
  */
 async function main() {
-  console.log('🚀 SonarCloud Issue Sync Started');
+  console.log("🚀 SonarCloud Issue Sync Started");
   console.log(`   Repository: ${GH_REPO}`);
   console.log(`   SonarCloud Project: ${SONAR_PROJECT_KEY}`);
 
@@ -265,7 +280,7 @@ async function main() {
   const sonarIssues = await getSonarCloudIssues();
 
   if (sonarIssues.length === 0) {
-    console.log('\n✨ No SonarCloud issues found. Everything is clean!');
+    console.log("\n✨ No SonarCloud issues found. Everything is clean!");
     process.exit(0);
   }
 
@@ -273,7 +288,7 @@ async function main() {
   const existingKeys = await getExistingGitHubIssues();
 
   // 3. GitHub Issues に新規 Issue を作成
-  console.log('\n📝 Creating GitHub Issues...');
+  console.log("\n📝 Creating GitHub Issues...");
   let created = 0;
   let skipped = 0;
 
@@ -282,27 +297,29 @@ async function main() {
     if (result) {
       created++;
     } else if (
-      existingKeys.sonarKeys.has(sonarIssue.key)
-      || existingKeys.locationKeys.has(`${sonarIssue.component}:${sonarIssue.line || 'N/A'}`)
+      existingKeys.sonarKeys.has(sonarIssue.key) ||
+      existingKeys.locationKeys.has(
+        `${sonarIssue.component}:${sonarIssue.line || "N/A"}`,
+      )
     ) {
       skipped++;
     }
   }
 
   // サマリー出力
-  console.log('\n' + '='.repeat(50));
-  console.log('📊 Summary');
-  console.log('='.repeat(50));
+  console.log("\n" + "=".repeat(50));
+  console.log("📊 Summary");
+  console.log("=".repeat(50));
   console.log(`✅ Created: ${created} issues`);
   console.log(`⏭️  Skipped: ${skipped} issues (already exist)`);
   console.log(`📌 Total SonarCloud issues: ${sonarIssues.length}`);
-  console.log('='.repeat(50));
+  console.log("=".repeat(50));
 
   process.exit(0);
 }
 
 // エラーハンドリング
 main().catch((error) => {
-  console.error('💥 Fatal error:', error);
+  console.error("💥 Fatal error:", error);
   process.exit(1);
 });
