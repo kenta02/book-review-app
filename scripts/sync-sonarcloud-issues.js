@@ -120,7 +120,7 @@ async function getExistingGitHubIssues() {
   console.log('\n📋 Fetching existing GitHub issues with sonarcloud label...');
 
   const [owner, repo] = GH_REPO.split('/');
-  const url = `https://api.github.com/repos/${owner}/${repo}/issues?labels=sonarcloud&per_page=100&state=open`;
+  const url = `https://api.github.com/repos/${owner}/${repo}/issues?labels=sonarcloud&per_page=100&state=all`;
 
   const headers = {
     Authorization: `Bearer ${GITHUB_TOKEN}`,
@@ -138,19 +138,33 @@ async function getExistingGitHubIssues() {
     const issues = response.body || [];
     console.log(`✅ Found ${issues.length} existing issues`);
 
-    // SonarCloud Issue キーを抽出して Set に格納
-    const existingKeys = new Set();
+    // 既存 Issue から SonarCloud の安定キーとロケーションキーを抽出して重複防止に使う
+    const existingKeys = {
+      sonarKeys: new Set(),
+      locationKeys: new Set(),
+    };
+
     issues.forEach((issue) => {
-      const match = issue.title.match(/\[SonarCloud\]\s+([A-Z0-9\-]+)/);
-      if (match) {
-        existingKeys.add(match[1]);
+      const body = issue.body || '';
+
+      const sonarKeyMatch = body.match(/\*\*Key\*\*:\s+([^\s]+)/);
+      if (sonarKeyMatch) {
+        existingKeys.sonarKeys.add(sonarKeyMatch[1]);
+      }
+
+      const locationMatch = issue.title.match(/\[SonarCloud\]\s+(.+?):\s/);
+      if (locationMatch) {
+        existingKeys.locationKeys.add(locationMatch[1]);
       }
     });
 
     return existingKeys;
   } catch (error) {
     console.error('❌ Failed to fetch GitHub issues:', error.message);
-    return new Set();
+    return {
+      sonarKeys: new Set(),
+      locationKeys: new Set(),
+    };
   }
 }
 
@@ -162,15 +176,15 @@ async function createGitHubIssue(sonarIssue, existingKeys) {
   const url = `https://api.github.com/repos/${owner}/${repo}/issues`;
 
   // SonarCloud Issue キー（例: "server:src/auth/login.ts:123"）
-  const issueKey = `${sonarIssue.component}:${sonarIssue.line || 'N/A'}`;
+  const locationKey = `${sonarIssue.component}:${sonarIssue.line || 'N/A'}`;
 
   // 重複チェック
-  if (existingKeys.has(issueKey)) {
+  if (existingKeys.sonarKeys.has(sonarIssue.key) || existingKeys.locationKeys.has(locationKey)) {
     console.log(`⏭️  Skipped (already exists): ${sonarIssue.key}`);
     return null;
   }
 
-  const title = `[SonarCloud] ${issueKey}: ${sonarIssue.message}`;
+  const title = `[SonarCloud] ${locationKey}: ${sonarIssue.message}`;
 
   // Issue 本文を構成
   const body = `## SonarCloud Security Issue
@@ -226,6 +240,8 @@ ${sonarIssue.textRange ? `- **Lines**: ${sonarIssue.textRange.startLine} - ${son
 
     if (response.statusCode === 201) {
       console.log(`✅ Created: #${response.body.number} - ${sonarIssue.key}`);
+      existingKeys.sonarKeys.add(sonarIssue.key);
+      existingKeys.locationKeys.add(locationKey);
       return response.body;
     } else {
       console.error(`❌ Failed to create issue (${response.statusCode}):`, response.body);
@@ -265,7 +281,10 @@ async function main() {
     const result = await createGitHubIssue(sonarIssue, existingKeys);
     if (result) {
       created++;
-    } else if (existingKeys.has(`${sonarIssue.component}:${sonarIssue.line || 'N/A'}`)) {
+    } else if (
+      existingKeys.sonarKeys.has(sonarIssue.key)
+      || existingKeys.locationKeys.has(`${sonarIssue.component}:${sonarIssue.line || 'N/A'}`)
+    ) {
       skipped++;
     }
   }
