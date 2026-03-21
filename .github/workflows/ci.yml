@@ -40,8 +40,6 @@ jobs:
       - name: Install server dependencies
         working-directory: ./server
         run: |
-          npm config set optional true
-          npm config set unsafe-perm true
           npm ci
           # rolldown optional dependency bug workaround
           npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.0-rc.10 || true
