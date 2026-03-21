@@ -61,10 +61,11 @@ jobs:
         working-directory: ./client
         # npm_config_os/cpu でCI環境（linux/x64）向けパッケージのみをインストール
         # Vite7のrollupがplatform-specificなoptionalパッケージを宣言するためdarwin-arm64が混入しないよう制御
+        # lockfileどおりにインストールしてeslint系の再解決を避ける
         env:
           npm_config_os: linux
           npm_config_cpu: x64
-        run: npm install
+        run: npm ci
 
       - name: Build client
         working-directory: ./client
