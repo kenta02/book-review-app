@@ -11,6 +11,8 @@ on:
 jobs:
   sonarcloud:
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     strategy:
       matrix:
@@ -68,9 +70,17 @@ jobs:
         working-directory: ./client
         run: npm run build --if-present
 
+      - name: Validate SonarCloud configuration
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "SONAR_TOKEN is not configured for this repository."
+            echo "Add SONAR_TOKEN to GitHub Actions secrets before running SonarCloud analysis."
+            exit 1
+          fi
+
       # SonarCloud スキャン
       - name: SonarCloud Scan
         # sonarcloud-github-action は廃止済みのため、公式後継へ移行
         uses: SonarSource/sonarqube-scan-action@v7.0.0
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
