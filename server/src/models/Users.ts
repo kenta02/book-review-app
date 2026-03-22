@@ -16,10 +16,10 @@ export interface UserAttributes {
 }
 
 // 新規作成時は id/role/timestamps を指定しない
-export interface UserCreationAttributes extends Optional<
+export type UserCreationAttributes = Optional<
   UserAttributes,
   'id' | 'role' | 'createdAt' | 'updatedAt'
-> {}
+>;
 
 const User = sequelize.define<Model<UserAttributes, UserCreationAttributes>>('User', {
   id: {
