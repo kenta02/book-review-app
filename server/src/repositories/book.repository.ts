@@ -171,6 +171,7 @@ export async function findBooksWithPagination(
     offset,
     order: orderClause,
     where,
+    subQuery: false,
   };
 
   if (queryDto.ratingMin !== undefined) {
