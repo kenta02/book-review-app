@@ -10,8 +10,41 @@ import swaggerUi from 'swagger-ui-express';
 
 const app = express();
 // Swagger UI 側にも基本的なセキュリティヘッダーを適用
-app.use(helmet());
-app.use(cors());
+const SWAGGER_UI_ALLOWED_ORIGINS = (
+  process.env.SWAGGER_UI_ALLOWED_ORIGINS || 'http://localhost:8080'
+)
+  .split(',')
+  .map((v) => v.trim());
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'same-origin' },
+  })
+);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || SWAGGER_UI_ALLOWED_ORIGINS.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  })
+);
+
 // 注意: ここでは express.json() を追加しない。
 // Swagger UI はリクエストを API サーバーへプロキシするため、
 // このサーバーで JSON ボディを先に消費するとプロキシ先へ渡せなくなる。
@@ -86,12 +119,24 @@ app.use('/api', (req: Request, res: Response) => {
   delete safeHeaders['transfer-encoding'];
   delete safeHeaders['content-length'];
 
+  // `/api` 以外は許可しない（SSRF パス回避防止）
+  if (!safePath.startsWith('/api/')) {
+    return res.status(403).json({
+      success: false,
+      error: {
+        message: 'Forbidden',
+        code: 'FORBIDDEN',
+      },
+    });
+  }
+
   const options: http.RequestOptions = {
     hostname: 'localhost',
-    port: 3000,
+    port: Number(process.env.API_SERVER_PORT || 3000),
     path: safePath,
     method: req.method,
     headers: safeHeaders,
+    timeout: 10_000,
   };
 
   const proxyReq = http.request(options, (proxyRes) => {
@@ -110,10 +155,14 @@ app.use('/api', (req: Request, res: Response) => {
     res.status(503).json({
       success: false,
       error: {
-        message: 'Could not connect to API server on http://localhost:3000',
+        message: 'Could not connect to API server',
         code: 'API_UNAVAILABLE',
       },
     });
+  });
+
+  proxyReq.on('timeout', () => {
+    proxyReq.destroy(new Error('API proxy timeout'));
   });
 
   req.pipe(proxyReq);
