@@ -8,6 +8,9 @@ on:
     workflows: ["CI"]
     types: [completed]
 
+permissions:
+  contents: read
+
 jobs:
   upload-coverage:
     # CI が成功したときのみこのジョブを実行
@@ -20,6 +23,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # CI を実行したコミットをチェックアウトする
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       # Node.js をセットアップする
       - name: Use Node.js
@@ -48,8 +53,8 @@ jobs:
           npx @codacy/codacy-coverage-reporter report \
             --project-token "$CODACY_PROJECT_TOKEN" \
             --coverage-file coverage/lcov.info \
-            --commit ${{ github.sha }} \
-            --branch ${{ github.ref_name }}
+            --commit ${{ github.event.workflow_run.head_sha }} \
+            --branch ${{ github.event.workflow_run.head_branch }}
 
       # client サイドの coverage を生成して Codacy に送信する
       - name: Upload client coverage to Codacy
@@ -72,5 +77,5 @@ jobs:
           npx @codacy/codacy-coverage-reporter report \
             --project-token "$CODACY_PROJECT_TOKEN" \
             --coverage-file coverage/lcov.info \
-            --commit ${{ github.sha }} \
-            --branch ${{ github.ref_name }}
+            --commit ${{ github.event.workflow_run.head_sha }} \
+            --branch ${{ github.event.workflow_run.head_branch }}
