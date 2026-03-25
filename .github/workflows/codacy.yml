@@ -1,0 +1,76 @@
+name: Codacy Coverage Upload
+
+# CI ワークフロー（ci.yml）完了後に実行される Codacy 連携用ワークフロー
+# このワークフローは、CI が成功している場合のみ coverage を Codacy に送信します。
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+jobs:
+  upload-coverage:
+    # CI が成功したときのみこのジョブを実行
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      # リポジトリをチェックアウトする
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Node.js をセットアップする
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # server サイドの coverage を生成して Codacy に送信する
+      - name: Upload server coverage to Codacy
+        working-directory: ./server
+        env:
+          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+        run: |
+          # トークンが登録されていない場合はスキップ
+          if [ -z "$CODACY_PROJECT_TOKEN" ]; then
+            echo "CODACY_PROJECT_TOKEN is not set; skipping server Codacy upload."
+            exit 0
+          fi
+
+          # 依存関係インストールとカバレッジ実行
+          npm ci
+          npm run coverage:ci
+
+          # Codacy にレポート送信
+          npm install --no-save @codacy/codacy-coverage-reporter
+          npx @codacy/codacy-coverage-reporter report \
+            --project-token "$CODACY_PROJECT_TOKEN" \
+            --coverage-file coverage/lcov.info \
+            --commit ${{ github.sha }} \
+            --branch ${{ github.ref_name }}
+
+      # client サイドの coverage を生成して Codacy に送信する
+      - name: Upload client coverage to Codacy
+        working-directory: ./client
+        env:
+          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+        run: |
+          # トークンが登録されていない場合はスキップ
+          if [ -z "$CODACY_PROJECT_TOKEN" ]; then
+            echo "CODACY_PROJECT_TOKEN is not set; skipping client Codacy upload."
+            exit 0
+          fi
+
+          # 依存関係インストールとカバレッジ実行
+          npm ci
+          npm run coverage
+
+          # Codacy にレポート送信
+          npm install --no-save @codacy/codacy-coverage-reporter
+          npx @codacy/codacy-coverage-reporter report \
+            --project-token "$CODACY_PROJECT_TOKEN" \
+            --coverage-file coverage/lcov.info \
+            --commit ${{ github.sha }} \
+            --branch ${{ github.ref_name }}
