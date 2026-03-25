@@ -1,12 +1,13 @@
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiHttpError } from "../errors/AppError";
+import type { Book } from "../types";
 import { apiClient } from "./apiClient";
 import { mockBookApi } from "./mockBookApi";
 import { mockReviewApi } from "./mockReviewApi";
 import { mockUserApi } from "./mockUserApi";
 
-const dummyBooks = [
+const dummyBooks: Book[] = [
   {
     id: 1,
     title: "Test Book",
@@ -18,6 +19,7 @@ const dummyBooks = [
     updatedAt: "2021-01-01T00:00:00.000Z",
   },
 ];
+const firstDummyBook: Book = dummyBooks[0]!;
 
 describe("apiClient", () => {
   beforeEach(() => {
@@ -401,10 +403,10 @@ describe("apiClient", () => {
       .mockResolvedValue({ data: { books: dummyBooks } });
     const createBookSpy = vi
       .spyOn(mockBookApi, "createBook")
-      .mockResolvedValue({ data: { ...dummyBooks[0], id: 99 } });
+      .mockResolvedValue({ data: { ...firstDummyBook, id: 99 } });
     const updateBookSpy = vi
       .spyOn(mockBookApi, "updateBook")
-      .mockResolvedValue({ data: { ...dummyBooks[0], title: "updated" } });
+      .mockResolvedValue({ data: { ...firstDummyBook, title: "updated" } });
     const deleteBookSpy = vi
       .spyOn(mockBookApi, "deleteBook")
       .mockResolvedValue({ data: null });
