@@ -8,13 +8,47 @@ import helmet from 'helmet';
 import yaml from 'yaml';
 import swaggerUi from 'swagger-ui-express';
 
+const DEFAULT_SWAGGER_UI_ALLOWED_ORIGIN = 'http://localhost:8080';
+const DEFAULT_API_SERVER_PORT = 3000;
+const LOCAL_PROXY_HOSTNAME = '127.0.0.1';
+const FORBIDDEN_PROXY_PATH_ERROR = 'Forbidden proxy path';
+const INVALID_API_SERVER_PORT_ERROR = 'API_SERVER_PORT must be an integer between 1 and 65535';
+
+export const parseAllowedOrigins = (rawOrigins: string): Set<string> =>
+  new Set(
+    rawOrigins
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+  );
+
+export const resolveApiServerPort = (rawPort: string | undefined): number => {
+  const parsedPort = Number.parseInt(rawPort ?? String(DEFAULT_API_SERVER_PORT), 10);
+
+  if (!Number.isInteger(parsedPort) || parsedPort < 1 || parsedPort > 65_535) {
+    throw new Error(INVALID_API_SERVER_PORT_ERROR);
+  }
+
+  return parsedPort;
+};
+
+export const buildSafeProxyPath = (originalUrl: string): string => {
+  const parsed = new URL(originalUrl, 'http://localhost');
+  const safePath = `${parsed.pathname}${parsed.search}`;
+
+  // `/api` 配下以外への転送を明示的に拒否する
+  if (!safePath.startsWith('/api/')) {
+    throw new Error(FORBIDDEN_PROXY_PATH_ERROR);
+  }
+
+  return safePath;
+};
+
 const app = express();
 // Swagger UI 側にも基本的なセキュリティヘッダーを適用
-const SWAGGER_UI_ALLOWED_ORIGINS = (
-  process.env.SWAGGER_UI_ALLOWED_ORIGINS || 'http://localhost:8080'
-)
-  .split(',')
-  .map((v) => v.trim());
+const SWAGGER_UI_ALLOWED_ORIGINS = parseAllowedOrigins(
+  process.env.SWAGGER_UI_ALLOWED_ORIGINS || DEFAULT_SWAGGER_UI_ALLOWED_ORIGIN
+);
 
 app.use(
   helmet({
@@ -33,7 +67,7 @@ app.use(
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || SWAGGER_UI_ALLOWED_ORIGINS.includes(origin)) {
+      if (!origin || SWAGGER_UI_ALLOWED_ORIGINS.has(origin)) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
@@ -86,10 +120,6 @@ app.get('/openapi.yaml', (_req: Request, res: Response) => {
 
 // APIプロキシ: Swagger UIからのリクエストをメインサーバーにフォワード
 app.use('/api', (req: Request, res: Response) => {
-  // path はユーザー入力に含まれる可能性があるため、URLオブジェクトで正規化
-  const parsed = new URL(req.originalUrl ?? '', 'http://localhost');
-  const safePath = parsed.pathname + parsed.search;
-
   // ヘッダーはホワイトリスト方式で受け入れる
   const allowedHeaders = new Set([
     'accept',
@@ -119,20 +149,38 @@ app.use('/api', (req: Request, res: Response) => {
   delete safeHeaders['transfer-encoding'];
   delete safeHeaders['content-length'];
 
-  // `/api` 以外は許可しない（SSRF パス回避防止）
-  if (!safePath.startsWith('/api/')) {
-    return res.status(403).json({
+  let safePath: string;
+  let apiServerPort: number;
+
+  try {
+    safePath = buildSafeProxyPath(req.originalUrl ?? '');
+    apiServerPort = resolveApiServerPort(process.env.API_SERVER_PORT);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+
+    if (message === FORBIDDEN_PROXY_PATH_ERROR) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          message: 'Forbidden',
+          code: 'FORBIDDEN',
+        },
+      });
+    }
+
+    console.error('Swagger proxy configuration error:', error);
+    return res.status(500).json({
       success: false,
       error: {
-        message: 'Forbidden',
-        code: 'FORBIDDEN',
+        message: 'Internal server error',
+        code: 'INTERNAL_SERVER_ERROR',
       },
     });
   }
 
   const options: http.RequestOptions = {
-    hostname: 'localhost',
-    port: Number(process.env.API_SERVER_PORT || 3000),
+    hostname: LOCAL_PROXY_HOSTNAME,
+    port: apiServerPort,
     path: safePath,
     method: req.method,
     headers: safeHeaders,
@@ -189,10 +237,14 @@ app.use(
 
 const port = process.env.SWAGGER_PORT || 8080;
 
-app.listen(port, () => {
-  console.info(`📚 Swagger UI running on http://localhost:${port}`);
-  console.info(`📄 OpenAPI spec: http://localhost:${port}/openapi.yaml`);
-  console.info(`💾 OpenAPI JSON: http://localhost:${port}/openapi.json`);
-  console.info(`🔀 API proxy: http://localhost:${port}/api/* -> http://localhost:3000/api/*`);
-  console.info(`\n⚠️  Note: API server (npm run dev) must be running on port 3000`);
-});
+if (require.main === module) {
+  app.listen(port, () => {
+    console.info(`📚 Swagger UI running on http://localhost:${port}`);
+    console.info(`📄 OpenAPI spec: http://localhost:${port}/openapi.yaml`);
+    console.info(`💾 OpenAPI JSON: http://localhost:${port}/openapi.json`);
+    console.info(`🔀 API proxy: http://localhost:${port}/api/* -> http://${LOCAL_PROXY_HOSTNAME}:${DEFAULT_API_SERVER_PORT}/api/*`);
+    console.info(`\n⚠️  Note: API server (npm run dev) must be running on port ${DEFAULT_API_SERVER_PORT}`);
+  });
+}
+
+export default app;
