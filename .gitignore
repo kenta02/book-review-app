@@ -123,3 +123,7 @@ PROJECT_MEMORY.md
 .github/skills/README.md
 AGENTS.md
 .envrc
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

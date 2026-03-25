@@ -16,6 +16,15 @@
 ![Sequelize](https://img.shields.io/badge/Sequelize-6-52B0E7?logo=sequelize)
 ![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql)
 ![Vitest](https://img.shields.io/badge/Vitest-1-<COLOR>?logo=vitest)
+![Codacy](https://img.shields.io/badge/Codacy-Active-4B76C0?logo=codacy)
+
+> Codacy の導入手順
+>
+> 1. GitHub Repo を Codacy に接続（Auhh -> Repositories）
+> 2. `CODACY_PROJECT_TOKEN` を GitHub Secrets に追加
+> 3. このリポジトリの `ci.yml` がカバレッジ送信を実行
+> 4. PR で `Uncovered Lines` / `New Code` を確認
+> 5. 必要に応じて `.codacy.yml` でルール調整
 
 ## 概要
 

@@ -1,11 +1,6 @@
 name: SonarCloud Issues Sync
 
-on:
-  workflow_run:
-    workflows: ["SonarCloud Analysis"]
-    types: [completed]
-    branches:
-      - main
+on: workflow_dispatch
 
 jobs:
   sync-issues:
