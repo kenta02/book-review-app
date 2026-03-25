@@ -44,8 +44,8 @@ jobs:
           npm run coverage:ci
 
           # Codacy にレポート送信
-          npm install --no-save @codacy/coverage-reporter
-          npx @codacy/coverage-reporter report \
+          npm install --no-save @codacy/codacy-coverage-reporter
+          npx @codacy/codacy-coverage-reporter report \
             --project-token "$CODACY_PROJECT_TOKEN" \
             --coverage-file coverage/lcov.info \
             --commit ${{ github.sha }} \
@@ -68,8 +68,8 @@ jobs:
           npm run coverage
 
           # Codacy にレポート送信
-          npm install --no-save @codacy/coverage-reporter
-          npx @codacy/coverage-reporter report \
+          npm install --no-save @codacy/codacy-coverage-reporter
+          npx @codacy/codacy-coverage-reporter report \
             --project-token "$CODACY_PROJECT_TOKEN" \
             --coverage-file coverage/lcov.info \
             --commit ${{ github.sha }} \
