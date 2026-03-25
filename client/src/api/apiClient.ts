@@ -15,7 +15,7 @@ import { mockReviewApi } from "./mockReviewApi";
 import { mockUserApi } from "./mockUserApi";
 
 // VITE_USE_MOCK=true でモック API、false で実 API を使用
-const VITE_USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+const isMockMode = (): boolean => import.meta.env.VITE_USE_MOCK === "true";
 
 /**
  * API レスポンスの `data` ラッパーを取り除き、内側の値を返す。
@@ -56,7 +56,9 @@ async function fetchJson<T>(
     // API から JSON が返らない場合は、呼び出し元で扱いやすい HTTP エラーへ寄せる。
     throw new ApiHttpError(
       response.status,
-      rawText ? `Invalid JSON response: ${rawText.slice(0, 200)}` : 'Invalid JSON response'
+      rawText
+        ? `Invalid JSON response: ${rawText.slice(0, 200)}`
+        : "Invalid JSON response",
     );
   }
 
@@ -88,7 +90,7 @@ export const apiClient = {
    * @returns {data: User} ユーザー情報
    */
   getUserById: async (userId: number): Promise<ApiResponse<User>> => {
-    if (VITE_USE_MOCK) {
+    if (isMockMode()) {
       return await mockUserApi.getUserById(userId);
     } else {
       const user = await fetchJson<User>(`/api/users/${userId}`);
@@ -103,7 +105,7 @@ export const apiClient = {
    *
    */
   getReviewById: async (reviewId: number): Promise<ApiResponse<Review>> => {
-    if (VITE_USE_MOCK) {
+    if (isMockMode()) {
       return await mockReviewApi.getReviewById(reviewId);
     } else {
       const review = await fetchJson<Review>(`/api/reviews/${reviewId}`);
@@ -127,7 +129,7 @@ export const apiClient = {
       pagination?: Pagination;
     }>
   > => {
-    if (VITE_USE_MOCK) {
+    if (isMockMode()) {
       // モック側に同じシグネチャがある
       return await mockReviewApi.getReviews(bookId);
     } else {
@@ -148,7 +150,7 @@ export const apiClient = {
   createReview: async (
     body: CreateReviewRequest,
   ): Promise<ApiResponse<Review>> => {
-    if (VITE_USE_MOCK) {
+    if (isMockMode()) {
       // モックのAPIを呼び出す
       return await mockReviewApi.createReview(body);
     } else {
@@ -167,7 +169,7 @@ export const apiClient = {
   updateReview: async (
     body: UpdateReviewRequest,
   ): Promise<ApiResponse<Review>> => {
-    if (VITE_USE_MOCK) {
+    if (isMockMode()) {
       return await mockReviewApi.updateReview(body);
     } else {
       const review = await fetchJson<Review>(`/api/reviews/${body.reviewId}`, {
@@ -182,7 +184,7 @@ export const apiClient = {
   },
   // レビューの削除
   deleteReview: async (body: DeleteReviewRequest): Promise<void> => {
-    if (VITE_USE_MOCK) {
+    if (isMockMode()) {
       await mockReviewApi.deleteReview(body.reviewId);
     } else {
       await fetchVoid(`/api/reviews/${body.reviewId}`, {
@@ -196,7 +198,7 @@ export const apiClient = {
    * @returns {Promise<ApiResponse<{ books: Book[] }>>} 書籍の配列
    */
   getAllBooks: async (): Promise<ApiResponse<{ books: Book[] }>> => {
-    if (VITE_USE_MOCK) {
+    if (isMockMode()) {
       // モックのAPIを呼び出す
       return await mockBookApi.getAllBooks();
     } else {
@@ -207,7 +209,7 @@ export const apiClient = {
 
   // 書籍情報を取得する
   getBookById: async (bookId: number): Promise<ApiResponse<Book>> => {
-    if (VITE_USE_MOCK) {
+    if (isMockMode()) {
       // モックのAPIを呼び出す
       return await mockBookApi.getBookById(bookId);
     } else {
@@ -219,7 +221,7 @@ export const apiClient = {
   createBook: async (
     bookData: CreateBookRequest,
   ): Promise<ApiResponse<Book>> => {
-    if (VITE_USE_MOCK) {
+    if (isMockMode()) {
       // モックのAPIを呼び出す
       return await mockBookApi.createBook(bookData);
     } else {
@@ -243,7 +245,7 @@ export const apiClient = {
     bookId: number,
     updatedData: Partial<Book>,
   ): Promise<ApiResponse<Book>> => {
-    if (VITE_USE_MOCK) {
+    if (isMockMode()) {
       return await mockBookApi.updateBook(bookId, updatedData);
     } else {
       const book = await fetchJson<Book>(`/api/books/${bookId}`, {
@@ -263,7 +265,7 @@ export const apiClient = {
    * @returns {Promise<void>} 削除成功のレスポンス
    */
   deleteBook: async (bookId: number): Promise<void> => {
-    if (VITE_USE_MOCK) {
+    if (isMockMode()) {
       await mockBookApi.deleteBook(bookId);
     } else {
       await fetchVoid(`/api/books/${bookId}`, {
