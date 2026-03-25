@@ -25,6 +25,7 @@
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.56.1",
     "@vitejs/plugin-react": "^6.0.1",
+    "@codacy/codacy-coverage-reporter": "^3.0.0",
     "@tailwindcss/postcss": "^4.2.2",
     "@vitest/coverage-v8": "^4.1.0",
     "autoprefixer": "^10.4.14",
