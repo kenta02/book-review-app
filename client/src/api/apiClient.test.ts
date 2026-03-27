@@ -1,9 +1,13 @@
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiHttpError } from "../errors/AppError";
+import type { Book } from "../types";
 import { apiClient } from "./apiClient";
+import { mockBookApi } from "./mockBookApi";
+import { mockReviewApi } from "./mockReviewApi";
+import { mockUserApi } from "./mockUserApi";
 
-const dummyBooks = [
+const dummyBooks: Book[] = [
   {
     id: 1,
     title: "Test Book",
@@ -15,6 +19,7 @@ const dummyBooks = [
     updatedAt: "2021-01-01T00:00:00.000Z",
   },
 ];
+const firstDummyBook: Book = dummyBooks[0]!;
 
 describe("apiClient", () => {
   beforeEach(() => {
@@ -388,5 +393,47 @@ describe("apiClient", () => {
     const book = await apiClient.getBookById(999);
     expect(book.data.id).toBe(999);
     expect((book.data as unknown as { name: string }).name).toBe("no-data");
+  });
+
+  it("should use mock API operations when VITE_USE_MOCK=true", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "true");
+
+    const getAllBooksSpy = vi
+      .spyOn(mockBookApi, "getAllBooks")
+      .mockResolvedValue({ data: { books: dummyBooks } });
+    const createBookSpy = vi
+      .spyOn(mockBookApi, "createBook")
+      .mockResolvedValue({ data: { ...firstDummyBook, id: 99 } });
+    const updateBookSpy = vi
+      .spyOn(mockBookApi, "updateBook")
+      .mockResolvedValue({ data: { ...firstDummyBook, title: "updated" } });
+    const deleteBookSpy = vi
+      .spyOn(mockBookApi, "deleteBook")
+      .mockResolvedValue({ data: null });
+
+    const allBooks = await apiClient.getAllBooks();
+    expect(allBooks.data.books).toEqual(dummyBooks);
+
+    const created = await apiClient.createBook({
+      title: "new",
+      author: "a",
+      ISBN: "000",
+      publicationYear: 2024,
+      summary: "s",
+    });
+    expect(created.data.id).toBe(99);
+
+    const updated = await apiClient.updateBook(99, { title: "updated" });
+    expect(updated.data.title).toBe("updated");
+
+    await expect(apiClient.deleteBook(99)).resolves.toBeUndefined();
+
+    expect(getAllBooksSpy).toHaveBeenCalled();
+    expect(createBookSpy).toHaveBeenCalled();
+    expect(updateBookSpy).toHaveBeenCalledWith(99, { title: "updated" });
+    expect(deleteBookSpy).toHaveBeenCalledWith(99);
+
+    // restore original env
+    vi.stubEnv("VITE_USE_MOCK", "false");
   });
 });
