@@ -44,8 +44,8 @@ jobs:
         working-directory: ./server
         run: |
           npm ci
-          # rolldown optional dependency bug workaround
-          npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.0-rc.10 || true
+          # rolldown optional dependency bug workaround: align with installed rolldown version
+          npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.0-rc.12 || true
 
       # サーバーコードに対して ESLint を実行します
       - name: Lint server
