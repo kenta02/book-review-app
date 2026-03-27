@@ -1,40 +1,40 @@
 module.exports = {
   root: true,
-  ignorePatterns: ['dist', 'coverage'],
+  ignorePatterns: ["dist", "coverage"],
   overrides: [
     {
-      files: ['**/*.{js,jsx}'],
-      extends: [
-        'eslint:recommended',
-        'plugin:react-hooks/recommended',
-      ],
+      files: ["**/*.{js,jsx}"],
+      extends: ["eslint:recommended", "plugin:react-hooks/recommended"],
       env: {
         browser: true,
         es2021: true,
       },
       parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
+        ecmaVersion: "latest",
+        sourceType: "module",
         ecmaFeatures: {
           jsx: true,
         },
       },
       rules: {
-        'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+        "no-unused-vars": ["error", { varsIgnorePattern: "^[A-Z_]" }],
       },
     },
     {
-      files: ['**/*.{ts,tsx}'],
-      parser: '@typescript-eslint/parser',
+      files: ["**/*.{ts,tsx}"],
+      parser: "@typescript-eslint/parser",
       parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-        project: ['./tsconfig.json'],
+        ecmaVersion: "latest",
+        sourceType: "module",
+        project: ["./tsconfig.json"],
       },
-      extends: ['plugin:@typescript-eslint/recommended'],
+      extends: ["plugin:@typescript-eslint/recommended"],
       rules: {
-        '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+        "@typescript-eslint/no-unused-vars": [
+          "error",
+          { varsIgnorePattern: "^[A-Z_]" },
+        ],
       },
     },
   ],
-}
+};
