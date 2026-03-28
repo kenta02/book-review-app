@@ -123,3 +123,5 @@ PROJECT_MEMORY.md
 .github/pull_request_template.md
 .github/skills/README.md
 .github/skills/test-ci-parity/SKILL.md
+AGENTS.md
+.envrc
