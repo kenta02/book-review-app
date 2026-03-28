@@ -50,7 +50,7 @@ function sendApiError(res: Response, error: ApiError) {
  * @param res - Express Response
  * @returns 書籍一覧とページング情報
  */
-export async function listBooks(req: Request, res: Response) {
+export async function listBooks(req: Request, res: Response): Promise<Response> {
   try {
     const parseResult = validateListBooksQuery(req);
 
@@ -91,7 +91,7 @@ export async function listBooks(req: Request, res: Response) {
  * @param res - Express Response
  * @returns 書籍詳細
  */
-export async function getBookDetail(req: Request, res: Response) {
+export async function getBookDetail(req: Request, res: Response): Promise<Response> {
   try {
     const parseResult = validateGetBookDetail(req);
 
@@ -133,7 +133,7 @@ export async function getBookDetail(req: Request, res: Response) {
  * @param res - Express Response
  * @returns 作成済み書籍
  */
-export async function createBook(req: Request, res: Response) {
+export async function createBook(req: Request, res: Response): Promise<Response> {
   try {
     const parseResult = validateCreateBook(req);
 
@@ -176,7 +176,7 @@ export async function createBook(req: Request, res: Response) {
  * @param res - Express Response
  * @returns 更新後の書籍
  */
-export async function updateBook(req: Request, res: Response) {
+export async function updateBook(req: Request, res: Response): Promise<Response> {
   try {
     const parseResult = validateUpdateBook(req);
 
@@ -220,7 +220,7 @@ export async function updateBook(req: Request, res: Response) {
  * @param res - Express Response
  * @returns レビュー一覧とページング情報
  */
-export async function listBookReviews(req: Request, res: Response) {
+export async function listBookReviews(req: Request, res: Response): Promise<Response> {
   try {
     const parseResult = validateGetBookReviews(req);
 
@@ -264,7 +264,7 @@ export async function listBookReviews(req: Request, res: Response) {
  * @param res - Express Response
  * @returns 204 No Content
  */
-export async function deleteBook(req: Request, res: Response) {
+export async function deleteBook(req: Request, res: Response): Promise<Response> {
   try {
     const parseResult = validateDeleteBook(req);
 

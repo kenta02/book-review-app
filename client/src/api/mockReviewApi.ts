@@ -5,6 +5,7 @@ import type {
   Review,
   UpdateReviewRequest,
 } from "../types";
+import { ApiHttpError } from "../errors/AppError";
 
 // レビューのモックデータ
 const mockReviews: Record<number, Review> = {
@@ -48,7 +49,7 @@ export const mockReviewApi = {
     const review = mockReviews[reviewId];
 
     if (!review) {
-      throw new Error(`レビュー${reviewId}が見つかりません`);
+      throw new ApiHttpError(404, `Review ${reviewId} not found`);
     }
 
     return {
@@ -137,7 +138,7 @@ export const mockReviewApi = {
 
     const review = mockReviews[body.reviewId];
     if (!review) {
-      throw new Error(`レビュー${body.reviewId}が見つかりません`);
+      throw new ApiHttpError(404, `Review ${body.reviewId} not found`);
     }
 
     // 更新内容を反映
@@ -164,7 +165,7 @@ export const mockReviewApi = {
 
     const review = mockReviews[reviewId];
     if (!review) {
-      throw new Error(`レビュー${reviewId}が見つかりません`);
+      throw new ApiHttpError(404, `Review ${reviewId} not found`);
     }
 
     // mockReviewsから該当レビューを削除

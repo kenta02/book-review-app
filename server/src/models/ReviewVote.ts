@@ -48,7 +48,7 @@ const ReviewVote = sequelize.define(
     },
   },
   {
-    // DB has only createdAt for this table (no updatedAt)
+    // このテーブルは createdAt のみを持ち、updatedAt は持たない
     updatedAt: false,
   }
 );

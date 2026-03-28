@@ -1,22 +1,16 @@
 name: SonarCloud Analysis
 
-on:
-  push:
-    branches:
-      - main
-      - develop
-  # pull_request:
-  #   branches:
-  #     - main
-  #     - develop
+on: workflow_dispatch
 
 jobs:
   sonarcloud:
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     strategy:
       matrix:
-        node-version: [22]
+        node-version: [24]
     # GitHub は 2026/6 から Node.js 24 をデフォルトにする予定なので
     # actions/checkout・actions/setup-node 等は適宜バージョンアップしてください。
     # FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 環境変数で先行切り替えも可能。
@@ -61,18 +55,27 @@ jobs:
         working-directory: ./client
         # npm_config_os/cpu でCI環境（linux/x64）向けパッケージのみをインストール
         # Vite7のrollupがplatform-specificなoptionalパッケージを宣言するためdarwin-arm64が混入しないよう制御
+        # lockfileどおりにインストールしてeslint系の再解決を避ける
         env:
           npm_config_os: linux
           npm_config_cpu: x64
-        run: npm install
+        run: npm ci
 
       - name: Build client
         working-directory: ./client
         run: npm run build --if-present
+
+      - name: Validate SonarCloud configuration
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "SONAR_TOKEN is not configured for this repository."
+            echo "Add SONAR_TOKEN to GitHub Actions secrets before running SonarCloud analysis."
+            exit 1
+          fi
 
       # SonarCloud スキャン
       - name: SonarCloud Scan
         # sonarcloud-github-action は廃止済みのため、公式後継へ移行
         uses: SonarSource/sonarqube-scan-action@v7.0.0
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}

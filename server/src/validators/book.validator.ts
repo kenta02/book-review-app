@@ -16,8 +16,9 @@ export type ParseResult<T> =
 /**
  * 既存実装の `parseInt(value) || defaultValue` と同じ挙動で数値化します。
  *
- * 0 や NaN はデフォルト値に倒し、負数はそのまま通すことで、
- * リファクタリング前の books API と互換にします。
+ * 0 や NaN はデフォルト値に倒し、負数はそのまま通します。
+ * 呼び出し元で non-positive の明示入力を先に弾くことで、
+ * 既存互換と入力バリデーションを両立します。
  *
  * @param rawValue - クエリから受け取った生の値
  * @param defaultValue - フォールバック値
@@ -32,6 +33,17 @@ function parseLegacyPagingValue(
   return parsed || defaultValue;
 }
 
+/**
+ * Optional なクエリパラメータをパースして検証します。
+ *
+ * - 空文字 / undefined / null は `undefined` として扱います。
+ * - 数値でない場合は `INVALID_QUERY_PARAM` エラーを `errors` に追加します。
+ *
+ * @param rawValue - リクエストクエリの生の値
+ * @param field - エラー時に返すフィールド名
+ * @param errors - 収集先のエラー配列
+ * @returns 変換された数値（未指定・空文字の場合は `undefined`）
+ */
 function parseStrictOptionalInteger(
   rawValue: unknown,
   field: string,
@@ -51,13 +63,82 @@ function parseStrictOptionalInteger(
   if (!/^-?\d+$/.test(normalized)) {
     errors.push({
       field,
-      message: `${field}は整数で指定してください。`,
+      message: `${field} must be an integer.`,
       code: 'INVALID_QUERY_PARAM',
     });
     return undefined;
   }
 
   return Number(normalized);
+}
+
+const VALID_SORT_VALUES = ['rating', 'title', 'author', 'publicationYear', 'createdAt'] as const;
+const VALID_ORDER_VALUES = ['asc', 'desc'] as const;
+
+/**
+ * ソート条件（sort/order）の妥当性を検証し、問題があれば `errors` に追加します。
+ *
+ * @param rawSort - リクエストから受け取った sort 値（未指定時は undefined）
+ * @param rawOrder - リクエストから受け取った order 値（未指定時は undefined）
+ * @param errors - 収集先のエラー配列
+ */
+function validateSortAndOrder(
+  rawSort: string | undefined,
+  rawOrder: string | undefined,
+  errors: ValidationError[]
+) {
+  if (rawSort && !VALID_SORT_VALUES.includes(rawSort as (typeof VALID_SORT_VALUES)[number])) {
+    errors.push({
+      field: 'sort',
+      message: 'Invalid sort value.',
+      code: 'INVALID_SORT',
+    });
+  }
+
+  if (rawOrder && !VALID_ORDER_VALUES.includes(rawOrder as (typeof VALID_ORDER_VALUES)[number])) {
+    errors.push({
+      field: 'order',
+      message: 'Invalid order value.',
+      code: 'INVALID_ORDER',
+    });
+  }
+}
+
+/**
+ * ページング関連の値（page/limit）を検証し、問題があれば `errors` に追加します。
+ *
+ * @param page - 正規化済みの page 値（未指定時は undefined）
+ * @param limit - 正規化済みの limit 値（未指定時は undefined）
+ * @param errors - 収集先のエラー配列
+ */
+function validatePagingValues(
+  page: number | undefined,
+  limit: number | undefined,
+  errors: ValidationError[]
+) {
+  if (limit !== undefined && limit > 100) {
+    errors.push({
+      field: 'limit',
+      message: 'limit must be 100 or less.',
+      code: 'INVALID_LIMIT',
+    });
+  }
+
+  if (page !== undefined && page <= 0) {
+    errors.push({
+      field: 'page',
+      message: ERROR_MESSAGES.PAGE_MUST_BE_POSITIVE_INT,
+      code: 'INVALID_PAGE',
+    });
+  }
+
+  if (limit !== undefined && limit <= 0) {
+    errors.push({
+      field: 'limit',
+      message: ERROR_MESSAGES.LIMIT_MUST_BE_POSITIVE_INT,
+      code: 'INVALID_LIMIT',
+    });
+  }
 }
 
 /**
@@ -81,9 +162,6 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
       ? req.query.order.trim().toLowerCase() || undefined
       : undefined;
 
-  const VALID_SORT_VALUES = ['rating', 'title', 'author', 'publicationYear', 'createdAt'] as const;
-  const VALID_ORDER_VALUES = ['asc', 'desc'] as const;
-
   const errors: ValidationError[] = [];
   const publicationYearFrom = parseStrictOptionalInteger(
     req.query.publicationYearFrom,
@@ -97,45 +175,8 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
   );
   const ratingMin = parseStrictOptionalInteger(req.query.ratingMin, 'ratingMin', errors);
 
-  if (rawSort && !VALID_SORT_VALUES.includes(rawSort as (typeof VALID_SORT_VALUES)[number])) {
-    errors.push({
-      field: 'sort',
-      message: `sortに指定できない値です。`,
-      code: 'INVALID_SORT',
-    });
-  }
-
-  if (rawOrder && !VALID_ORDER_VALUES.includes(rawOrder as (typeof VALID_ORDER_VALUES)[number])) {
-    errors.push({
-      field: 'order',
-      message: `orderに指定できない値です。`,
-      code: 'INVALID_ORDER',
-    });
-  }
-
-  if (limit !== undefined && limit > 100) {
-    errors.push({
-      field: 'limit',
-      message: 'limitは100以下で指定してください。',
-      code: 'INVALID_LIMIT',
-    });
-  }
-
-  if (page !== undefined && page <= 0) {
-    errors.push({
-      field: 'page',
-      message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
-      code: 'INVALID_PAGE',
-    });
-  }
-
-  if (limit !== undefined && limit <= 0) {
-    errors.push({
-      field: 'limit',
-      message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
-      code: 'INVALID_LIMIT',
-    });
-  }
+  validateSortAndOrder(rawSort, rawOrder, errors);
+  validatePagingValues(page, limit, errors);
 
   if (errors.length > 0) {
     return { success: false, errors };
@@ -144,7 +185,7 @@ export function validateListBooksQuery(req: Request): ParseResult<ListBooksQuery
   return {
     success: true,
     data: {
-      // 一覧 API のページングは既存互換を保つため、未指定時のみ既定値を補います。
+      // 一覧 API では未指定時だけ既定値を補い、明示的な不正値は上でバリデーションします。
       page: page === undefined ? 1 : page,
       limit: limit === undefined ? 20 : limit,
       // 文字列系フィルタはここで trim しておくと、下位層で空白除去を繰り返さずに済みます。
@@ -212,21 +253,21 @@ export function validateCreateBook(req: Request): ParseResult<CreateBookDto> {
   if (publicationYear !== undefined && !Number.isInteger(publicationYear)) {
     errors.push({
       field: 'publicationYear',
-      message: 'publicationYearは整数で指定してください。',
+      message: 'publicationYear must be an integer.',
     });
   }
 
   if (ISBN !== undefined && typeof ISBN !== 'string') {
     errors.push({
       field: 'ISBN',
-      message: 'ISBNは文字列で指定してください。',
+      message: 'ISBN must be a string.',
     });
   }
 
   if (summary !== undefined && typeof summary !== 'string') {
     errors.push({
       field: 'summary',
-      message: 'summaryは文字列で指定してください。',
+      message: 'summary must be a string.',
     });
   }
 
@@ -245,6 +286,87 @@ export function validateCreateBook(req: Request): ParseResult<CreateBookDto> {
       summary,
     },
   };
+}
+
+/**
+ * 任意項目（undefined 許容）の入力値を検証し、エラーがあれば `errors` に追加します。
+ *
+ * - `undefined` は検証対象外とし、エラーにはしません。
+ * - バリデータは `isValid` で判定を行います。
+ *
+ * @param value - 検証対象の入力値
+ * @param field - エラー時に返すフィールド名
+ * @param errors - 収集先のエラー配列
+ * @param message - エラーメッセージ
+ * @param isValid - 検証関数（true なら問題なし）
+ */
+function validateOptionalField(
+  value: unknown,
+  field: string,
+  errors: ValidationError[],
+  message: string,
+  isValid: (value: unknown) => boolean
+) {
+  if (value !== undefined && !isValid(value)) {
+    errors.push({ field, message });
+  }
+}
+
+/**
+ * 任意項目（undefined 許容）の場合、文字列型かつ trim 後に空文字でないことを検証します。
+ *
+ * @param value - 検証対象の入力値
+ * @param field - エラー時に返すフィールド名
+ * @param errors - 収集先のエラー配列
+ * @param message - エラーメッセージ
+ */
+function validateOptionalTrimmedStringField(
+  value: unknown,
+  field: string,
+  errors: ValidationError[],
+  message: string
+) {
+  validateOptionalField(
+    value,
+    field,
+    errors,
+    message,
+    (v) => typeof v === 'string' && v.trim() !== ''
+  );
+}
+
+/**
+ * 任意項目（undefined 許容）の場合、文字列型であることだけを検証します。
+ *
+ * @param value - 検証対象の入力値
+ * @param field - エラー時に返すフィールド名
+ * @param errors - 収集先のエラー配列
+ * @param message - エラーメッセージ
+ */
+function validateOptionalStringField(
+  value: unknown,
+  field: string,
+  errors: ValidationError[],
+  message: string
+) {
+  validateOptionalField(value, field, errors, message, (v) => typeof v === 'string');
+}
+
+/**
+ * 任意項目（undefined 許容）の場合、整数であることを検証します。
+ *
+ * @param value - 検証対象の入力値
+ * @param field - エラー時に返すフィールド名
+ * @param errors - 収集先のエラー配列
+ * @param message - エラーメッセージ
+ */
+function validateOptionalIntegerField(
+  value: unknown,
+  field: string,
+  errors: ValidationError[],
+  message: string
+) {
+  validateOptionalField(value, field, errors, message, (v) => Number.isInteger(v));
 }
 
 /**
@@ -271,34 +393,26 @@ export function validateUpdateBook(
     });
   }
 
-  if (title !== undefined && (typeof title !== 'string' || title.trim() === '')) {
-    errors.push({ field: 'title', message: ERROR_MESSAGES.INVALID_TITLE_IF_PROVIDED });
-  }
-
-  if (author !== undefined && (typeof author !== 'string' || author.trim() === '')) {
-    errors.push({ field: 'author', message: ERROR_MESSAGES.INVALID_AUTHOR_IF_PROVIDED });
-  }
-
-  if (publicationYear !== undefined && !Number.isInteger(publicationYear)) {
-    errors.push({
-      field: 'publicationYear',
-      message: 'publicationYearは整数で指定してください。',
-    });
-  }
-
-  if (ISBN !== undefined && typeof ISBN !== 'string') {
-    errors.push({
-      field: 'ISBN',
-      message: 'ISBNは文字列で指定してください。',
-    });
-  }
-
-  if (summary !== undefined && typeof summary !== 'string') {
-    errors.push({
-      field: 'summary',
-      message: 'summaryは文字列で指定してください。',
-    });
-  }
+  validateOptionalTrimmedStringField(
+    title,
+    'title',
+    errors,
+    ERROR_MESSAGES.INVALID_TITLE_IF_PROVIDED
+  );
+  validateOptionalTrimmedStringField(
+    author,
+    'author',
+    errors,
+    ERROR_MESSAGES.INVALID_AUTHOR_IF_PROVIDED
+  );
+  validateOptionalIntegerField(
+    publicationYear,
+    'publicationYear',
+    errors,
+    'publicationYear must be an integer.'
+  );
+  validateOptionalStringField(ISBN, 'ISBN', errors, 'ISBN must be a string.');
+  validateOptionalStringField(summary, 'summary', errors, 'summary must be a string.');
 
   if (errors.length > 0) {
     return { success: false, errors };
@@ -348,21 +462,21 @@ export function validateGetBookReviews(
   const rawPage = Array.isArray(req.query.page) ? req.query.page[0] : req.query.page;
   const rawLimit = Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit;
 
-  // 互換のため page/limit の数値化自体は legacy ルールを維持しつつ、
-  // クエリで明示的に non-positive が渡された場合だけ弾く。
+  // 一覧 API と同様に、未指定や 0/NaN 相当は既定値へ寄せつつ、
+  // 明示的な non-positive 整数だけは入力エラーとして返します。
   const rawParsedPage = parseInt(String(rawPage), 10);
   const rawParsedLimit = parseInt(String(rawLimit), 10);
   if (rawPage !== undefined && Number.isInteger(rawParsedPage) && rawParsedPage <= 0) {
     errors.push({
       field: 'page',
-      message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
+      message: ERROR_MESSAGES.PAGE_MUST_BE_POSITIVE_INT,
       code: 'INVALID_PAGE',
     });
   }
   if (rawLimit !== undefined && Number.isInteger(rawParsedLimit) && rawParsedLimit <= 0) {
     errors.push({
       field: 'limit',
-      message: ERROR_MESSAGES.ID_MUST_BE_POSITIVE_INT,
+      message: ERROR_MESSAGES.LIMIT_MUST_BE_POSITIVE_INT,
       code: 'INVALID_LIMIT',
     });
   }

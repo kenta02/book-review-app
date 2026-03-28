@@ -24,7 +24,7 @@ function sendApiError(res: Response, error: ApiError) {
  * @param res - Express Response
  * @returns ユーザー情報
  */
-export async function getUserProfile(req: Request, res: Response) {
+export async function getUserProfile(req: Request, res: Response): Promise<Response> {
   try {
     const parseResult = validateGetUserProfile(req);
     if (!parseResult.success) {

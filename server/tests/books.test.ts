@@ -1,9 +1,7 @@
 import express from 'express';
 import request from 'supertest';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import type { SpyInstance } from 'vitest';
-import { Op } from 'sequelize';
-import type { FindAndCountOptions } from 'sequelize';
+import { Op, type FindAndCountOptions, type Transaction } from 'sequelize';
 import jwt from 'jsonwebtoken';
 
 import bookRouter from '../src/routes/books';
@@ -12,13 +10,26 @@ import Review from '../src/models/Review';
 import Favorite from '../src/models/Favorite';
 import User from '../src/models/Users';
 import { sequelize } from '../src/sequelize';
+import * as bookService from '../src/services/book.service';
+import { ApiError } from '../src/errors/ApiError';
+import { logger } from '../src/utils/logger';
 
 // このファイルの目的：書籍 API の CRUD とページネーションを検証するテスト
 // - findAndCountAll のモックを用いてページング動作を確認
 
 type BookInstance = InstanceType<typeof Book>;
 type UserInstance = InstanceType<typeof User>;
+type TransactionCallback = (transaction: Transaction) => unknown | Promise<unknown>;
+type FindAndCountAllResult = {
+  rows: BookInstance[];
+  count: number | Array<{ count: number }>;
+};
 
+/**
+ * 書籍ルーターだけを組み込んだテスト用 Express アプリを生成します。
+ *
+ * @returns テスト対象の Express アプリ
+ */
 function makeApp() {
   const app = express();
   app.use(express.json());
@@ -26,8 +37,28 @@ function makeApp() {
   return app;
 }
 
+/**
+ * `findAndCountAll` の戻り値をページングテスト向けにモックします。
+ *
+ * @param result - モックする一覧結果
+ * @returns `findAndCountAll` の spy
+ */
+function mockFindAndCountAll(result: FindAndCountAllResult) {
+  const spy = vi.spyOn(Book, 'findAndCountAll');
+  spy.mockImplementation((async () => result) as unknown as typeof Book.findAndCountAll);
+  return spy;
+}
+
+/**
+ * 認証済みユーザーを簡易的にモックします。
+ *
+ * @param role - 認可判定に使うロール
+ * @param userId - 認証済みユーザー ID
+ */
 function mockAuthenticatedUser(role: 'admin' | 'user' = 'admin', userId = 1) {
-  vi.spyOn(jwt, 'verify').mockReturnValue({ id: userId } as unknown as jwt.JwtPayload);
+  vi.spyOn(jwt, 'verify').mockImplementation(
+    (() => ({ id: userId }) as jwt.JwtPayload) as unknown as typeof jwt.verify
+  );
   vi.spyOn(User, 'findByPk').mockResolvedValue({
     toJSON: () => ({ id: userId, role }),
   } as unknown as UserInstance);
@@ -38,10 +69,10 @@ let app: express.Express;
 beforeEach(() => {
   app = makeApp();
   vi.restoreAllMocks();
-  vi.spyOn(sequelize, 'transaction').mockImplementation(async (callback: any) => {
-    const tx = { LOCK: { UPDATE: 'UPDATE' } };
+  vi.spyOn(sequelize, 'transaction').mockImplementation((async (callback: TransactionCallback) => {
+    const tx = { LOCK: { UPDATE: 'UPDATE' } } as unknown as Transaction;
     return callback(tx);
-  });
+  }) as unknown as typeof sequelize.transaction);
 });
 
 afterEach(() => {
@@ -51,22 +82,36 @@ afterEach(() => {
 // GET /api/books のページネーション動作を確認
 describe('GET /api/books', () => {
   it('returns paginated books', async () => {
-    const book1 = { id: 1 } as unknown as BookInstance;
-    const book2 = { id: 2 } as unknown as BookInstance;
+    const book1 = {
+      toJSON: () => ({ id: 1, title: 'A', averageRating: '4.5', reviewCount: '3' }),
+      get: (key: string) =>
+        key === 'averageRating' ? '4.5' : key === 'reviewCount' ? '3' : undefined,
+    } as unknown as BookInstance;
+    const book2 = {
+      toJSON: () => ({ id: 2, title: 'B', averageRating: null, reviewCount: null }),
+      get: (key: string) =>
+        key === 'averageRating' ? null : key === 'reviewCount' ? null : undefined,
+    } as unknown as BookInstance;
     // Sequelize の findAndCountAll は overload によって
     // `count` の型が number | GroupedCountResultItem[] と変わるため
     // テスト上は any へダウンキャストしてモックします。
-    const spy = vi.spyOn(Book, 'findAndCountAll') as unknown as SpyInstance<
-      [FindAndCountOptions?],
-      { rows: BookInstance[]; count: number }
-    >;
-    spy.mockResolvedValue({ rows: [book1, book2], count: 2 });
+    mockFindAndCountAll({ rows: [book1, book2], count: 2 });
 
     const res = await request(app).get('/api/books?page=1&limit=2');
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.books).toHaveLength(2);
+    expect(res.body.data.books[0]).toMatchObject({
+      id: 1,
+      averageRating: 4.5,
+      reviewCount: 3,
+    });
+    expect(res.body.data.books[1]).toMatchObject({
+      id: 2,
+      averageRating: null,
+      reviewCount: 0,
+    });
     expect(res.body.data.pagination.totalItems).toBe(2);
   });
 
@@ -81,11 +126,7 @@ describe('GET /api/books', () => {
   });
 
   it('applies keyword search across title, author, and summary', async () => {
-    const spy = vi.spyOn(Book, 'findAndCountAll') as unknown as SpyInstance<
-      [FindAndCountOptions?],
-      { rows: BookInstance[]; count: number }
-    >;
-    spy.mockResolvedValue({ rows: [], count: 0 });
+    const spy = mockFindAndCountAll({ rows: [], count: [] });
 
     await request(app).get('/api/books?keyword=React');
 
@@ -102,11 +143,10 @@ describe('GET /api/books', () => {
   it('uses grouped review aggregation when sorting by rating', async () => {
     const book1 = { id: 1 } as unknown as BookInstance;
     const groupedCount = [{ count: 1 }, { count: 1 }];
-    const spy = vi.spyOn(Book, 'findAndCountAll') as unknown as SpyInstance<
-      [FindAndCountOptions?],
-      { rows: BookInstance[]; count: Array<{ count: number }> }
-    >;
-    spy.mockResolvedValue({ rows: [book1], count: groupedCount });
+    const spy = mockFindAndCountAll({
+      rows: [book1],
+      count: groupedCount,
+    });
 
     const res = await request(app).get('/api/books?sort=rating&order=asc');
 
@@ -123,13 +163,27 @@ describe('GET /api/books', () => {
     expect(res.body.data.pagination.totalItems).toBe(2);
   });
 
+  it('falls back to null and 0 when aggregation values are not finite numbers', async () => {
+    const book = {
+      toJSON: () => ({ id: 1, title: 'C', averageRating: 'NaN', reviewCount: 'Infinity' }),
+      get: (key: string) =>
+        key === 'averageRating' ? 'NaN' : key === 'reviewCount' ? 'Infinity' : undefined,
+    } as unknown as BookInstance;
+    mockFindAndCountAll({ rows: [book], count: [{ count: 1 }] });
+
+    const res = await request(app).get('/api/books');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.books[0]).toMatchObject({
+      id: 1,
+      averageRating: null,
+      reviewCount: 0,
+    });
+  });
+
   it('applies having clause when ratingMin is specified', async () => {
     const groupedCount = [{ count: 1 }];
-    const spy = vi.spyOn(Book, 'findAndCountAll') as unknown as SpyInstance<
-      [FindAndCountOptions?],
-      { rows: BookInstance[]; count: Array<{ count: number }> }
-    >;
-    spy.mockResolvedValue({ rows: [], count: groupedCount });
+    const spy = mockFindAndCountAll({ rows: [], count: groupedCount });
 
     await request(app).get('/api/books?ratingMin=4');
 
@@ -173,6 +227,15 @@ describe('GET /api/books', () => {
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it('returns 500 when service fails', async () => {
+    vi.spyOn(bookService, 'listBooks').mockRejectedValue(new Error('boom'));
+
+    const res = await request(app).get('/api/books');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_SERVER_ERROR');
+  });
 });
 
 // GET /api/books/:id の入力チェック・存在チェック
@@ -192,6 +255,13 @@ describe('GET /api/books/:id', () => {
     expect(res.body.error.code).toBe('BOOK_NOT_FOUND');
   });
 
+  it('returns 500 when service fails', async () => {
+    vi.spyOn(Book, 'findByPk').mockRejectedValue(new Error('boom'));
+    const res = await request(app).get('/api/books/1');
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_SERVER_ERROR');
+  });
+
   it('returns 200 when book found', async () => {
     const book = { id: 1 } as unknown as BookInstance;
     vi.spyOn(Book, 'findByPk').mockResolvedValue(book);
@@ -199,6 +269,43 @@ describe('GET /api/books/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.id).toBe(1);
+  });
+});
+
+// GET /api/books/:id/reviews
+describe('GET /api/books/:id/reviews', () => {
+  it('returns 200 with reviews', async () => {
+    const reviews = {
+      reviews: [{ id: 1, content: 'ok' }],
+      pagination: { page: 1, totalItems: 1, totalPages: 1 },
+    };
+    vi.spyOn(bookService, 'listBookReviews').mockResolvedValue(reviews as never);
+
+    const res = await request(app).get('/api/books/1/reviews');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toEqual(reviews);
+  });
+
+  it('returns 500 when service fails', async () => {
+    vi.spyOn(bookService, 'listBookReviews').mockRejectedValue(new Error('boom'));
+
+    const res = await request(app).get('/api/books/1/reviews');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_SERVER_ERROR');
+  });
+
+  it('returns ApiError when service throws ApiError', async () => {
+    vi.spyOn(bookService, 'listBookReviews').mockRejectedValue(
+      new ApiError(404, 'BOOK_NOT_FOUND', 'book not found')
+    );
+
+    const res = await request(app).get('/api/books/1/reviews');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('BOOK_NOT_FOUND');
   });
 });
 
@@ -236,14 +343,11 @@ describe('POST /api/books', () => {
       name: 'SequelizeUniqueConstraintError',
       errors: [{ path: 'ISBN' }],
     });
-    const res = await request(app)
-      .post('/api/books')
-      .set('Authorization', 'Bearer token')
-      .send({
-        title: 't',
-        author: 'a',
-        ISBN: 'dup',
-      });
+    const res = await request(app).post('/api/books').set('Authorization', 'Bearer token').send({
+      title: 't',
+      author: 'a',
+      ISBN: 'dup',
+    });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
   });
@@ -254,14 +358,11 @@ describe('POST /api/books', () => {
       name: 'SequelizeUniqueConstraintError',
       errors: [{ path: 'title' }, { path: 'author' }],
     });
-    const res = await request(app)
-      .post('/api/books')
-      .set('Authorization', 'Bearer token')
-      .send({
-        title: 'Same Title',
-        author: 'Same Author',
-        ISBN: 'unique-isbn',
-      });
+    const res = await request(app).post('/api/books').set('Authorization', 'Bearer token').send({
+      title: 'Same Title',
+      author: 'Same Author',
+      ISBN: 'unique-isbn',
+    });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
   });
@@ -270,15 +371,47 @@ describe('POST /api/books', () => {
     mockAuthenticatedUser('admin');
     const book = { id: 1 } as unknown as BookInstance;
     vi.spyOn(Book, 'create').mockResolvedValue(book);
-    const res = await request(app)
-      .post('/api/books')
-      .set('Authorization', 'Bearer token')
-      .send({
-        title: 't',
-        author: 'a',
-      });
+    const res = await request(app).post('/api/books').set('Authorization', 'Bearer token').send({
+      title: 't',
+      author: 'a',
+    });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
+  });
+
+  it('returns 500 when service fails', async () => {
+    mockAuthenticatedUser('admin');
+    vi.spyOn(Book, 'create').mockRejectedValue(new Error('boom'));
+
+    const res = await request(app).post('/api/books').set('Authorization', 'Bearer token').send({
+      title: 't',
+      author: 'a',
+    });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_SERVER_ERROR');
+  });
+
+  it('returns ApiError details when service throws ApiError', async () => {
+    mockAuthenticatedUser('admin');
+    const apiError = new ApiError(400, 'TEST_ERROR', 'test error', [
+      { field: 'ISBN', message: 'duplicate' },
+    ]);
+    vi.spyOn(Book, 'create').mockRejectedValue(apiError);
+
+    const res = await request(app).post('/api/books').set('Authorization', 'Bearer token').send({
+      title: 't',
+      author: 'a',
+      ISBN: 'dup',
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toEqual({
+      message: 'test error',
+      code: 'TEST_ERROR',
+      details: [{ field: 'ISBN', message: 'duplicate' }],
+    });
   });
 
   it('returns 400 when optional fields have invalid types', async () => {
@@ -378,13 +511,10 @@ describe('PUT /api/books/:id', () => {
     };
     vi.spyOn(Book, 'findByPk').mockResolvedValue(fakeBook as unknown as BookInstance);
 
-    const res = await request(app)
-      .put('/api/books/1')
-      .set('Authorization', 'Bearer token')
-      .send({
-        title: 'Same Title',
-        author: 'Same Author',
-      });
+    const res = await request(app).put('/api/books/1').set('Authorization', 'Bearer token').send({
+      title: 'Same Title',
+      author: 'Same Author',
+    });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
   });
@@ -400,6 +530,20 @@ describe('PUT /api/books/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(fakeBook.update).toHaveBeenCalled();
+  });
+
+  it('returns 500 when service fails', async () => {
+    mockAuthenticatedUser('admin');
+    const fakeBook = { update: vi.fn().mockRejectedValue(new Error('boom')) };
+    vi.spyOn(Book, 'findByPk').mockResolvedValue(fakeBook as unknown as BookInstance);
+
+    const res = await request(app)
+      .put('/api/books/1')
+      .set('Authorization', 'Bearer token')
+      .send({ title: 't' });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_SERVER_ERROR');
   });
 
   it('returns 400 when optional update fields have invalid types', async () => {
@@ -446,6 +590,15 @@ describe('DELETE /api/books/:id', () => {
     const res = await request(app).delete('/api/books/999').set('Authorization', 'Bearer token');
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('BOOK_NOT_FOUND');
+  });
+
+  it('returns 500 when service fails', async () => {
+    mockAuthenticatedUser('admin');
+    vi.spyOn(Book, 'findByPk').mockRejectedValue(new Error('boom'));
+
+    const res = await request(app).delete('/api/books/1').set('Authorization', 'Bearer token');
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_SERVER_ERROR');
   });
 
   it('returns 409 when related data exists', async () => {

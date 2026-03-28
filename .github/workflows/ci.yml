@@ -22,13 +22,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22]
+        node-version: [24]
 
     steps:
+      # リポジトリのソースをチェックアウトします
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # GitHub Actions で Node.js のバージョンをセットアップします
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
@@ -37,43 +39,53 @@ jobs:
       # ----- backend -----
       # サーバーサイド（./server）に対するステップ
 
+      # サーバー依存パッケージをインストールします
       - name: Install server dependencies
         working-directory: ./server
         run: |
           npm ci
-          # rollup optional dependency bug workaround (see sonarcloud.yml)
-          npm install --no-save @rollup/rollup-linux-x64-gnu@4.59.0 || true
+          # rolldown optional dependency bug workaround: align with installed rolldown version
+          npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.0-rc.12 || true
 
+      # サーバーコードに対して ESLint を実行します
       - name: Lint server
         working-directory: ./server
         run: npm run lint
 
+      # サーバーコードの TypeScript 型チェックを実行します
       - name: Type‑check server
         working-directory: ./server
         run: npm run check-types
 
+      # サーバーのユニットテストとカバレッジ測定を実行します
       - name: Run server unit tests
         working-directory: ./server
-        run: npm run test:ci-parity
+        run: |
+          mkdir -p coverage/.tmp
+          npm run test:ci-parity
 
       # ----- frontend -----
       # クライアントサイド（./client）に対するステップ
 
+      # クライアント依存パッケージをインストールします
       - name: Install client dependencies
         working-directory: ./client
         env:
           npm_config_os: linux
           npm_config_cpu: x64
-        run: npm install
+        run: npm ci
 
+      # クライアントコードに対して ESLint を実行します
       - name: Lint client
         working-directory: ./client
         run: npm run lint
 
-      - name: Run client unit tests
+      # クライアントのユニットテストとカバレッジ測定を実行します
+      - name: Run client unit tests with coverage
         working-directory: ./client
-        run: npx vitest --run
+        run: npx vitest --run --coverage
 
+      # クライアントの TypeScript 型チェックを実行します
       - name: Type‑check client
         working-directory: ./client
         run: npx tsc --noEmit

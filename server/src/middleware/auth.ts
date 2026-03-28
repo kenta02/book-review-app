@@ -1,16 +1,17 @@
 // JWT を検証する
 // ユーザー情報を取得する
 // 失敗時はエラーを返す
-// 成功時は req.userId などを設定して next() に進める ← これが key point
+// 成功時は req.userId などを設定して next() に進める（重要）
 
 import express, { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
 import User from '../models/Users';
 import { ERROR_MESSAGES } from '../constants/error-messages';
+import { logger } from '../utils/logger';
 
 // Express の Request 型を拡張して userId プロパティを追加
-/* eslint-disable @typescript-eslint/no-namespace -- required for Express request augmentation */
+/* eslint-disable @typescript-eslint/no-namespace -- Express の型拡張に必要 */
 declare global {
   namespace Express {
     interface Request {
@@ -31,37 +32,58 @@ export const authenticateToken = async (
       return next();
     }
 
-    const existingUser = await User.findByPk(req.userId);
-    if (!existingUser) {
-      res.status(401).json({
+    try {
+      const existingUser = await User.findByPk(req.userId);
+      if (!existingUser) {
+        res.status(401).json({
+          success: false,
+          error: { message: ERROR_MESSAGES.USER_NOT_FOUND, code: 'USER_NOT_FOUND' },
+        });
+        return;
+      }
+
+      req.userRole = existingUser.toJSON().role;
+      return next();
+    } catch (error) {
+      logger.error('[AUTH-MW] failed to hydrate user role', error);
+      res.status(500).json({
         success: false,
-        error: { message: ERROR_MESSAGES.USER_NOT_FOUND, code: 'USER_NOT_FOUND' },
+        error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
       });
       return;
     }
-
-    req.userRole = existingUser.toJSON().role;
-    return next();
   }
 
   // authHeader が存在するか確認
   // 「Bearer 」で始まっているか確認
 
   const authHeader = req.headers.authorization;
-  console.info(
-    '[AUTH-MW] authorization header=',
-    authHeader ? authHeader.slice(0, 30) + '...' : authHeader
-  );
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+
+  // Authorization header は攻撃者が操作可能なため、ログインジェクションを防ぐためトークン本体を出力しない。
+  const sanitizedHeader = authHeader ? authHeader.split('\r').join('').split('\n').join('') : '';
+  const maskedAuthHeader = sanitizedHeader.startsWith('Bearer ') ? 'Bearer <redacted>' : '(none)';
+  logger.info('[AUTH-MW] authorization header=', maskedAuthHeader);
+
+  if (!authHeader?.startsWith('Bearer ')) {
     res.status(401).json({
       success: false,
       error: { message: ERROR_MESSAGES.AUTHENTICATION_REQUIRED, code: 'AUTHENTICATION_REQUIRED' },
     });
     return;
   }
+
   // トークン部分を取り出す(7文字目以降)
   const token = authHeader.substring(7);
-  const jwtSecret: string = process.env.JWT_SECRET || 'dev_secret_key_12345';
+
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    logger.error('[AUTH-MW] JWT_SECRET is not configured');
+    res.status(500).json({
+      success: false,
+      error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
+    });
+    return;
+  }
 
   // JWTを検証
   try {
@@ -84,6 +106,7 @@ export const authenticateToken = async (
       return;
     }
   } catch (error) {
+    logger.error('[AUTH-MW] JWT verification / user lookup failed', error);
     // 401: 認証失敗
     res.status(401).json({
       success: false,
@@ -93,11 +116,7 @@ export const authenticateToken = async (
   }
 };
 
-export const requireAdmin = (
-  req: Request,
-  res: Response,
-  next: express.NextFunction
-): void => {
+export const requireAdmin = (req: Request, res: Response, next: express.NextFunction): void => {
   if (req.userRole !== 'admin') {
     res.status(403).json({
       success: false,

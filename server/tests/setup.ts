@@ -15,3 +15,7 @@ sequelize.sync = (async () => {
 sequelize.transaction = (async () => {
   throw new Error(guardMessage);
 }) as typeof sequelize.transaction;
+
+sequelize.query = (async () => {
+  throw new Error(guardMessage);
+}) as typeof sequelize.query;

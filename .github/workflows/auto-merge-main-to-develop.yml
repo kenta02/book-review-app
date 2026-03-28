@@ -1,0 +1,48 @@
+name: Sync main → develop (create PR)
+
+# main への push 時に develop への同期用 PR を自動作成します。
+# 既存の open PR があればスキップします。
+# コンフリクトがある場合は PR を手動でマージしてください。
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync-main-to-develop:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create sync PR (main → develop)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # sync ラベルを作成（存在しなければ）
+          gh label create "sync" --color "0075ca" --description "Sync PRs" --force || true
+
+          # 既存の open PR があればスキップ
+          EXISTING=$(gh pr list --base develop --head main --state open --limit 1)
+          if [ -n "$EXISTING" ]; then
+            echo "Sync PR already exists, skipping."
+            exit 0
+          fi
+
+          # PR 作成
+          gh pr create \
+            --base develop \
+            --head main \
+            --title "Sync main → develop" \
+            --body "main への変更を develop に取り込みます。コンフリクトがある場合は手動でマージしてください。" \
+            --label "sync"
+          echo "Sync PR created."
