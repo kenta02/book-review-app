@@ -1,6 +1,8 @@
 import type {
   ApiResponse,
   Book,
+  BookListQuery,
+  BookListResponse,
   CreateBookRequest,
   CreateReviewRequest,
   DeleteReviewRequest,
@@ -195,14 +197,14 @@ export const apiClient = {
 
   /**
    * 全書籍一覧を取得する
-   * @returns {Promise<ApiResponse<{ books: Book[] }>>} 書籍の配列
+   * @returns {Promise<ApiResponse<BookListResponse>>} 書籍の配列 + ページネーション
    */
-  getAllBooks: async (): Promise<ApiResponse<{ books: Book[] }>> => {
+  getAllBooks: async (): Promise<ApiResponse<BookListResponse>> => {
     if (isMockMode()) {
       // モックのAPIを呼び出す
-      return await mockBookApi.getAllBooks();
+      return await mockBookApi.searchBooks();
     } else {
-      const data = await fetchJson<{ books: Book[] }>(`/api/books`);
+      const data = await fetchJson<BookListResponse>(`/api/books`);
       return { data };
     }
   },
@@ -215,6 +217,45 @@ export const apiClient = {
     } else {
       const book = await fetchJson<Book>(`/api/books/${bookId}`);
       return { data: book };
+    }
+  },
+  // 書籍情報を取得する（ID 以外のクエリで検索）
+  searchBooks: async (
+    query?: BookListQuery,
+  ): Promise<ApiResponse<BookListResponse>> => {
+    if (isMockMode()) {
+      // モックのAPIを呼び出す
+      return await mockBookApi.searchBooks(query);
+    } else {
+      // クエリ文字列の生成処理を共通化するため、URLSearchParams を使用
+      const params = new URLSearchParams();
+      // query を受け取ってURLを組み立て、fetchJson を呼び出す。必要であれば型変換も行う。
+      if (query) {
+        // クエリパラメータを追加（存在するものだけ）
+        if (query.page != null) params.append("page", query.page.toString());
+        if (query.limit != null) params.append("limit", query.limit.toString());
+        if (query.keyword) params.append("keyword", query.keyword);
+        if (query.author) params.append("author", query.author);
+        if (query.publicationYearFrom != null)
+          params.append(
+            "publicationYearFrom",
+            query.publicationYearFrom.toString(),
+          );
+        if (query.publicationYearTo != null)
+          params.append(
+            "publicationYearTo",
+            query.publicationYearTo.toString(),
+          );
+        if (query.ratingMin != null)
+          params.append("ratingMin", query.ratingMin.toString());
+        if (query.sort) params.append("sort", query.sort);
+        if (query.order) params.append("order", query.order);
+      }
+      // クエリ文字列を生成して API を呼び出す
+      const queryString = params.toString();
+      const url = queryString ? `/api/books?${queryString}` : `/api/books`;
+      const data = await fetchJson<BookListResponse>(url);
+      return { data };
     }
   },
   // 書籍を作成する
