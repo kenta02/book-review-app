@@ -96,3 +96,22 @@ export interface UpdateBookRequest {
 export interface DeleteBookRequest {
   bookId: number;
 }
+
+// 書籍一覧のクエリパラメータの型
+export interface BookListQuery {
+  page?: number;
+  limit?: number;
+  keyword?: string;
+  author?: string;
+  publicationYearFrom?: number;
+  publicationYearTo?: number;
+  ratingMin?: number;
+  sort?: "title" | "author" | "publicationYear" | "rating" | "createdAt";
+  order?: "asc" | "desc";
+}
+
+// 書籍一覧のレスポンスの型
+export interface BookListResponse {
+  books: Book[];
+  pagination: Pagination;
+}
