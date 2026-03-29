@@ -44,8 +44,8 @@ export function DashboardPage() {
           <input
             id="search-input"
             type="text"
-            aria-label="書籍名、著者名、ISBNで検索"
-            placeholder="書籍名、著者名、ISBNで検索..."
+            aria-label="書籍名、著者名、要約で検索"
+            placeholder="書籍名、著者名、要約で検索..."
             className="w-full py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 border border-gray-300 dark:border-slate-700 rounded focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
           />
         </div>
