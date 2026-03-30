@@ -19,6 +19,15 @@ const dummyBooks: Book[] = [
 ];
 const firstDummyBook: Book = dummyBooks[0]!;
 
+const setFetchMock = (fetchMock: typeof fetch) => {
+  (globalThis as unknown as { fetch?: typeof fetch }).fetch = fetchMock;
+};
+
+const clearFetchMock = () => {
+  (globalThis as unknown as { fetch?: typeof fetch }).fetch = undefined;
+};
+
+
 describe("apiClient", () => {
   beforeEach(() => {
     vi.stubEnv("VITE_USE_MOCK", "false");
@@ -26,8 +35,7 @@ describe("apiClient", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = undefined;
+    clearFetchMock();
   });
 
   it("getAllBooks: should return books when response is valid data wrapper", async () => {
@@ -38,8 +46,7 @@ describe("apiClient", () => {
       text: async () => JSON.stringify({ data: { books: dummyBooks } }),
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     const response = await apiClient.getAllBooks();
 
@@ -55,8 +62,7 @@ describe("apiClient", () => {
       text: async () => "{}",
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     await expect(apiClient.getAllBooks()).rejects.toEqual(
       new ApiHttpError(404, "Not Found"),
@@ -71,8 +77,7 @@ describe("apiClient", () => {
       text: async () => "not json",
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     await expect(apiClient.getAllBooks()).rejects.toThrow(
       /Invalid JSON response/i,
@@ -87,8 +92,7 @@ describe("apiClient", () => {
       text: async () => "",
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     await expect(apiClient.deleteBook(123)).resolves.toBeUndefined();
     expect(fetchMock).toHaveBeenCalledWith("/api/books/123", {
@@ -104,8 +108,7 @@ describe("apiClient", () => {
       text: async () => "error",
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     await expect(apiClient.deleteBook(123)).rejects.toEqual(
       new ApiHttpError(500, "Internal Server Error"),
@@ -156,8 +159,7 @@ describe("apiClient", () => {
           }),
       });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     const user = await apiClient.getUserById(42);
     expect(user.data.username).toBe("hey");
@@ -220,8 +222,7 @@ describe("apiClient", () => {
           }),
       });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     const allReviews = await apiClient.getReviews();
     expect(allReviews.data.reviews.length).toBe(1);
@@ -235,6 +236,72 @@ describe("apiClient", () => {
       "/api/reviews?bookId=2",
       undefined,
     );
+  });
+
+  it("searchBooks: should build URL correctly with query params", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async () => JSON.stringify({ data: { books: dummyBooks } }),
+    });
+
+    setFetchMock(fetchMock);
+
+    const query = {
+      page: 2,
+      limit: 5,
+      keyword: "React",
+      author: "Author",
+      publicationYearFrom: 2000,
+      publicationYearTo: 2025,
+      ratingMin: 3,
+      sort: "rating" as const,
+      order: "desc" as const,
+    };
+
+    const response = await apiClient.searchBooks(query);
+
+    expect(response.data.books).toEqual(dummyBooks);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/books?page=2&limit=5&keyword=React&author=Author&publicationYearFrom=2000&publicationYearTo=2025&ratingMin=3&sort=rating&order=desc",
+      undefined,
+    );
+  });
+
+  it("searchBooks: should call /api/books when query is undefined or empty object", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async () => JSON.stringify({ data: { books: dummyBooks } }),
+    });
+
+    setFetchMock(fetchMock);
+
+    const responseUndefined = await apiClient.searchBooks();
+    expect(responseUndefined.data.books).toEqual(dummyBooks);
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/books", undefined);
+
+    const responseEmpty = await apiClient.searchBooks({});
+    expect(responseEmpty.data.books).toEqual(dummyBooks);
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/books", undefined);
+  });
+
+  it("searchBooks: should include an empty keyword when set to empty string", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async () => JSON.stringify({ data: { books: dummyBooks } }),
+    });
+
+    setFetchMock(fetchMock);
+
+    const response = await apiClient.searchBooks({ keyword: "" });
+
+    expect(response.data.books).toEqual(dummyBooks);
+    expect(fetchMock).toHaveBeenCalledWith("/api/books?keyword=", undefined);
   });
 
   it("create/update review and book endpoints call correct HTTP verb", async () => {
@@ -309,8 +376,7 @@ describe("apiClient", () => {
           }),
       });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     const createdReview = await apiClient.createReview({
       bookId: 1,
@@ -385,8 +451,7 @@ describe("apiClient", () => {
       text: async () => JSON.stringify({ id: 999, name: "no-data" }),
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     const book = await apiClient.getBookById(999);
     expect(book.data.id).toBe(999);

@@ -227,33 +227,51 @@ export const apiClient = {
       // モックのAPIを呼び出す
       return await mockBookApi.searchBooks(query);
     } else {
-      // クエリ文字列の生成処理を共通化するため、URLSearchParams を使用
+      // URLSearchParams で クエリパラメータを組み立てる
       const params = new URLSearchParams();
-      // query を受け取ってURLを組み立て、fetchJson を呼び出す。必要であれば型変換も行う。
-      if (query) {
-        // クエリパラメータを追加（存在するものだけ）
-        if (query.page != null) params.append("page", query.page.toString());
-        if (query.limit != null) params.append("limit", query.limit.toString());
-        if (query.keyword) params.append("keyword", query.keyword);
-        if (query.author) params.append("author", query.author);
-        if (query.publicationYearFrom != null)
-          params.append(
-            "publicationYearFrom",
-            query.publicationYearFrom.toString(),
-          );
-        if (query.publicationYearTo != null)
-          params.append(
-            "publicationYearTo",
-            query.publicationYearTo.toString(),
-          );
-        if (query.ratingMin != null)
-          params.append("ratingMin", query.ratingMin.toString());
-        if (query.sort) params.append("sort", query.sort);
-        if (query.order) params.append("order", query.order);
+
+      // query が undefined のときは、そのまま /api/books にリクエスト
+      if (!query) {
+        const data = await fetchJson<BookListResponse>(`/api/books`);
+        return { data };
       }
-      // クエリ文字列を生成して API を呼び出す
+      // query が指定されている場合、すべてのパラメータを "!= null" で判定
+      if (query.page != null) {
+        params.append("page", query.page.toString());
+      }
+      if (query.limit != null) {
+        params.append("limit", query.limit.toString());
+      }
+      if (query.keyword != null) {
+        params.append("keyword", query.keyword);
+      }
+      if (query.author != null) {
+        params.append("author", query.author);
+      }
+      if (query.publicationYearFrom != null) {
+        params.append(
+          "publicationYearFrom",
+          query.publicationYearFrom.toString(),
+        );
+      }
+      if (query.publicationYearTo != null) {
+        params.append("publicationYearTo", query.publicationYearTo.toString());
+      }
+      if (query.ratingMin != null) {
+        params.append("ratingMin", query.ratingMin.toString());
+      }
+      if (query.sort != null) {
+        params.append("sort", query.sort);
+      }
+      if (query.order != null) {
+        params.append("order", query.order);
+      }
+
+      // クエリパラメータを付与した URL を構築
       const queryString = params.toString();
-      const url = queryString ? `/api/books?${queryString}` : `/api/books`;
+      const url = `/api/books${queryString ? `?${queryString}` : ""}`;
+
+      // API を呼び出して結果を返す
       const data = await fetchJson<BookListResponse>(url);
       return { data };
     }
