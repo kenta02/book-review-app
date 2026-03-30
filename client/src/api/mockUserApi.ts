@@ -22,7 +22,14 @@ const mockUsers: Record<number, User> = {
 
 // ユーザーのAPIのモック
 export const mockUserApi = {
-  async getUserById(userId: number): Promise<ApiResponse<User>> {
+  async getUserById(
+    userId: number,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<User>> {
+    if (abortSignal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
 
     // mockUsersから該当ユーザーを取得

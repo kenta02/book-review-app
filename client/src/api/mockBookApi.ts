@@ -89,8 +89,15 @@ export const mockBookApi = {
    * @param bookId 取得する書籍のID
    * @returns {Promise<ApiResponse<Book>>} 書籍データを含むAPIレスポンス
    */
-  async getBookById(bookId: number): Promise<ApiResponse<Book>> {
+  async getBookById(
+    bookId: number,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<Book>> {
     await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
+
+    if (abortSignal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
 
     // mockBooksから該当書籍を取得
     const book = mockBooks[bookId];
@@ -111,8 +118,13 @@ export const mockBookApi = {
 
   async searchBooks(
     query?: BookListQuery,
+    abortSignal?: AbortSignal,
   ): Promise<ApiResponse<BookListResponse>> {
     await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
+
+    if (abortSignal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
 
     // クエリに基づいて mockBooks をフィルタリング
     let books = Object.values(mockBooks);
@@ -201,12 +213,19 @@ export const mockBookApi = {
    * 全書籍一覧を取得するモック関数
    * @returns {Promise<ApiResponse<BookListResponse>>} 書籍の配列 + ページネーションを含むAPIレスポンス
    */
-  async getAllBooks(): Promise<ApiResponse<BookListResponse>> {
+  async getAllBooks(
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<BookListResponse>> {
     await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
 
     const books = Object.values(mockBooks);
     const totalItems = books.length;
     const itemsPerPage = totalItems;
+
+    // クエリパラメータがない場合は全件返す
+    if (abortSignal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
 
     return {
       data: {
@@ -226,8 +245,14 @@ export const mockBookApi = {
    * @param bookData 作成する書籍のデータ
    * @returns {Promise<ApiResponse<Book>>} 作成された書籍データを含むAPIレスポンス
    */
-  async createBook(bookData: CreateBookRequest): Promise<ApiResponse<Book>> {
+  async createBook(
+    bookData: CreateBookRequest,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<Book>> {
     await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
+    if (abortSignal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
 
     // IDを自動採番（既存の最大IDに1を加える）
     const maxId =
@@ -261,8 +286,12 @@ export const mockBookApi = {
   async updateBook(
     bookId: number,
     updatedData: Partial<Book>,
+    abortSignal?: AbortSignal,
   ): Promise<ApiResponse<Book>> {
     await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
+    if (abortSignal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
 
     // mockBooksから該当書籍を取得
     const existingBook = mockBooks[bookId];
@@ -287,8 +316,14 @@ export const mockBookApi = {
    * @param bookId 削除する書籍のID
    * @returns {Promise<ApiResponse<null>>} 削除結果を含むAPIレスポンス
    */
-  async deleteBook(bookId: number): Promise<ApiResponse<null>> {
+  async deleteBook(
+    bookId: number,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<null>> {
     await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
+    if (abortSignal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
 
     // mockBooksから該当書籍を削除
     if (!mockBooks[bookId]) {
