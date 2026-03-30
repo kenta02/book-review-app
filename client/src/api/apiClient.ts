@@ -16,7 +16,9 @@ import { mockBookApi } from "./mockBookApi";
 import { mockReviewApi } from "./mockReviewApi";
 import { mockUserApi } from "./mockUserApi";
 
-// VITE_USE_MOCK=true でモック API、false で実 API を使用
+// API クライアントの入口。モック環境と実環境を切り替えて疎結合に保つ。
+// - VITE_USE_MOCK=true でモック API、false で実 API を使用
+// - 各 API は AbortSignal を引き回し、キャンセル対応を提供する。
 const isMockMode = (): boolean => import.meta.env.VITE_USE_MOCK === "true";
 
 /**
@@ -135,12 +137,9 @@ export const apiClient = {
   },
   /**
    * レビュー一覧を取得
-   * @param bookId - 書籍 ID
-   * @returns {data: { reviews: Review[]; pagination?: Pagination }} レビューの配列
-   */
-  /**
-   * レビュー一覧を取得
-   * @param bookId - 書籍 ID (省略可)
+   * @param bookId - 書籍 ID（省略可。未指定の場合は全レビュー取得）
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<ApiResponse<{ reviews: Review[]; pagination?: Pagination }>>} レビューの配列とページネーション
    */
   getReviews: async (
     bookId?: number,
@@ -171,7 +170,12 @@ export const apiClient = {
     }
   },
 
-  // レビューの作成
+  /**
+   * レビューを作成する
+   * @param body - レビュー作成のリクエストボディ
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<ApiResponse<Review>>} 作成されたレビュー情報
+   */
   createReview: async (
     body: CreateReviewRequest,
     abortSignal?: AbortSignal,
@@ -193,7 +197,12 @@ export const apiClient = {
     }
   },
 
-  // レビューの更新
+  /**
+   * レビューを更新する
+   * @param body - レビュー更新のリクエストボディ（reviewId を含む）
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<ApiResponse<Review>>} 更新されたレビュー情報
+   */
   updateReview: async (
     body: UpdateReviewRequest,
     abortSignal?: AbortSignal,
@@ -215,7 +224,12 @@ export const apiClient = {
       return { data: review };
     }
   },
-  // レビューの削除
+  /**
+   * レビューを削除する
+   * @param body - 削除対象のレビュー ID
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<void>} 削除完了
+   */
   deleteReview: async (
     body: DeleteReviewRequest,
     abortSignal?: AbortSignal,
@@ -232,22 +246,27 @@ export const apiClient = {
   },
 
   /**
-   * 全書籍一覧を取得する
-   * @returns {Promise<ApiResponse<BookListResponse>>} 書籍の配列 + ページネーション
+   * 全書籍一覧を取得する（クエリなし）
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<ApiResponse<BookListResponse>>} 書籍一覧とページネーション
    */
   getAllBooks: async (
     abortSignal?: AbortSignal,
   ): Promise<ApiResponse<BookListResponse>> => {
+    // モックまたは実 API の切り替えを行う
     if (isMockMode()) {
-      // モックのAPIを呼び出す
       return await mockBookApi.searchBooks(undefined, abortSignal);
     } else {
-      // seachBooks と同じエンドポイントにクエリなしでリクエストを送る
       return await apiClient.searchBooks(undefined, abortSignal);
     }
   },
 
-  // 書籍情報を取得する
+  /**
+   * 書籍を ID から取得する
+   * @param bookId - 書籍 ID
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<ApiResponse<Book>>} 書籍情報
+   */
   getBookById: async (
     bookId: number,
     abortSignal?: AbortSignal,
@@ -261,7 +280,12 @@ export const apiClient = {
       return { data: book };
     }
   },
-  // 書籍情報を取得する（ID 以外のクエリで検索）
+  /**
+   * 検索・フィルタ・ソート条件付きで書籍一覧を取得
+   * @param query - 検索・フィルタ・ソート条件（未指定時は全書籍一覧）
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<ApiResponse<BookListResponse>>} 書籍一覧とページネーション
+   */
   searchBooks: async (
     query?: BookListQuery,
     abortSignal?: AbortSignal,
@@ -281,7 +305,9 @@ export const apiClient = {
         const data = await fetchJson<BookListResponse>(`/api/books`, options);
         return { data };
       }
-      // query が指定されている場合、すべてのパラメータを "!= null" で判定
+
+      // query が指定されている場合、各フィルタを条件付きで追加（null/undefined は除外）
+      // これにより、未指定パラメータは URL に不要に含めない。
       if (query.page != null) {
         params.append("page", query.page.toString());
       }
@@ -313,7 +339,7 @@ export const apiClient = {
         params.append("order", query.order);
       }
 
-      // クエリパラメータを付与した URL を構築
+      // クエリ文字列を組み立てて URL に追加（空クエリは付与しない）
       const queryString = params.toString();
       const url = `/api/books${queryString ? `?${queryString}` : ""}`;
 
@@ -322,7 +348,12 @@ export const apiClient = {
       return { data };
     }
   },
-  // 書籍を作成する
+  /**
+   * 書籍を作成する
+   * @param bookData - 書籍作成のリクエストボディ
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<ApiResponse<Book>>} 作成された書籍情報
+   */
   createBook: async (
     bookData: CreateBookRequest,
     abortSignal?: AbortSignal,

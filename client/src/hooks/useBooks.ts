@@ -10,6 +10,8 @@ import type { Pagination } from "../types/index";
 /**
  * 書籍一覧取得用のカスタムフック
  * APIクライアントを呼び出して書籍データを取得し、ローディング状態やエラー状態も管理します。
+ * @param query - 検索・フィルタ・ソート条件（未指定時は全書籍一覧）
+ * @returns {useBooksResult} books（書籍配列）/ pagination（ページネーション）/ loading（取得中フラグ）/ errorCode（エラーコード）/ refresh（再取得関数）
  */
 export function useBooks(query?: BookListQuery): useBooksResult {
   const [books, setBooks] = useState<Book[]>([]);
@@ -17,11 +19,15 @@ export function useBooks(query?: BookListQuery): useBooksResult {
   const [errorCode, setErrorCode] = useState<ErrorCode | null>(null);
   const [pagination, setPagination] = useState<Pagination | null>(null);
 
-  // マウント状態を保持する
+  // マウント状態を保持する（アンマウント時に state 更新を防ぐため）
   const isMountedRef = useRef(true);
-  // 連続呼び出しで多重フェッチされるのを防ぐフラグ
+  // 連続呼び出しで多重フェッチされるのを防ぐためのフラグ
   const isFetchingRef = useRef(false);
 
+  /**
+   * 書籍データを取得し、状態を更新するコア関数
+   * @param signal - AbortController から渡されるキャンセルシグナル
+   */
   const fetchBooks = useCallback(
     async (signal?: AbortSignal) => {
       // マウントされていない、あるいは既に取得中なら処理を中断
@@ -32,9 +38,11 @@ export function useBooks(query?: BookListQuery): useBooksResult {
       isFetchingRef.current = true;
       setLoading(true);
       try {
+        // 実またはモック API 呼び出し。query には検索・絞り込み条件が含まれる。
         const res = await apiClient.searchBooks(query, signal);
         logger.log("API Response:", res);
 
+        // 単純にアンマウントされていたら後続ステート更新しない
         if (!isMountedRef.current) {
           return;
         }
@@ -59,6 +67,7 @@ export function useBooks(query?: BookListQuery): useBooksResult {
           return;
         }
 
+        // AbortController によるキャンセルはエラー扱いしない
         if (e instanceof DOMException && e.name === "AbortError") {
           logger.warn("Fetch aborted");
           return;
@@ -88,10 +97,10 @@ export function useBooks(query?: BookListQuery): useBooksResult {
 
     // 書籍データを取得する。引数としてAbortSignalを渡すことで、クリーンアップ時にリクエストをキャンセルできるようにする。
     fetchBooks(controller.signal);
-    // クリーンアップ関数でマウント状態を更新する
+
+    // クリーンアップ関数でマウント状態を更新し、前リクエストを中断する
     return () => {
       isMountedRef.current = false;
-      // APIリクエストをキャンセルする
       controller.abort();
     };
   }, [fetchBooks]);
