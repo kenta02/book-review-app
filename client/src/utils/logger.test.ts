@@ -2,7 +2,6 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 
 // Ensure we can re-import module with different environment variables
 const importLogger = async () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return await import("./logger");
 };
 
