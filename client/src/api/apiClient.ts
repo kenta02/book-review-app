@@ -204,8 +204,8 @@ export const apiClient = {
       // モックのAPIを呼び出す
       return await mockBookApi.searchBooks();
     } else {
-      const data = await fetchJson<BookListResponse>(`/api/books`);
-      return { data };
+      // seachBooks と同じエンドポイントにクエリなしでリクエストを送る
+      return await apiClient.searchBooks();
     }
   },
 
