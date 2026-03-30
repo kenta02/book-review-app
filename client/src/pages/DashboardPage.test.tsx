@@ -10,6 +10,7 @@ vi.mock("../api/apiClient", () => {
   return {
     apiClient: {
       getAllBooks: vi.fn(),
+      searchBooks: vi.fn(),
     },
   };
 });
@@ -51,6 +52,7 @@ describe("DashboardPage", () => {
   beforeEach(() => {
     // reset api mock and localStorage stub
     (apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>).mockReset();
+    (apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>).mockReset();
     Object.defineProperty(globalThis, "localStorage", {
       value: localStorageMock,
       writable: true,
@@ -60,9 +62,17 @@ describe("DashboardPage", () => {
 
   it("renders loading and then book cards", async () => {
     (
-      apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
+      apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValue({
-      data: { books: sample },
+      data: {
+        books: sample,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 1,
+          itemsPerPage: 10,
+        },
+      },
     });
     render(
       <MemoryRouter>
@@ -79,7 +89,7 @@ describe("DashboardPage", () => {
 
   it("shows error message when request fails", async () => {
     (
-      apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
+      apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>
     ).mockRejectedValue(new Error("err"));
     render(
       <MemoryRouter>
@@ -92,8 +102,18 @@ describe("DashboardPage", () => {
   it("renders search controls and filter inputs", async () => {
     // resolve empty list so we don't need cards
     (
-      apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
-    ).mockResolvedValue({ data: { books: [] } });
+      apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({
+      data: {
+        books: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalItems: 0,
+          itemsPerPage: 10,
+        },
+      },
+    });
 
     render(
       <MemoryRouter>
@@ -107,7 +127,7 @@ describe("DashboardPage", () => {
     );
 
     expect(
-      screen.getByRole("textbox", { name: /書籍名、著者名、ISBNで検索/ }),
+      screen.getByRole("textbox", { name: /書籍名、著者名、要約で検索/ }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("clear-filters-button")).toBeInTheDocument();
     expect(screen.getByTestId("search-button")).toBeInTheDocument();

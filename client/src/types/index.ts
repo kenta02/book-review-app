@@ -1,3 +1,5 @@
+import type { ErrorCode } from "../errors/errorCodes";
+
 // ユーザープロフィール用に型を定義する
 export interface User {
   id: number;
@@ -115,3 +117,12 @@ export interface BookListResponse {
   books: Book[];
   pagination: Pagination;
 }
+
+// useBooks フックの戻り値の型を定義する
+export type useBooksResult = {
+  books: Book[];
+  loading: boolean;
+  errorCode: ErrorCode | null;
+  pagination: Pagination | null;
+  refresh: () => Promise<void>;
+};

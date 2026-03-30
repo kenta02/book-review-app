@@ -27,7 +27,6 @@ const clearFetchMock = () => {
   (globalThis as unknown as { fetch?: typeof fetch }).fetch = undefined;
 };
 
-
 describe("apiClient", () => {
   beforeEach(() => {
     vi.stubEnv("VITE_USE_MOCK", "false");
@@ -462,7 +461,7 @@ describe("apiClient", () => {
     vi.stubEnv("VITE_USE_MOCK", "true");
 
     const getAllBooksSpy = vi
-      .spyOn(mockBookApi, "getAllBooks")
+      .spyOn(mockBookApi, "searchBooks")
       .mockResolvedValue({ data: { books: dummyBooks } });
     const createBookSpy = vi
       .spyOn(mockBookApi, "createBook")
