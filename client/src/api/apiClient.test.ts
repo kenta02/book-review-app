@@ -53,6 +53,25 @@ describe("apiClient", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/books", undefined);
   });
 
+  it("getAllBooks: should pass signal to fetch", async () => {
+    const controller = new AbortController();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async () => JSON.stringify({ data: { books: dummyBooks } }),
+    });
+
+    setFetchMock(fetchMock);
+
+    const response = await apiClient.getAllBooks(controller.signal);
+
+    expect(response.data.books).toEqual(dummyBooks);
+    expect(fetchMock).toHaveBeenCalledWith("/api/books", {
+      signal: controller.signal,
+    });
+  });
+
   it("getAllBooks: should throw ApiHttpError when HTTP status is not ok", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
@@ -235,6 +254,45 @@ describe("apiClient", () => {
       "/api/reviews?bookId=2",
       undefined,
     );
+  });
+
+  it("getReviews: should pass signal to fetch", async () => {
+    const controller = new AbortController();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async () =>
+        JSON.stringify({
+          data: {
+            reviews: [
+              {
+                id: 1,
+                bookId: 2,
+                userId: 1,
+                rating: 5,
+                content: "ok",
+                createdAt: "",
+              },
+            ],
+            pagination: {
+              currentPage: 1,
+              totalPages: 1,
+              totalItems: 1,
+              itemsPerPage: 20,
+            },
+          },
+        }),
+    });
+
+    setFetchMock(fetchMock);
+
+    const response = await apiClient.getReviews(undefined, controller.signal);
+
+    expect(response.data.reviews.length).toBe(1);
+    expect(fetchMock).toHaveBeenCalledWith("/api/reviews", {
+      signal: controller.signal,
+    });
   });
 
   it("searchBooks: should build URL correctly with query params", async () => {
@@ -492,8 +550,12 @@ describe("apiClient", () => {
 
     expect(getAllBooksSpy).toHaveBeenCalled();
     expect(createBookSpy).toHaveBeenCalled();
-    expect(updateBookSpy).toHaveBeenCalledWith(99, { title: "updated" });
-    expect(deleteBookSpy).toHaveBeenCalledWith(99);
+    expect(updateBookSpy).toHaveBeenCalledWith(
+      99,
+      { title: "updated" },
+      undefined,
+    );
+    expect(deleteBookSpy).toHaveBeenCalledWith(99, undefined);
 
     // restore original env
     vi.stubEnv("VITE_USE_MOCK", "false");
