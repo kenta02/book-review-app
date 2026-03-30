@@ -1,3 +1,4 @@
+/* global AbortController, DOMException */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockBookApi } from "./mockBookApi";
 import { ApiHttpError } from "../errors/AppError";
@@ -34,6 +35,15 @@ describe("mockBookApi", () => {
     const result = await promise;
 
     expect(result.data.books.length).toBeGreaterThan(0);
+  });
+
+  it("getAllBooks aborts when signal is aborted", async () => {
+    const controller = new AbortController();
+    const promise = mockBookApi.getAllBooks(controller.signal);
+    controller.abort();
+    vi.advanceTimersByTime(500);
+    await expect(promise).rejects.toThrow(DOMException);
+    await expect(promise).rejects.toHaveProperty("name", "AbortError");
   });
 
   it("searchBooks filters by keyword, author, and pagination", async () => {

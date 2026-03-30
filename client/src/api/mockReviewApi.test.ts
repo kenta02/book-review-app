@@ -1,3 +1,4 @@
+/* global AbortController, DOMException */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockReviewApi } from "./mockReviewApi";
 import { ApiHttpError } from "../errors/AppError";
@@ -35,6 +36,14 @@ describe("mockReviewApi", () => {
     const result = await promise;
 
     expect(result.data.reviews.every((r) => r.bookId === 101)).toBe(true);
+  });
+
+  it("getReviews aborts when signal is aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const promise = mockReviewApi.getReviews(undefined, controller.signal);
+    await expect(promise).rejects.toThrow(DOMException);
+    await expect(promise).rejects.toHaveProperty("name", "AbortError");
   });
 
   it("create/update/delete review and not found cases", async () => {

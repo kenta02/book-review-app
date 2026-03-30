@@ -1,6 +1,11 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+/* global global, AbortController, DOMException */
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { ApiHttpError } from "../errors/AppError";
 import { mockUserApi } from "./mockUserApi";
+
+// Vitest で AbortController を使用可能にする
+global.AbortController = AbortController;
+global.DOMException = DOMException;
 
 describe("mockUserApi", () => {
   beforeEach(() => {
@@ -24,6 +29,16 @@ describe("mockUserApi", () => {
     const promise = mockUserApi.getUserById(999);
     vi.advanceTimersByTime(500);
 
-    await expect(promise).rejects.toEqual(new ApiHttpError(404, "User 999 not found"));
+    await expect(promise).rejects.toEqual(
+      new ApiHttpError(404, "User 999 not found"),
+    );
+  });
+
+  it("getUserById aborts when signal is aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const promise = mockUserApi.getUserById(1, controller.signal);
+    await expect(promise).rejects.toThrow(DOMException);
+    await expect(promise).rejects.toHaveProperty("name", "AbortError");
   });
 });
