@@ -31,6 +31,22 @@ export default [
     },
   },
   {
+    files: ["**/*.test.{ts,tsx}"],
+    languageOptions: {
+      globals: {
+        global: "readonly",
+        AbortController: "readonly",
+        DOMException: "readonly",
+        afterEach: "readonly",
+        beforeEach: "readonly",
+        describe: "readonly",
+        it: "readonly",
+        expect: "readonly",
+      },
+    },
+    rules: {},
+  },
+  {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       parser: tsParser,
