@@ -8,7 +8,9 @@ const mockNavigate = vi.fn();
 const mockUseParams = vi.fn().mockReturnValue({ bookId: "1" });
 
 vi.mock("react-router-dom", async () => {
-  const actual = (await vi.importActual("react-router-dom")) as any;
+  const actual = (await vi.importActual(
+    "react-router-dom",
+  )) as typeof import("react-router-dom");
   return {
     ...actual,
     useNavigate: () => mockNavigate,

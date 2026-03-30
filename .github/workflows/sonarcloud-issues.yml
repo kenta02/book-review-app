@@ -1,21 +1,27 @@
 name: SonarCloud Issues Sync
 
 on:
+  workflow_dispatch:
   workflow_run:
     workflows: ["SonarCloud Analysis"]
     types: [completed]
-    branches:
-      - main
+
+permissions:
+  contents: read
+  issues: write
 
 jobs:
   sync-issues:
-    # SonarCloud 分析が成功したときのみ実行
-    if: github.event.workflow_run.conclusion == 'success'
+    # SonarCloud 分析成功時、または手動実行時のみ動かす
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # workflow_run では完了したワークフローの head_sha を対象にする
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Use Node.js 24
         uses: actions/setup-node@v4

@@ -1,0 +1,25 @@
+# Codacy settings for Book Review App
+# - GitHub marketplace との連携で各種解析を自動実行
+# - 新規コードに対する `Uncovered Lines` / `New Code` を Codacy へ送信する
+
+# ファイル除外 (lint/coverage の対象外)
+ignore:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/coverage/**"
+  - "**/tmp/**"
+  - "**/scripts/**"
+  - "**/migrations/**"
+
+# 使用する静的解析エンジン
+engines:
+  eslint:
+    enabled: true
+  # CodacyにはVitest専用エンジンはないため、coverageはcodacy-coverage-reporter経由で連携
+  # TypeScript解析はESLint(typescript-eslint)に委ねる
+  # 追加のルールブックはGitHub UIまたは Codacy プロジェクト設定で管理
+
+# Code patterns-ignore 例:
+#patterns:
+#  duplicated-code: false
+#  stateless-function: true

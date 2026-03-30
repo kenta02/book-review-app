@@ -4,8 +4,6 @@ import { ApiHttpError } from "../errors/AppError";
 import type { Book } from "../types";
 import { apiClient } from "./apiClient";
 import { mockBookApi } from "./mockBookApi";
-import { mockReviewApi } from "./mockReviewApi";
-import { mockUserApi } from "./mockUserApi";
 
 const dummyBooks: Book[] = [
   {
