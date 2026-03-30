@@ -22,64 +22,77 @@ export function useBooks(query?: BookListQuery): useBooksResult {
   // 連続呼び出しで多重フェッチされるのを防ぐフラグ
   const isFetchingRef = useRef(false);
 
-  const fetchBooks = useCallback(async () => {
-    // マウントされていない、あるいは既に取得中なら処理を中断
-    if (!isMountedRef.current || isFetchingRef.current) {
-      return;
-    }
-
-    isFetchingRef.current = true;
-    setLoading(true);
-    try {
-      const res = await apiClient.searchBooks(query);
-      logger.log("API Response:", res);
-
-      if (!isMountedRef.current) {
+  const fetchBooks = useCallback(
+    async (signal?: AbortSignal) => {
+      // マウントされていない、あるいは既に取得中なら処理を中断
+      if (!isMountedRef.current || isFetchingRef.current) {
         return;
       }
 
-      if (Array.isArray(res?.data?.books)) {
-        logger.log("Books data:", res.data.books);
+      isFetchingRef.current = true;
+      setLoading(true);
+      try {
+        const res = await apiClient.searchBooks(query, signal);
+        logger.log("API Response:", res);
 
-        if (res.data.pagination) {
-          logger.log("Pagination data:", res.data.pagination);
-          setPagination(res.data.pagination);
-        } else {
-          logger.warn("Pagination data is missing in the response");
+        if (!isMountedRef.current) {
+          return;
         }
 
-        setErrorCode(null);
-        setBooks(res.data.books);
-      } else {
-        throw createUnknownAppError("Unexpected response payload");
+        if (Array.isArray(res?.data?.books)) {
+          logger.log("Books data:", res.data.books);
+
+          if (res.data.pagination) {
+            logger.log("Pagination data:", res.data.pagination);
+            setPagination(res.data.pagination);
+          } else {
+            logger.warn("Pagination data is missing in the response");
+          }
+
+          setErrorCode(null);
+          setBooks(res.data.books);
+        } else {
+          throw createUnknownAppError("Unexpected response payload");
+        }
+      } catch (e) {
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        if (e instanceof DOMException && e.name === "AbortError") {
+          logger.warn("Fetch aborted");
+          return;
+        }
+
+        const appError = normalizeError(e);
+        logger.error("Error fetching books:", appError);
+        setErrorCode(appError.errorCode);
+        setBooks([]);
+        setPagination(null);
+      } finally {
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
+        isFetchingRef.current = false;
       }
-    } catch (e) {
-      if (!isMountedRef.current) {
-        return;
-      }
-      const appError = normalizeError(e);
-      logger.error("Error fetching books:", appError);
-      setErrorCode(appError.errorCode);
-      setBooks([]);
-      setPagination(null);
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
-      isFetchingRef.current = false;
-    }
-  }, [query]);
+    },
+    [query],
+  );
 
   // コンポーネントのマウント時とクエリの変更時に書籍データを取得する
   useEffect(() => {
+    // APIリクエストをキャンセルするためのコントローラー
+    const controller = new AbortController();
     // マウント状態を更新
     isMountedRef.current = true;
 
-    // 書籍データを取得する
-    fetchBooks();
+    // 書籍データを取得する。引数としてAbortSignalを渡すことで、クリーンアップ時にリクエストをキャンセルできるようにする。
+    fetchBooks(controller.signal);
     // クリーンアップ関数でマウント状態を更新する
     return () => {
       isMountedRef.current = false;
+      // APIリクエストをキャンセルする
+      controller.abort();
     };
   }, [fetchBooks]);
 
