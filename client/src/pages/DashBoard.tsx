@@ -2,9 +2,21 @@ import { MainLayout } from "../components/layouts/MainLayout";
 import { BookCard } from "../components/BookCard";
 import { BOOK_LIST_ERROR_MESSAGES } from "../constants/messages";
 import { useBooks } from "../hooks/useBooks";
+import { useState } from "react";
+import type { BookListQuery } from "../types";
 
 export function DashboardPage() {
-  const { books, loading, errorCode } = useBooks();
+  // ステート管理
+  const [query, setQuery] = useState<BookListQuery>({
+    page: 1,
+    limit: 20,
+    keyword: "",
+    author: "",
+    sort: "createdAt",
+    order: "desc",
+  });
+
+  const { books, loading, errorCode } = useBooks(query);
   const errorMessage = errorCode ? BOOK_LIST_ERROR_MESSAGES[errorCode] : null;
 
   // ローディング中、エラー中は早期リターンする
@@ -44,6 +56,13 @@ export function DashboardPage() {
           <input
             id="search-input"
             type="text"
+            value={query.keyword}
+            onChange={(e) =>
+              setQuery({
+                ...query,
+                keyword: e.target.value,
+              })
+            }
             aria-label="書籍名、著者名、要約で検索"
             placeholder="書籍名、著者名、要約で検索..."
             className="w-full py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 border border-gray-300 dark:border-slate-700 rounded focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
@@ -61,14 +80,23 @@ export function DashboardPage() {
             </label>
             <select
               id="filter-rating"
+              value={query.ratingMin ?? ""}
+              onChange={(e) =>
+                setQuery({
+                  ...query,
+                  ratingMin: e.target.value
+                    ? Number(e.target.value)
+                    : undefined,
+                })
+              }
               className="min-w-[180px] py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded cursor-pointer focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
             >
-              <option>すべて</option>
-              <option>★1以上</option>
-              <option>★2以上</option>
-              <option>★3以上</option>
-              <option>★4以上</option>
-              <option>★5のみ</option>
+              <option value="">すべて</option>
+              <option value="1">★1以上</option>
+              <option value="2">★2以上</option>
+              <option value="3">★3以上</option>
+              <option value="4">★4以上</option>
+              <option value="5">★5のみ</option>
             </select>
           </div>
 
@@ -81,6 +109,15 @@ export function DashboardPage() {
                 type="number"
                 inputMode="numeric"
                 placeholder="From"
+                value={query.publicationYearFrom ?? ""}
+                onChange={(e) =>
+                  setQuery({
+                    ...query,
+                    publicationYearFrom: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
+                  })
+                }
                 aria-label="出版年 From"
                 className="w-[110px] py-2 px-3 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 border border-gray-300 dark:border-slate-700 rounded focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
               />
@@ -89,6 +126,15 @@ export function DashboardPage() {
                 type="number"
                 inputMode="numeric"
                 placeholder="to"
+                value={query.publicationYearTo ?? ""}
+                onChange={(e) =>
+                  setQuery({
+                    ...query,
+                    publicationYearTo: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
+                  })
+                }
                 aria-label="出版年 to"
                 className="w-[110px] py-2 px-3 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 border border-gray-300 dark:border-slate-700 rounded focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
               />
@@ -104,13 +150,39 @@ export function DashboardPage() {
             </label>
             <select
               id="sort-order"
+              value={`${query.sort}-${query.order}`}
+              onChange={(e) => {
+                const mapping = {
+                  "rating-desc": { sort: "rating", order: "desc" } as const,
+                  "createdAt-desc": {
+                    sort: "createdAt",
+                    order: "desc",
+                  } as const,
+                  "title-asc": { sort: "title", order: "asc" } as const,
+                  "author-asc": { sort: "author", order: "asc" } as const,
+                  "publicationYear-desc": {
+                    sort: "publicationYear",
+                    order: "desc",
+                  } as const,
+                } as const;
+
+                const { sort, order } = mapping[
+                  e.target.value as keyof typeof mapping
+                ] ?? { sort: "createdAt", order: "desc" };
+
+                setQuery({
+                  ...query,
+                  sort,
+                  order,
+                });
+              }}
               className="min-w-[220px] py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded cursor-pointer focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
             >
-              <option>評価が高い順</option>
-              <option>登録日が新しい順</option>
-              <option>タイトル順</option>
-              <option>著者名順</option>
-              <option>出版年が新しい順</option>
+              <option value="rating-desc">評価が高い順</option>
+              <option value="createdAt-desc">登録日が新しい順</option>
+              <option value="title-asc">タイトル順</option>
+              <option value="author-asc">著者名順</option>
+              <option value="publicationYear-desc">出版年が新しい順</option>
             </select>
           </div>
         </div>
@@ -118,6 +190,16 @@ export function DashboardPage() {
         {/* ボタングループ（右下） */}
         <div className="flex flex-col sm:flex-row gap-2 justify-end">
           <button
+            onClick={() =>
+              setQuery({
+                page: 1,
+                limit: 20,
+                keyword: "",
+                author: "",
+                sort: "createdAt",
+                order: "desc",
+              })
+            }
             type="button"
             data-testid="clear-filters-button"
             className="py-2 px-4 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-gray-200 rounded font-semibold text-sm hover:bg-gray-100 dark:hover:bg-slate-800 active:scale-95 transition whitespace-nowrap"

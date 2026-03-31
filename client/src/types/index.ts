@@ -105,9 +105,9 @@ export interface BookListQuery {
   limit?: number;
   keyword?: string;
   author?: string;
-  publicationYearFrom?: number;
-  publicationYearTo?: number;
-  ratingMin?: number;
+  publicationYearFrom?: number | undefined;
+  publicationYearTo?: number | undefined;
+  ratingMin?: number | undefined;
   sort?: "title" | "author" | "publicationYear" | "rating" | "createdAt";
   order?: "asc" | "desc";
 }
