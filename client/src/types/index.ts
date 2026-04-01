@@ -125,4 +125,5 @@ export type useBooksResult = {
   errorCode: ErrorCode | null;
   pagination: Pagination | null;
   refresh: () => Promise<void>;
+  isFetched?: boolean; // データが初回取得されたかどうかを示すフラグ
 };

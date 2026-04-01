@@ -6,30 +6,26 @@ import { useState } from "react";
 import type { BookListQuery } from "../types";
 
 export function DashboardPage() {
-  // ステート管理
-  const [query, setQuery] = useState<BookListQuery>({
+  // クエリの初期値を定義する
+  const initialQuery: BookListQuery = {
     page: 1,
     limit: 20,
     keyword: "",
     author: "",
     sort: "createdAt",
     order: "desc",
-  });
+  };
 
   // 入力中のクエリ
-  const [draftQuery, setDraftQuery] = useState<BookListQuery>(query);
+  const [draftQuery, setDraftQuery] = useState<BookListQuery>(initialQuery);
   // 適用済みのクエリ（APIに反映されているクエリ）
-  const [appliedQuery, setAppliedQuery] = useState<BookListQuery>(query);
+  const [appliedQuery, setAppliedQuery] = useState<BookListQuery>(initialQuery);
 
-  // クエリを適用する関数（検索ボタンやEnterキーで呼び出される）
-  const { books, loading, errorCode } = useBooks(appliedQuery);
+  // hooksの戻り値から書籍データと状態を取得するために定義
+  const { books, loading, errorCode, isFetched } = useBooks(appliedQuery);
 
   // エラーメッセージの取得
   const errorMessage = errorCode ? BOOK_LIST_ERROR_MESSAGES[errorCode] : null;
-  // ローディング中、エラー中は早期リターンする
-  if (loading) {
-    return <MainLayout>Loading...</MainLayout>;
-  }
 
   if (errorMessage) {
     return <MainLayout>Error: {errorMessage}</MainLayout>;
@@ -157,7 +153,7 @@ export function DashboardPage() {
             </label>
             <select
               id="sort-order"
-              value={`${query.sort}-${query.order}`}
+              value={`${draftQuery.sort}-${draftQuery.order}`}
               onChange={(e) => {
                 const mapping = {
                   "rating-desc": { sort: "rating", order: "desc" } as const,
@@ -177,8 +173,8 @@ export function DashboardPage() {
                   e.target.value as keyof typeof mapping
                 ] ?? { sort: "createdAt", order: "desc" };
 
-                setQuery({
-                  ...query,
+                setDraftQuery({
+                  ...draftQuery,
                   sort,
                   order,
                 });
@@ -197,12 +193,22 @@ export function DashboardPage() {
         {/* ボタングループ（右下） */}
         <div className="flex flex-col sm:flex-row gap-2 justify-end">
           <button
-            onClick={() =>
+            // onClick={() =>
+            //   setAppliedQuery({
+            //     // クエリをリセットする際に、入力中のクエリも初期化する
+            //     ...initialQuery,
+            //   })
+            // }
+            onClick={() => {
               setAppliedQuery({
-                // クエリをリセットする際に、入力中のクエリも初期化する
-                ...draftQuery,
-              })
-            }
+                // クエリをリセットする際に検索済のクエリも初期化する
+                ...initialQuery,
+              });
+              setDraftQuery({
+                // クエリをリセットする際に入力中のクエリも初期化する
+                ...initialQuery,
+              });
+            }}
             type="button"
             data-testid="clear-filters-button"
             className="py-2 px-4 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-gray-200 rounded font-semibold text-sm hover:bg-gray-100 dark:hover:bg-slate-800 active:scale-95 transition whitespace-nowrap"
@@ -221,18 +227,35 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 flex-1 overflow-y-auto">
-        {books.map((book) => (
-          <BookCard
-            key={book.id}
-            title={book.title}
-            author={book.author}
-            ratingDisplay={"4.5"} // ここは仮の値です。実際にはAPIから取得した評価を表示します。
-            summary={book.summary}
-            ISBN={book.ISBN}
-            publicationYear={book.publicationYear}
-            bookId={book.id}
-          />
-        ))}
+        {/* loading 中はローディング表示 */}
+        {loading && (
+          <div className="col-span-full text-center py-10">
+            <p className="text-gray-500 dark:text-gray-400">
+              Loading...（読み込み中）
+            </p>
+          </div>
+        )}
+        {!loading && isFetched && books.length === 0 && (
+          <div className="col-span-full text-center py-10">
+            <p className="text-gray-500 dark:text-gray-400">
+              書籍が見つかりませんでした。
+            </p>
+          </div>
+        )}
+
+        {!loading &&
+          books.map((book) => (
+            <BookCard
+              key={book.id}
+              title={book.title}
+              author={book.author}
+              ratingDisplay={"4.5"} // ここは仮の値です。実際にはAPIから取得した評価を表示します。
+              summary={book.summary}
+              ISBN={book.ISBN}
+              publicationYear={book.publicationYear}
+              bookId={book.id}
+            />
+          ))}
       </div>
     </MainLayout>
   );

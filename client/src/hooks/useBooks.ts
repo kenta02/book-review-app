@@ -19,7 +19,12 @@ export function useBooks(query?: BookListQuery): useBooksResult {
   const [errorCode, setErrorCode] = useState<ErrorCode | null>(null);
   const [pagination, setPagination] = useState<Pagination | null>(null);
 
-  // マウント状態を保持する（アンマウント時に state 更新を防ぐため）
+  // データ取得完了（成功/失敗）の判定に使うフラグ
+  // 初期表示時は未取得とみなし、0件表示のちらつきを防ぐ
+  const [isFetched, setIsFetched] = useState<boolean>(false);
+
+  // コンポーネントがアンマウントされたかどうかを監視
+  // unmounted状態で setState を呼ばないようにするために使用
   const isMountedRef = useRef(true);
 
   /**
@@ -47,6 +52,7 @@ export function useBooks(query?: BookListQuery): useBooksResult {
         if (Array.isArray(res?.data?.books)) {
           logger.log("Books data:", res.data.books);
 
+          // pagination があれば設定し、なければ警告
           if (res.data.pagination) {
             logger.log("Pagination data:", res.data.pagination);
             setPagination(res.data.pagination);
@@ -54,9 +60,12 @@ export function useBooks(query?: BookListQuery): useBooksResult {
             logger.warn("Pagination data is missing in the response");
           }
 
+          // 正常なケース：エラー解除して書籍データをセット
           setErrorCode(null);
           setBooks(res.data.books);
+          setIsFetched(true); // 取得済みフラグを true に
         } else {
+          // API のフォーマットが想定と異なる場合は例外にして catch へ飛ばす
           throw createUnknownAppError("Unexpected response payload");
         }
       } catch (e) {
@@ -64,17 +73,23 @@ export function useBooks(query?: BookListQuery): useBooksResult {
           return;
         }
 
-        // AbortController によるキャンセルはエラー扱いしない
+        // AbortController によるキャンセルはユーザー操作による中断として扱う
         if (e instanceof DOMException && e.name === "AbortError") {
           logger.warn("Fetch aborted");
           return;
         }
 
+        // それ以外のエラーは UI に表示させるためのエラー状態を設定
         const appError = normalizeError(e);
         logger.error("Error fetching books:", appError);
         setErrorCode(appError.errorCode);
+
+        // エラー時は一覧表示を消し、空状態とする
         setBooks([]);
         setPagination(null);
+
+        // API 呼び出しは試行済みとしてフラグを立てる
+        setIsFetched(true);
       } finally {
         if (isMountedRef.current) {
           setLoading(false);
@@ -101,5 +116,12 @@ export function useBooks(query?: BookListQuery): useBooksResult {
     };
   }, [fetchBooks]);
 
-  return { books, loading, errorCode, pagination, refresh: fetchBooks };
+  return {
+    books,
+    loading,
+    errorCode,
+    pagination,
+    refresh: fetchBooks,
+    isFetched,
+  };
 }
