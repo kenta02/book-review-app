@@ -21,8 +21,6 @@ export function useBooks(query?: BookListQuery): useBooksResult {
 
   // マウント状態を保持する（アンマウント時に state 更新を防ぐため）
   const isMountedRef = useRef(true);
-  // 連続呼び出しで多重フェッチされるのを防ぐためのフラグ
-  const isFetchingRef = useRef(false);
 
   /**
    * 書籍データを取得し、状態を更新するコア関数
@@ -30,12 +28,11 @@ export function useBooks(query?: BookListQuery): useBooksResult {
    */
   const fetchBooks = useCallback(
     async (signal?: AbortSignal) => {
-      // マウントされていない、あるいは既に取得中なら処理を中断
-      if (!isMountedRef.current || isFetchingRef.current) {
+      // コンポーネントがアンマウント済みなら処理を中断
+      if (!isMountedRef.current) {
         return;
       }
 
-      isFetchingRef.current = true;
       setLoading(true);
       try {
         // 実またはモック API 呼び出し。query には検索・絞り込み条件が含まれる。
@@ -82,7 +79,6 @@ export function useBooks(query?: BookListQuery): useBooksResult {
         if (isMountedRef.current) {
           setLoading(false);
         }
-        isFetchingRef.current = false;
       }
     },
     [query],
