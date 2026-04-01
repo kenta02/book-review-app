@@ -16,9 +16,16 @@ export function DashboardPage() {
     order: "desc",
   });
 
-  const { books, loading, errorCode } = useBooks(query);
-  const errorMessage = errorCode ? BOOK_LIST_ERROR_MESSAGES[errorCode] : null;
+  // 入力中のクエリ
+  const [draftQuery, setDraftQuery] = useState<BookListQuery>(query);
+  // 適用済みのクエリ（APIに反映されているクエリ）
+  const [appliedQuery, setAppliedQuery] = useState<BookListQuery>(query);
 
+  // クエリを適用する関数（検索ボタンやEnterキーで呼び出される）
+  const { books, loading, errorCode } = useBooks(appliedQuery);
+
+  // エラーメッセージの取得
+  const errorMessage = errorCode ? BOOK_LIST_ERROR_MESSAGES[errorCode] : null;
   // ローディング中、エラー中は早期リターンする
   if (loading) {
     return <MainLayout>Loading...</MainLayout>;
@@ -56,10 +63,10 @@ export function DashboardPage() {
           <input
             id="search-input"
             type="text"
-            value={query.keyword}
+            value={draftQuery.keyword}
             onChange={(e) =>
-              setQuery({
-                ...query,
+              setDraftQuery({
+                ...draftQuery,
                 keyword: e.target.value,
               })
             }
@@ -80,10 +87,10 @@ export function DashboardPage() {
             </label>
             <select
               id="filter-rating"
-              value={query.ratingMin ?? ""}
+              value={draftQuery.ratingMin ?? ""}
               onChange={(e) =>
-                setQuery({
-                  ...query,
+                setDraftQuery({
+                  ...draftQuery,
                   ratingMin: e.target.value
                     ? Number(e.target.value)
                     : undefined,
@@ -109,10 +116,10 @@ export function DashboardPage() {
                 type="number"
                 inputMode="numeric"
                 placeholder="From"
-                value={query.publicationYearFrom ?? ""}
+                value={draftQuery.publicationYearFrom ?? ""}
                 onChange={(e) =>
-                  setQuery({
-                    ...query,
+                  setDraftQuery({
+                    ...draftQuery,
                     publicationYearFrom: e.target.value
                       ? Number(e.target.value)
                       : undefined,
@@ -126,10 +133,10 @@ export function DashboardPage() {
                 type="number"
                 inputMode="numeric"
                 placeholder="to"
-                value={query.publicationYearTo ?? ""}
+                value={draftQuery.publicationYearTo ?? ""}
                 onChange={(e) =>
-                  setQuery({
-                    ...query,
+                  setDraftQuery({
+                    ...draftQuery,
                     publicationYearTo: e.target.value
                       ? Number(e.target.value)
                       : undefined,
@@ -191,13 +198,9 @@ export function DashboardPage() {
         <div className="flex flex-col sm:flex-row gap-2 justify-end">
           <button
             onClick={() =>
-              setQuery({
-                page: 1,
-                limit: 20,
-                keyword: "",
-                author: "",
-                sort: "createdAt",
-                order: "desc",
+              setAppliedQuery({
+                // クエリをリセットする際に、入力中のクエリも初期化する
+                ...draftQuery,
               })
             }
             type="button"
@@ -209,6 +212,7 @@ export function DashboardPage() {
           <button
             type="button"
             data-testid="search-button"
+            onClick={() => setAppliedQuery({ ...draftQuery })}
             className="py-2 px-5 bg-gray-900 border border-black/20 rounded font-semibold text-sm hover:bg-gray-800 active:scale-95 transition whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-gray-300 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
           >
             検索
