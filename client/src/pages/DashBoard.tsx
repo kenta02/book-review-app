@@ -4,6 +4,7 @@ import { BOOK_LIST_ERROR_MESSAGES } from "../constants/messages";
 import { useBooks } from "../hooks/useBooks";
 import { useState } from "react";
 import type { BookListQuery } from "../types";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export function DashboardPage() {
   // クエリの初期値を定義する
@@ -26,6 +27,44 @@ export function DashboardPage() {
 
   // エラーメッセージの取得
   const errorMessage = errorCode ? BOOK_LIST_ERROR_MESSAGES[errorCode] : null;
+
+  // URLクエリを更新する
+  const location = useLocation();
+
+  // クエリが変更されたときにURLを更新する
+  const navigate = useNavigate();
+
+  /**
+   *  クエリオブジェクトをURLSearchParamsに変換する
+   * @param query:BookListQueryオブジェクト
+   * @returns params: URLSearchParamsオブジェクト
+   */
+  const buildSearchParams = (query: BookListQuery) => {
+    const params = new URLSearchParams();
+    if (query.keyword) params.set("keyword", query.keyword);
+    if (query.author) params.set("author", query.author);
+    if (query.ratingMin) params.set("ratingMin", String(query.ratingMin));
+    if (query.publicationYearFrom !== undefined) {
+      params.set("publicationYearFrom", String(query.publicationYearFrom));
+    }
+    if (query.publicationYearTo !== undefined) {
+      params.set("publicationYearTo", String(query.publicationYearTo));
+    }
+    if (query.sort) {
+      params.set("sort", query.sort);
+    }
+    if (query.order) {
+      params.set("order", query.order);
+    }
+    return params;
+  };
+
+  const handleSearch = () => {
+    setAppliedQuery({ ...draftQuery });
+    const params = buildSearchParams(draftQuery);
+    const queryString = params.toString();
+    navigate(`${location.pathname}${queryString ? `?${queryString}` : ""}`);
+  };
 
   if (errorMessage) {
     return <MainLayout>Error: {errorMessage}</MainLayout>;
@@ -193,12 +232,6 @@ export function DashboardPage() {
         {/* ボタングループ（右下） */}
         <div className="flex flex-col sm:flex-row gap-2 justify-end">
           <button
-            // onClick={() =>
-            //   setAppliedQuery({
-            //     // クエリをリセットする際に、入力中のクエリも初期化する
-            //     ...initialQuery,
-            //   })
-            // }
             onClick={() => {
               setAppliedQuery({
                 // クエリをリセットする際に検索済のクエリも初期化する
@@ -208,6 +241,8 @@ export function DashboardPage() {
                 // クエリをリセットする際に入力中のクエリも初期化する
                 ...initialQuery,
               });
+              // クエリをリセットした後にURLもクリーンな状態にする
+              navigate(location.pathname);
             }}
             type="button"
             data-testid="clear-filters-button"
@@ -218,7 +253,8 @@ export function DashboardPage() {
           <button
             type="button"
             data-testid="search-button"
-            onClick={() => setAppliedQuery({ ...draftQuery })}
+            // onClick={() => setAppliedQuery({ ...draftQuery })}
+            onClick={handleSearch}
             className="py-2 px-5 bg-gray-900 border border-black/20 rounded font-semibold text-sm hover:bg-gray-800 active:scale-95 transition whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-gray-300 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
           >
             検索
