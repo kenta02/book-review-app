@@ -2,7 +2,7 @@ import { MainLayout } from "../components/layouts/MainLayout";
 import { BookCard } from "../components/BookCard";
 import { BOOK_LIST_ERROR_MESSAGES } from "../constants/messages";
 import { useBooks } from "../hooks/useBooks";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { BookListQuery } from "../types";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -41,30 +41,100 @@ export function DashboardPage() {
    */
   const buildSearchParams = (query: BookListQuery) => {
     const params = new URLSearchParams();
-    if (query.keyword) params.set("keyword", query.keyword);
-    if (query.author) params.set("author", query.author);
-    if (query.ratingMin) params.set("ratingMin", String(query.ratingMin));
+
+    const setparam = (key: string, value: string | number | undefined) => {
+      if (value !== undefined && value !== "") {
+        params.set(key, String(value));
+      }
+    };
+
+    if (query.keyword) setparam("keyword", query.keyword);
+    if (query.author) setparam("author", query.author);
+    if (query.ratingMin) setparam("ratingMin", query.ratingMin);
     if (query.publicationYearFrom !== undefined) {
-      params.set("publicationYearFrom", String(query.publicationYearFrom));
+      setparam("publicationYearFrom", query.publicationYearFrom);
     }
     if (query.publicationYearTo !== undefined) {
-      params.set("publicationYearTo", String(query.publicationYearTo));
+      setparam("publicationYearTo", query.publicationYearTo);
     }
     if (query.sort) {
-      params.set("sort", query.sort);
+      setparam("sort", query.sort);
     }
     if (query.order) {
-      params.set("order", query.order);
+      setparam("order", query.order);
+    }
+    if (query.page) {
+      setparam("page", query.page);
+    }
+    if (query.limit) {
+      setparam("limit", query.limit);
     }
     return params;
   };
 
-  const handleSearch = () => {
-    setAppliedQuery({ ...draftQuery });
-    const params = buildSearchParams(draftQuery);
-    const queryString = params.toString();
-    navigate(`${location.pathname}${queryString ? `?${queryString}` : ""}`);
+  // URLクエリから数値を安全にパースする
+  const parseNumberParam = (value: string | null, fallback: number): number => {
+    if (value === null || value.trim() === "") {
+      return fallback;
+    }
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? fallback : parsed;
   };
+
+  /**
+   * 検索ボタンがクリックされたときの処理
+   * - 入力中のクエリを適用済みのクエリにコピーする
+   * - URLクエリを更新する
+   */
+  // const handleSearch = () => {
+  //   setAppliedQuery({ ...draftQuery });
+  //   const params = buildSearchParams(draftQuery);
+  //   const queryString = params.toString();
+  //   const path = queryString
+  //     ? `${location.pathname}?${queryString}`
+  //     : location.pathname;
+  //   navigate(path);
+  // };
+
+  const handleSearch = () => {
+    const params = buildSearchParams(draftQuery);
+    navigate({
+      pathname: location.pathname,
+      search: params.toString(),
+    });
+  };
+
+  // location.searchのクエリパラメータを解析して、クエリオブジェクトに変換する
+  const parseQueryParams = (search: string): BookListQuery => {
+    const params = new URLSearchParams(search);
+    const query: BookListQuery = {
+      ...initialQuery,
+      keyword: params.get("keyword") ?? "",
+      author: params.get("author") ?? "",
+      page: parseNumberParam(params.get("page"), 1),
+      limit: parseNumberParam(params.get("limit"), 20),
+      ratingMin: params.get("ratingMin")
+        ? Number(params.get("ratingMin"))
+        : undefined,
+      publicationYearFrom: params.get("publicationYearFrom")
+        ? Number(params.get("publicationYearFrom"))
+        : undefined,
+      publicationYearTo: params.get("publicationYearTo")
+        ? Number(params.get("publicationYearTo"))
+        : undefined,
+      sort: (params.get("sort") as BookListQuery["sort"]) ?? "createdAt",
+      order: (params.get("order") as BookListQuery["order"]) ?? "desc",
+    };
+
+    // 結果をdraftQueryとappliedQueryの両方に反映するために、クエリオブジェクトを返す
+    return query;
+  };
+
+  useEffect(() => {
+    const queryFromUrl = parseQueryParams(location.search);
+    setDraftQuery(queryFromUrl);
+    setAppliedQuery(queryFromUrl);
+  }, [location.search]);
 
   if (errorMessage) {
     return <MainLayout>Error: {errorMessage}</MainLayout>;
@@ -138,7 +208,7 @@ export function DashboardPage() {
               <option value="2">★2以上</option>
               <option value="3">★3以上</option>
               <option value="4">★4以上</option>
-              <option value="5">★5のみ</option>
+              <option value="5">★5以上</option>
             </select>
           </div>
 
@@ -285,7 +355,9 @@ export function DashboardPage() {
               key={book.id}
               title={book.title}
               author={book.author}
-              ratingDisplay={"4.5"} // ここは仮の値です。実際にはAPIから取得した評価を表示します。
+              ratingDisplay={
+                book.averageRating != null ? String(book.averageRating) : "0"
+              }
               summary={book.summary}
               ISBN={book.ISBN}
               publicationYear={book.publicationYear}
