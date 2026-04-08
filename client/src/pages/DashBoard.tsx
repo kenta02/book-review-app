@@ -4,7 +4,7 @@ import { BOOK_LIST_ERROR_MESSAGES } from "../constants/messages";
 import { useBooks } from "../hooks/useBooks";
 import { useEffect, useState } from "react";
 import type { BookListQuery } from "../types";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 
 export function DashboardPage() {
   // クエリの初期値を定義する
@@ -31,8 +31,8 @@ export function DashboardPage() {
   // URLクエリを更新する
   const location = useLocation();
 
-  // クエリが変更されたときにURLを更新する
-  const navigate = useNavigate();
+  // クエリを初期化
+  const [, setSearchParams] = useSearchParams();
 
   /**
    *  クエリオブジェクトをURLSearchParamsに変換する
@@ -86,22 +86,13 @@ export function DashboardPage() {
    * - 入力中のクエリを適用済みのクエリにコピーする
    * - URLクエリを更新する
    */
-  // const handleSearch = () => {
-  //   setAppliedQuery({ ...draftQuery });
-  //   const params = buildSearchParams(draftQuery);
-  //   const queryString = params.toString();
-  //   const path = queryString
-  //     ? `${location.pathname}?${queryString}`
-  //     : location.pathname;
-  //   navigate(path);
-  // };
-
   const handleSearch = () => {
+    // draftQueryをURLクエリに変換する
     const params = buildSearchParams(draftQuery);
-    navigate({
-      pathname: location.pathname,
-      search: params.toString(),
-    });
+    // クエリを適用する
+    setAppliedQuery(draftQuery);
+    // URLクエリを更新する
+    setSearchParams(params);
   };
 
   // location.searchのクエリパラメータを解析して、クエリオブジェクトに変換する
@@ -303,16 +294,9 @@ export function DashboardPage() {
         <div className="flex flex-col sm:flex-row gap-2 justify-end">
           <button
             onClick={() => {
-              setAppliedQuery({
-                // クエリをリセットする際に検索済のクエリも初期化する
-                ...initialQuery,
-              });
-              setDraftQuery({
-                // クエリをリセットする際に入力中のクエリも初期化する
-                ...initialQuery,
-              });
-              // クエリをリセットした後にURLもクリーンな状態にする
-              navigate(location.pathname);
+              setSearchParams({});
+              setAppliedQuery(initialQuery);
+              setDraftQuery(initialQuery);
             }}
             type="button"
             data-testid="clear-filters-button"
@@ -323,7 +307,6 @@ export function DashboardPage() {
           <button
             type="button"
             data-testid="search-button"
-            // onClick={() => setAppliedQuery({ ...draftQuery })}
             onClick={handleSearch}
             className="py-2 px-5 bg-gray-900 border border-black/20 rounded font-semibold text-sm hover:bg-gray-800 active:scale-95 transition whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-gray-300 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
           >
