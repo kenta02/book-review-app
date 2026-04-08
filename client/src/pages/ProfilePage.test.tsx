@@ -17,7 +17,7 @@ describe("ProfilePage", () => {
     (apiClient.getUserById as unknown as ReturnType<typeof vi.fn>).mockReset();
   });
 
-  it("renders user data when API returns user", async () => {
+  it("API がユーザーを返したときユーザーデータをレンダリングする", async () => {
     (
       apiClient.getUserById as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValue({
@@ -39,7 +39,7 @@ describe("ProfilePage", () => {
     expect(screen.getByText("user@example.com")).toBeInTheDocument();
   });
 
-  it("shows error message when API fails", async () => {
+  it("API が失敗したときエラーメッセージを表示する", async () => {
     (
       apiClient.getUserById as unknown as ReturnType<typeof vi.fn>
     ).mockRejectedValue(new Error("fail"));

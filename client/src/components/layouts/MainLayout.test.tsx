@@ -35,7 +35,7 @@ describe("MainLayout", () => {
     globalThis.localStorage.clear();
   });
 
-  it("renders children and toggles sidebar via menu button", () => {
+  it("子要素をレンダリングしメニューボタンでサイドバーを切り替える", () => {
     render(
       <BrowserRouter>
         <MainLayout>

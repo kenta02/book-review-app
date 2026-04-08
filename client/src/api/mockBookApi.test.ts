@@ -12,7 +12,7 @@ describe("mockBookApi", () => {
     vi.useRealTimers();
   });
 
-  it("getBookById returns existing book", async () => {
+  it("getBookById が既存書籍を返す", async () => {
     const promise = mockBookApi.getBookById(1);
     vi.advanceTimersByTime(500);
     const result = await promise;
@@ -21,7 +21,7 @@ describe("mockBookApi", () => {
     expect(result.data.title).toContain("吾輩は猫である");
   });
 
-  it("getBookById throws ApiHttpError when book not found", async () => {
+  it("getBookById が書籍未登録時に ApiHttpError を投げる", async () => {
     const promise = mockBookApi.getBookById(9999);
     vi.advanceTimersByTime(500);
     await expect(promise).rejects.toEqual(
@@ -29,7 +29,7 @@ describe("mockBookApi", () => {
     );
   });
 
-  it("getAllBooks returns full list", async () => {
+  it("getAllBooks が全件書籍リストを返す", async () => {
     const promise = mockBookApi.getAllBooks();
     vi.advanceTimersByTime(500);
     const result = await promise;
@@ -37,7 +37,7 @@ describe("mockBookApi", () => {
     expect(result.data.books.length).toBeGreaterThan(0);
   });
 
-  it("getAllBooks aborts when signal is aborted", async () => {
+  it("signal が中断されたとき getAllBooks が中止される", async () => {
     const controller = new AbortController();
     const promise = mockBookApi.getAllBooks(controller.signal);
     controller.abort();
@@ -46,7 +46,7 @@ describe("mockBookApi", () => {
     await expect(promise).rejects.toHaveProperty("name", "AbortError");
   });
 
-  it("searchBooks filters by keyword, author, and pagination", async () => {
+  it("searchBooks がキーワード・著者・ページネーションでフィルタする", async () => {
     const first = mockBookApi.searchBooks({ keyword: "猫" });
     vi.advanceTimersByTime(500);
     const firstResult = await first;
@@ -75,7 +75,7 @@ describe("mockBookApi", () => {
     expect(pageResult.data.pagination.totalItems).toBeGreaterThanOrEqual(2);
   });
 
-  it("searchBooks supports sorting and rating min", async () => {
+  it("searchBooks が並び替えと最低評価条件をサポートする", async () => {
     const rating = mockBookApi.searchBooks({ ratingMin: 4.4 });
     vi.advanceTimersByTime(500);
     const ratingResult = await rating;
@@ -98,7 +98,7 @@ describe("mockBookApi", () => {
     );
   });
 
-  it("createBook, updateBook, deleteBook and missing book cases", async () => {
+  it("書籍の作成・更新・削除と未登録書籍ケース", async () => {
     const promiseCreate = mockBookApi.createBook({
       title: "新書",
       author: "著者",

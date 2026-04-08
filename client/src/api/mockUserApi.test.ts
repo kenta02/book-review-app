@@ -16,7 +16,7 @@ describe("mockUserApi", () => {
     vi.useRealTimers();
   });
 
-  it("getUserById returns existing user", async () => {
+  it("getUserById が既存ユーザーを返す", async () => {
     const promise = mockUserApi.getUserById(1);
     vi.advanceTimersByTime(500);
 
@@ -25,7 +25,7 @@ describe("mockUserApi", () => {
     expect(user.data.username).toBe("john_doe");
   });
 
-  it("getUserById throws ApiHttpError when user not found", async () => {
+  it("getUserById がユーザー未登録時に ApiHttpError を投げる", async () => {
     const promise = mockUserApi.getUserById(999);
     vi.advanceTimersByTime(500);
 
@@ -34,7 +34,7 @@ describe("mockUserApi", () => {
     );
   });
 
-  it("getUserById aborts when signal is aborted", async () => {
+  it("signal が中断されたとき getUserById が中止される", async () => {
     const controller = new AbortController();
     controller.abort();
     const promise = mockUserApi.getUserById(1, controller.signal);

@@ -24,7 +24,8 @@ const setFetchMock = (fetchMock: typeof fetch) => {
 };
 
 const clearFetchMock = () => {
-  (globalThis as unknown as { fetch?: typeof fetch }).fetch = undefined;
+  (globalThis as unknown as { fetch?: typeof fetch | undefined }).fetch =
+    undefined;
 };
 
 describe("apiClient", () => {
@@ -37,7 +38,7 @@ describe("apiClient", () => {
     clearFetchMock();
   });
 
-  it("getAllBooks: should return books when response is valid data wrapper", async () => {
+  it("getAllBooks: レスポンスが正しいデータラッパーなら書籍を返す", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -53,7 +54,7 @@ describe("apiClient", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/books", undefined);
   });
 
-  it("getAllBooks: should pass signal to fetch", async () => {
+  it("getAllBooks: signal を fetch に渡す", async () => {
     const controller = new AbortController();
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -72,7 +73,7 @@ describe("apiClient", () => {
     });
   });
 
-  it("getAllBooks: should throw ApiHttpError when HTTP status is not ok", async () => {
+  it("getAllBooks: HTTP ステータスが ok でないとき ApiHttpError を投げる", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 404,
@@ -87,7 +88,7 @@ describe("apiClient", () => {
     );
   });
 
-  it("getAllBooks: should throw ApiHttpError when JSON is invalid", async () => {
+  it("getAllBooks: JSON が無効なとき ApiHttpError を投げる", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -102,7 +103,7 @@ describe("apiClient", () => {
     );
   });
 
-  it("deleteBook: should call DELETE and resolve on ok response", async () => {
+  it("deleteBook: ok レスポンスで DELETE を呼び出して解決する", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 204,
@@ -118,7 +119,7 @@ describe("apiClient", () => {
     });
   });
 
-  it("deleteBook: should throw ApiHttpError when DELETE returns error", async () => {
+  it("deleteBook: DELETE がエラーを返したら ApiHttpError を投げる", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
@@ -133,7 +134,7 @@ describe("apiClient", () => {
     );
   });
 
-  it("getUserById/getReviewById/getBookById should return resource", async () => {
+  it("getUserById/getReviewById/getBookById がリソースを返す", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
@@ -193,7 +194,7 @@ describe("apiClient", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/books/1", undefined);
   });
 
-  it("getReviews (all and specific) should work", async () => {
+  it("getReviews (全件・特定) が動作する", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
@@ -256,7 +257,7 @@ describe("apiClient", () => {
     );
   });
 
-  it("getReviews: should pass signal to fetch", async () => {
+  it("getReviews: signal を fetch に渡す", async () => {
     const controller = new AbortController();
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -295,7 +296,7 @@ describe("apiClient", () => {
     });
   });
 
-  it("searchBooks: should build URL correctly with query params", async () => {
+  it("searchBooks: クエリパラメータで URL を正しく構築する", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -326,7 +327,7 @@ describe("apiClient", () => {
     );
   });
 
-  it("searchBooks: should call /api/books when query is undefined or empty object", async () => {
+  it("searchBooks: query が undefined または空オブジェクトのとき /api/books を呼ぶ", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -345,7 +346,7 @@ describe("apiClient", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/books", undefined);
   });
 
-  it("searchBooks: should include an empty keyword when set to empty string", async () => {
+  it("searchBooks: 空文字を設定したとき空キーワードを含める", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -361,7 +362,7 @@ describe("apiClient", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/books?keyword=", undefined);
   });
 
-  it("create/update review and book endpoints call correct HTTP verb", async () => {
+  it("作成・更新レビューと書籍エンドポイントが正しい HTTP 動詞を呼ぶ", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
@@ -500,7 +501,7 @@ describe("apiClient", () => {
     });
   });
 
-  it("fetchJson returns unwrapped payload when data field is missing", async () => {
+  it("fetchJson が data フィールドなしのときラップなしペイロードを返す", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -515,12 +516,22 @@ describe("apiClient", () => {
     expect((book.data as unknown as { name: string }).name).toBe("no-data");
   });
 
-  it("should use mock API operations when VITE_USE_MOCK=true", async () => {
+  it("VITE_USE_MOCK=true のときモック API 操作を使用する", async () => {
     vi.stubEnv("VITE_USE_MOCK", "true");
 
     const getAllBooksSpy = vi
       .spyOn(mockBookApi, "searchBooks")
-      .mockResolvedValue({ data: { books: dummyBooks } });
+      .mockResolvedValue({
+        data: {
+          books: dummyBooks,
+          pagination: {
+            currentPage: 1,
+            totalPages: 1,
+            totalItems: dummyBooks.length,
+            itemsPerPage: dummyBooks.length,
+          },
+        },
+      });
     const createBookSpy = vi
       .spyOn(mockBookApi, "createBook")
       .mockResolvedValue({ data: { ...firstDummyBook, id: 99 } });

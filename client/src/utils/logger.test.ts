@@ -13,7 +13,7 @@ describe("logger", () => {
     process.env = { ...originalEnv };
   });
 
-  it("does not call console when not in dev mode", async () => {
+  it("dev モードでないとき console を呼ばない", async () => {
     process.env.VITE_DEBUG = "false";
     process.env.NODE_ENV = "production";
 
@@ -35,7 +35,7 @@ describe("logger", () => {
     expect(infoSpy).not.toHaveBeenCalled();
   });
 
-  it("calls console when VITE_DEBUG is true", async () => {
+  it("VITE_DEBUG=true のとき console を呼ぶ", async () => {
     process.env.VITE_DEBUG = "true";
     process.env.NODE_ENV = "production";
 

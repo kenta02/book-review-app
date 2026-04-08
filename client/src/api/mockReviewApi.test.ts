@@ -12,7 +12,7 @@ describe("mockReviewApi", () => {
     vi.useRealTimers();
   });
 
-  it("getReviewById returns existing review", async () => {
+  it("getReviewById が既存レビューを返す", async () => {
     const promise = mockReviewApi.getReviewById(1);
     vi.advanceTimersByTime(500);
 
@@ -21,7 +21,7 @@ describe("mockReviewApi", () => {
     expect(result.data.content).toContain("この本は最高でした");
   });
 
-  it("getReviewById throws ApiHttpError when review not found", async () => {
+  it("getReviewById がレビュー未登録時に ApiHttpError を投げる", async () => {
     const promise = mockReviewApi.getReviewById(999);
     vi.advanceTimersByTime(500);
 
@@ -30,7 +30,7 @@ describe("mockReviewApi", () => {
     );
   });
 
-  it("getReviews returns filtered reviews by bookId", async () => {
+  it("getReviews が bookId による絞り込みレビューを返す", async () => {
     const promise = mockReviewApi.getReviews(101);
     vi.advanceTimersByTime(500);
     const result = await promise;
@@ -38,7 +38,7 @@ describe("mockReviewApi", () => {
     expect(result.data.reviews.every((r) => r.bookId === 101)).toBe(true);
   });
 
-  it("getReviews aborts when signal is aborted", async () => {
+  it("signal が中断されたとき getReviews が中止される", async () => {
     const controller = new AbortController();
     controller.abort();
     const promise = mockReviewApi.getReviews(undefined, controller.signal);
@@ -46,7 +46,7 @@ describe("mockReviewApi", () => {
     await expect(promise).rejects.toHaveProperty("name", "AbortError");
   });
 
-  it("create/update/delete review and not found cases", async () => {
+  it("レビューの作成・更新・削除と未登録ケース", async () => {
     const createPromise = mockReviewApi.createReview({
       bookId: 120,
       rating: 5,

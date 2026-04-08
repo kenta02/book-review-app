@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Sidebar } from "./Sidebar";
 
 describe("Sidebar", () => {
-  it("renders overlay when open and calls onClose when clicked", () => {
+  it("開いているときオーバーレイを表示しクリックで onClose を呼ぶ", () => {
     const onClose = vi.fn();
 
     render(
@@ -21,7 +21,7 @@ describe("Sidebar", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("does not render overlay when closed", () => {
+  it("閉じているときオーバーレイを表示しない", () => {
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>
         <Sidebar isOpen={false} />
@@ -31,7 +31,7 @@ describe("Sidebar", () => {
     expect(screen.queryByTestId("sidebar-overlay")).toBeNull();
   });
 
-  it("highlights the active route", () => {
+  it("アクティブルートをハイライトする", () => {
     render(
       <MemoryRouter initialEntries={["/settings"]}>
         <Sidebar isOpen={true} onClose={() => {}} />

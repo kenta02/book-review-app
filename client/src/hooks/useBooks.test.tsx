@@ -52,7 +52,7 @@ describe("useBooks hook", () => {
     (apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>).mockReset();
   });
 
-  it("starts in loading state then renders data", async () => {
+  it("読み込み状態から始まりデータをレンダリングする", async () => {
     (
       apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValue({
@@ -75,7 +75,7 @@ describe("useBooks hook", () => {
     });
   });
 
-  it("can refresh on button click", async () => {
+  it("ボタンクリックでリフレッシュできる", async () => {
     // 初回は空データ、二回目はbooksを返す
     (apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
@@ -118,7 +118,7 @@ describe("useBooks hook", () => {
     });
   });
 
-  it("shows error when api fails", async () => {
+  it("API が失敗したときエラーを表示する", async () => {
     (
       apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>
     ).mockRejectedValue(new ApiHttpError(500, "server error"));
@@ -130,7 +130,7 @@ describe("useBooks hook", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows unknown error when response payload is unexpected", async () => {
+  it("レスポンスペイロードが想定外のとき不明なエラーを表示する", async () => {
     (
       apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValue({ data: {} });

@@ -14,7 +14,7 @@ describe("ReviewItem", () => {
     createdAt: "2023-02-25T12:00:00.000Z",
   };
 
-  it("renders all fields correctly", () => {
+  it("すべてのフィールドを正しくレンダリングする", () => {
     render(<ReviewItem review={sample} />);
 
     expect(screen.getByText(/Book ID:/)).toHaveTextContent("Book ID: 42");
