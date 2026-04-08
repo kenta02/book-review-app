@@ -95,6 +95,35 @@ export function DashboardPage() {
     setSearchParams(params);
   };
 
+  const allowedSortValues = [
+    "title",
+    "author",
+    "publicationYear",
+    "rating",
+    "createdAt",
+  ] as const;
+
+  type SortValue = (typeof allowedSortValues)[number];
+
+  const allowedOrderValues = ["asc", "desc"] as const;
+  type OrderValue = (typeof allowedOrderValues)[number];
+
+  const isValidSort = (value: string | null): value is SortValue => {
+    return value !== null && allowedSortValues.some((item) => item === value);
+  };
+
+  const isValidOrder = (value: string | null): value is OrderValue => {
+    return value !== null && allowedOrderValues.some((item) => item === value);
+  };
+
+  const parseSort = (value: string | null): SortValue => {
+    return isValidSort(value) ? value : "createdAt";
+  };
+
+  const parseOrder = (value: string | null): OrderValue => {
+    return isValidOrder(value) ? value : "desc";
+  };
+
   // location.searchのクエリパラメータを解析して、クエリオブジェクトに変換する
   const parseQueryParams = (search: string): BookListQuery => {
     const params = new URLSearchParams(search);
@@ -113,8 +142,8 @@ export function DashboardPage() {
       publicationYearTo: params.get("publicationYearTo")
         ? Number(params.get("publicationYearTo"))
         : undefined,
-      sort: (params.get("sort") as BookListQuery["sort"]) ?? "createdAt",
-      order: (params.get("order") as BookListQuery["order"]) ?? "desc",
+      sort: parseSort(params.get("sort")),
+      order: parseOrder(params.get("order")),
     };
 
     // 結果をdraftQueryとappliedQueryの両方に反映するために、クエリオブジェクトを返す
@@ -339,7 +368,9 @@ export function DashboardPage() {
               title={book.title}
               author={book.author}
               ratingDisplay={
-                book.averageRating != null ? String(book.averageRating) : "0"
+                book.averageRating != null
+                  ? String(book.averageRating)
+                  : "評価なし"
               }
               summary={book.summary}
               ISBN={book.ISBN}
