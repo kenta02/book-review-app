@@ -12,7 +12,7 @@ export function DashboardPage() {
     page: 1,
     limit: 20,
     keyword: "",
-    author: "",
+    // author: "",
     sort: "createdAt",
     order: "desc",
   };
@@ -49,7 +49,7 @@ export function DashboardPage() {
     };
 
     if (query.keyword) setparam("keyword", query.keyword);
-    if (query.author) setparam("author", query.author);
+    // if (query.author) setparam("author", query.author);
     if (query.ratingMin) setparam("ratingMin", query.ratingMin);
     if (query.publicationYearFrom !== undefined) {
       setparam("publicationYearFrom", query.publicationYearFrom);
@@ -109,11 +109,11 @@ export function DashboardPage() {
   type OrderValue = (typeof allowedOrderValues)[number];
 
   const isValidSort = (value: string | null): value is SortValue => {
-    return value !== null && allowedSortValues.some((item) => item === value);
+    return value !== null && allowedSortValues.includes(value as SortValue);
   };
 
   const isValidOrder = (value: string | null): value is OrderValue => {
-    return value !== null && allowedOrderValues.some((item) => item === value);
+    return value !== null && allowedOrderValues.includes(value as OrderValue);
   };
 
   const parseSort = (value: string | null): SortValue => {
@@ -130,7 +130,7 @@ export function DashboardPage() {
     const query: BookListQuery = {
       ...initialQuery,
       keyword: params.get("keyword") ?? "",
-      author: params.get("author") ?? "",
+      // author: params.get("author") ?? "",
       page: parseNumberParam(params.get("page"), 1),
       limit: parseNumberParam(params.get("limit"), 20),
       ratingMin: params.get("ratingMin")
