@@ -91,6 +91,19 @@ async function fetchVoid(
   }
 }
 
+const DEFAULT_FETCH_ALL_BOOKS_PAGE_SIZE = 100;
+
+/**
+ * 多ページ取得ループの各段階で AbortSignal を検査する。
+ * fetch 開始前に中断済みなら、追加リクエストを送らずに即時終了する。
+ * @param abortSignal - 呼び出し元から渡された AbortSignal
+ */
+function ensureNotAborted(abortSignal?: AbortSignal): void {
+  if (abortSignal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+}
+
 export const apiClient = {
   /**
    * ユーザー情報を ID から取得
@@ -248,17 +261,58 @@ export const apiClient = {
   /**
    * 全書籍一覧を取得する（クエリなし）
    * @param abortSignal - リクエストキャンセル用の AbortSignal
-   * @returns {Promise<ApiResponse<BookListResponse>>} 書籍一覧とページネーション
+   * @returns {Promise<ApiResponse<BookListResponse>>} 全件の書籍一覧と集約済みページネーション
    */
   getAllBooks: async (
     abortSignal?: AbortSignal,
   ): Promise<ApiResponse<BookListResponse>> => {
-    // モックまたは実 API の切り替えを行う
     if (isMockMode()) {
-      return await mockBookApi.searchBooks(undefined, abortSignal);
-    } else {
-      return await apiClient.searchBooks(undefined, abortSignal);
+      return await mockBookApi.getAllBooks(abortSignal);
     }
+
+    // 実 API はページング前提のため、全ページを順に取得して結合する。
+    const books: Book[] = [];
+    let page = 1;
+    let totalPages = 1;
+    let totalItems = 0;
+
+    while (page <= totalPages) {
+      ensureNotAborted(abortSignal);
+
+      const response = await apiClient.searchBooks(
+        {
+          page,
+          limit: DEFAULT_FETCH_ALL_BOOKS_PAGE_SIZE,
+        },
+        abortSignal,
+      );
+
+      books.push(...response.data.books);
+
+      const pagination = response.data.pagination;
+      if (!pagination) {
+        // ページ情報が返らない場合は、ここまでの取得結果を全件とみなす。
+        totalItems = books.length;
+        totalPages = page;
+        break;
+      }
+
+      totalItems = pagination.totalItems;
+      totalPages = pagination.totalPages;
+      page += 1;
+    }
+
+    return {
+      data: {
+        books,
+        pagination: {
+          currentPage: 1,
+          itemsPerPage: books.length,
+          totalItems,
+          totalPages: totalItems === 0 ? 0 : 1,
+        },
+      },
+    };
   },
 
   /**

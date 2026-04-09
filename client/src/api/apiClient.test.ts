@@ -43,7 +43,18 @@ describe("apiClient", () => {
       ok: true,
       status: 200,
       statusText: "OK",
-      text: async () => JSON.stringify({ data: { books: dummyBooks } }),
+      text: async () =>
+        JSON.stringify({
+          data: {
+            books: dummyBooks,
+            pagination: {
+              currentPage: 1,
+              totalPages: 1,
+              totalItems: dummyBooks.length,
+              itemsPerPage: 100,
+            },
+          },
+        }),
     });
 
     setFetchMock(fetchMock);
@@ -51,7 +62,7 @@ describe("apiClient", () => {
     const response = await apiClient.getAllBooks();
 
     expect(response.data.books).toEqual(dummyBooks);
-    expect(fetchMock).toHaveBeenCalledWith("/api/books", undefined);
+    expect(fetchMock).toHaveBeenCalledWith("/api/books?page=1&limit=100", undefined);
   });
 
   it("getAllBooks: signal を fetch に渡す", async () => {
@@ -60,7 +71,18 @@ describe("apiClient", () => {
       ok: true,
       status: 200,
       statusText: "OK",
-      text: async () => JSON.stringify({ data: { books: dummyBooks } }),
+      text: async () =>
+        JSON.stringify({
+          data: {
+            books: dummyBooks,
+            pagination: {
+              currentPage: 1,
+              totalPages: 1,
+              totalItems: dummyBooks.length,
+              itemsPerPage: 100,
+            },
+          },
+        }),
     });
 
     setFetchMock(fetchMock);
@@ -68,9 +90,71 @@ describe("apiClient", () => {
     const response = await apiClient.getAllBooks(controller.signal);
 
     expect(response.data.books).toEqual(dummyBooks);
-    expect(fetchMock).toHaveBeenCalledWith("/api/books", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/books?page=1&limit=100", {
       signal: controller.signal,
     });
+  });
+
+  it("getAllBooks: 複数ページを取得して全件を結合する", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        text: async () =>
+          JSON.stringify({
+            data: {
+              books: [dummyBooks[0]],
+              pagination: {
+                currentPage: 1,
+                totalPages: 2,
+                totalItems: 2,
+                itemsPerPage: 100,
+              },
+            },
+          }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        text: async () =>
+          JSON.stringify({
+            data: {
+              books: [{ ...firstDummyBook, id: 2, title: "Second Book" }],
+              pagination: {
+                currentPage: 2,
+                totalPages: 2,
+                totalItems: 2,
+                itemsPerPage: 100,
+              },
+            },
+          }),
+      });
+
+    setFetchMock(fetchMock);
+
+    const response = await apiClient.getAllBooks();
+
+    expect(response.data.books).toHaveLength(2);
+    expect(response.data.books.map((book) => book.id)).toEqual([1, 2]);
+    expect(response.data.pagination).toEqual({
+      currentPage: 1,
+      itemsPerPage: 2,
+      totalItems: 2,
+      totalPages: 1,
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "/api/books?page=1&limit=100",
+      undefined,
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/books?page=2&limit=100",
+      undefined,
+    );
   });
 
   it("getAllBooks: HTTP ステータスが ok でないとき ApiHttpError を投げる", async () => {
@@ -520,7 +604,7 @@ describe("apiClient", () => {
     vi.stubEnv("VITE_USE_MOCK", "true");
 
     const getAllBooksSpy = vi
-      .spyOn(mockBookApi, "searchBooks")
+      .spyOn(mockBookApi, "getAllBooks")
       .mockResolvedValue({
         data: {
           books: dummyBooks,
