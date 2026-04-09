@@ -19,6 +19,15 @@ const dummyBooks: Book[] = [
 ];
 const firstDummyBook: Book = dummyBooks[0]!;
 
+const setFetchMock = (fetchMock: typeof fetch) => {
+  (globalThis as unknown as { fetch?: typeof fetch }).fetch = fetchMock;
+};
+
+const clearFetchMock = () => {
+  (globalThis as unknown as { fetch?: typeof fetch | undefined }).fetch =
+    undefined;
+};
+
 describe("apiClient", () => {
   beforeEach(() => {
     vi.stubEnv("VITE_USE_MOCK", "false");
@@ -26,28 +35,129 @@ describe("apiClient", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = undefined;
+    clearFetchMock();
   });
 
-  it("getAllBooks: should return books when response is valid data wrapper", async () => {
+  it("getAllBooks: レスポンスが正しいデータラッパーなら書籍を返す", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
       statusText: "OK",
-      text: async () => JSON.stringify({ data: { books: dummyBooks } }),
+      text: async () =>
+        JSON.stringify({
+          data: {
+            books: dummyBooks,
+            pagination: {
+              currentPage: 1,
+              totalPages: 1,
+              totalItems: dummyBooks.length,
+              itemsPerPage: 100,
+            },
+          },
+        }),
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     const response = await apiClient.getAllBooks();
 
     expect(response.data.books).toEqual(dummyBooks);
-    expect(fetchMock).toHaveBeenCalledWith("/api/books", undefined);
+    expect(fetchMock).toHaveBeenCalledWith("/api/books?page=1&limit=100", undefined);
   });
 
-  it("getAllBooks: should throw ApiHttpError when HTTP status is not ok", async () => {
+  it("getAllBooks: signal を fetch に渡す", async () => {
+    const controller = new AbortController();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async () =>
+        JSON.stringify({
+          data: {
+            books: dummyBooks,
+            pagination: {
+              currentPage: 1,
+              totalPages: 1,
+              totalItems: dummyBooks.length,
+              itemsPerPage: 100,
+            },
+          },
+        }),
+    });
+
+    setFetchMock(fetchMock);
+
+    const response = await apiClient.getAllBooks(controller.signal);
+
+    expect(response.data.books).toEqual(dummyBooks);
+    expect(fetchMock).toHaveBeenCalledWith("/api/books?page=1&limit=100", {
+      signal: controller.signal,
+    });
+  });
+
+  it("getAllBooks: 複数ページを取得して全件を結合する", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        text: async () =>
+          JSON.stringify({
+            data: {
+              books: [dummyBooks[0]],
+              pagination: {
+                currentPage: 1,
+                totalPages: 2,
+                totalItems: 2,
+                itemsPerPage: 100,
+              },
+            },
+          }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        text: async () =>
+          JSON.stringify({
+            data: {
+              books: [{ ...firstDummyBook, id: 2, title: "Second Book" }],
+              pagination: {
+                currentPage: 2,
+                totalPages: 2,
+                totalItems: 2,
+                itemsPerPage: 100,
+              },
+            },
+          }),
+      });
+
+    setFetchMock(fetchMock);
+
+    const response = await apiClient.getAllBooks();
+
+    expect(response.data.books).toHaveLength(2);
+    expect(response.data.books.map((book) => book.id)).toEqual([1, 2]);
+    expect(response.data.pagination).toEqual({
+      currentPage: 1,
+      itemsPerPage: 2,
+      totalItems: 2,
+      totalPages: 1,
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "/api/books?page=1&limit=100",
+      undefined,
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/books?page=2&limit=100",
+      undefined,
+    );
+  });
+
+  it("getAllBooks: HTTP ステータスが ok でないとき ApiHttpError を投げる", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 404,
@@ -55,15 +165,14 @@ describe("apiClient", () => {
       text: async () => "{}",
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     await expect(apiClient.getAllBooks()).rejects.toEqual(
       new ApiHttpError(404, "Not Found"),
     );
   });
 
-  it("getAllBooks: should throw ApiHttpError when JSON is invalid", async () => {
+  it("getAllBooks: JSON が無効なとき ApiHttpError を投げる", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -71,15 +180,14 @@ describe("apiClient", () => {
       text: async () => "not json",
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     await expect(apiClient.getAllBooks()).rejects.toThrow(
       /Invalid JSON response/i,
     );
   });
 
-  it("deleteBook: should call DELETE and resolve on ok response", async () => {
+  it("deleteBook: ok レスポンスで DELETE を呼び出して解決する", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 204,
@@ -87,8 +195,7 @@ describe("apiClient", () => {
       text: async () => "",
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     await expect(apiClient.deleteBook(123)).resolves.toBeUndefined();
     expect(fetchMock).toHaveBeenCalledWith("/api/books/123", {
@@ -96,7 +203,7 @@ describe("apiClient", () => {
     });
   });
 
-  it("deleteBook: should throw ApiHttpError when DELETE returns error", async () => {
+  it("deleteBook: DELETE がエラーを返したら ApiHttpError を投げる", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
@@ -104,15 +211,14 @@ describe("apiClient", () => {
       text: async () => "error",
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     await expect(apiClient.deleteBook(123)).rejects.toEqual(
       new ApiHttpError(500, "Internal Server Error"),
     );
   });
 
-  it("getUserById/getReviewById/getBookById should return resource", async () => {
+  it("getUserById/getReviewById/getBookById がリソースを返す", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
@@ -156,8 +262,7 @@ describe("apiClient", () => {
           }),
       });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     const user = await apiClient.getUserById(42);
     expect(user.data.username).toBe("hey");
@@ -173,7 +278,7 @@ describe("apiClient", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/books/1", undefined);
   });
 
-  it("getReviews (all and specific) should work", async () => {
+  it("getReviews (全件・特定) が動作する", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
@@ -220,8 +325,7 @@ describe("apiClient", () => {
           }),
       });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     const allReviews = await apiClient.getReviews();
     expect(allReviews.data.reviews.length).toBe(1);
@@ -237,7 +341,112 @@ describe("apiClient", () => {
     );
   });
 
-  it("create/update review and book endpoints call correct HTTP verb", async () => {
+  it("getReviews: signal を fetch に渡す", async () => {
+    const controller = new AbortController();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async () =>
+        JSON.stringify({
+          data: {
+            reviews: [
+              {
+                id: 1,
+                bookId: 2,
+                userId: 1,
+                rating: 5,
+                content: "ok",
+                createdAt: "",
+              },
+            ],
+            pagination: {
+              currentPage: 1,
+              totalPages: 1,
+              totalItems: 1,
+              itemsPerPage: 20,
+            },
+          },
+        }),
+    });
+
+    setFetchMock(fetchMock);
+
+    const response = await apiClient.getReviews(undefined, controller.signal);
+
+    expect(response.data.reviews.length).toBe(1);
+    expect(fetchMock).toHaveBeenCalledWith("/api/reviews", {
+      signal: controller.signal,
+    });
+  });
+
+  it("searchBooks: クエリパラメータで URL を正しく構築する", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async () => JSON.stringify({ data: { books: dummyBooks } }),
+    });
+
+    setFetchMock(fetchMock);
+
+    const query = {
+      page: 2,
+      limit: 5,
+      keyword: "React",
+      author: "Author",
+      publicationYearFrom: 2000,
+      publicationYearTo: 2025,
+      ratingMin: 3,
+      sort: "rating" as const,
+      order: "desc" as const,
+    };
+
+    const response = await apiClient.searchBooks(query);
+
+    expect(response.data.books).toEqual(dummyBooks);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/books?page=2&limit=5&keyword=React&author=Author&publicationYearFrom=2000&publicationYearTo=2025&ratingMin=3&sort=rating&order=desc",
+      undefined,
+    );
+  });
+
+  it("searchBooks: query が undefined または空オブジェクトのとき /api/books を呼ぶ", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async () => JSON.stringify({ data: { books: dummyBooks } }),
+    });
+
+    setFetchMock(fetchMock);
+
+    const responseUndefined = await apiClient.searchBooks();
+    expect(responseUndefined.data.books).toEqual(dummyBooks);
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/books", undefined);
+
+    const responseEmpty = await apiClient.searchBooks({});
+    expect(responseEmpty.data.books).toEqual(dummyBooks);
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/books", undefined);
+  });
+
+  it("searchBooks: 空文字を設定したとき空キーワードを含める", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async () => JSON.stringify({ data: { books: dummyBooks } }),
+    });
+
+    setFetchMock(fetchMock);
+
+    const response = await apiClient.searchBooks({ keyword: "" });
+
+    expect(response.data.books).toEqual(dummyBooks);
+    expect(fetchMock).toHaveBeenCalledWith("/api/books?keyword=", undefined);
+  });
+
+  it("作成・更新レビューと書籍エンドポイントが正しい HTTP 動詞を呼ぶ", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
@@ -309,8 +518,7 @@ describe("apiClient", () => {
           }),
       });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     const createdReview = await apiClient.createReview({
       bookId: 1,
@@ -377,7 +585,7 @@ describe("apiClient", () => {
     });
   });
 
-  it("fetchJson returns unwrapped payload when data field is missing", async () => {
+  it("fetchJson が data フィールドなしのときラップなしペイロードを返す", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -385,20 +593,29 @@ describe("apiClient", () => {
       text: async () => JSON.stringify({ id: 999, name: "no-data" }),
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (global as any).fetch = fetchMock;
+    setFetchMock(fetchMock);
 
     const book = await apiClient.getBookById(999);
     expect(book.data.id).toBe(999);
     expect((book.data as unknown as { name: string }).name).toBe("no-data");
   });
 
-  it("should use mock API operations when VITE_USE_MOCK=true", async () => {
+  it("VITE_USE_MOCK=true のときモック API 操作を使用する", async () => {
     vi.stubEnv("VITE_USE_MOCK", "true");
 
     const getAllBooksSpy = vi
       .spyOn(mockBookApi, "getAllBooks")
-      .mockResolvedValue({ data: { books: dummyBooks } });
+      .mockResolvedValue({
+        data: {
+          books: dummyBooks,
+          pagination: {
+            currentPage: 1,
+            totalPages: 1,
+            totalItems: dummyBooks.length,
+            itemsPerPage: dummyBooks.length,
+          },
+        },
+      });
     const createBookSpy = vi
       .spyOn(mockBookApi, "createBook")
       .mockResolvedValue({ data: { ...firstDummyBook, id: 99 } });
@@ -428,8 +645,12 @@ describe("apiClient", () => {
 
     expect(getAllBooksSpy).toHaveBeenCalled();
     expect(createBookSpy).toHaveBeenCalled();
-    expect(updateBookSpy).toHaveBeenCalledWith(99, { title: "updated" });
-    expect(deleteBookSpy).toHaveBeenCalledWith(99);
+    expect(updateBookSpy).toHaveBeenCalledWith(
+      99,
+      { title: "updated" },
+      undefined,
+    );
+    expect(deleteBookSpy).toHaveBeenCalledWith(99, undefined);
 
     // restore original env
     vi.stubEnv("VITE_USE_MOCK", "false");

@@ -1,6 +1,8 @@
 import type {
   ApiResponse,
   Book,
+  BookListQuery,
+  BookListResponse,
   CreateBookRequest,
   CreateReviewRequest,
   DeleteReviewRequest,
@@ -14,7 +16,9 @@ import { mockBookApi } from "./mockBookApi";
 import { mockReviewApi } from "./mockReviewApi";
 import { mockUserApi } from "./mockUserApi";
 
-// VITE_USE_MOCK=true でモック API、false で実 API を使用
+// API クライアントの入口。モック環境と実環境を切り替えて疎結合に保つ。
+// - VITE_USE_MOCK=true でモック API、false で実 API を使用
+// - 各 API は AbortSignal を引き回し、キャンセル対応を提供する。
 const isMockMode = (): boolean => import.meta.env.VITE_USE_MOCK === "true";
 
 /**
@@ -40,7 +44,7 @@ function unwrapResponseData<T>(payload: unknown): T {
  */
 async function fetchJson<T>(
   input: RequestInfo | URL,
-  init?: RequestInit,
+  init?: Omit<RequestInit, "signal"> & { signal?: AbortSignal },
 ): Promise<T> {
   const response = await fetch(input, init);
 
@@ -52,7 +56,11 @@ async function fetchJson<T>(
   let payload: unknown;
   try {
     payload = JSON.parse(rawText) as unknown;
-  } catch {
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") {
+      throw e;
+    }
+
     // API から JSON が返らない場合は、呼び出し元で扱いやすい HTTP エラーへ寄せる。
     throw new ApiHttpError(
       response.status,
@@ -74,12 +82,25 @@ async function fetchJson<T>(
  */
 async function fetchVoid(
   input: RequestInfo | URL,
-  init?: RequestInit,
+  init?: Omit<RequestInit, "signal"> & { signal?: AbortSignal },
 ): Promise<void> {
   const response = await fetch(input, init);
 
   if (!response.ok) {
     throw new ApiHttpError(response.status, response.statusText);
+  }
+}
+
+const DEFAULT_FETCH_ALL_BOOKS_PAGE_SIZE = 100;
+
+/**
+ * 多ページ取得ループの各段階で AbortSignal を検査する。
+ * fetch 開始前に中断済みなら、追加リクエストを送らずに即時終了する。
+ * @param abortSignal - 呼び出し元から渡された AbortSignal
+ */
+function ensureNotAborted(abortSignal?: AbortSignal): void {
+  if (abortSignal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
   }
 }
 
@@ -89,11 +110,17 @@ export const apiClient = {
    * @param userId - ユーザー ID
    * @returns {data: User} ユーザー情報
    */
-  getUserById: async (userId: number): Promise<ApiResponse<User>> => {
+  getUserById: async (
+    userId: number,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<User>> => {
     if (isMockMode()) {
-      return await mockUserApi.getUserById(userId);
+      return await mockUserApi.getUserById(userId, abortSignal);
     } else {
-      const user = await fetchJson<User>(`/api/users/${userId}`);
+      // 実APIではconst optionとする
+      const options = abortSignal ? { signal: abortSignal } : undefined;
+
+      const user = await fetchJson<User>(`/api/users/${userId}`, options);
       return { data: user };
     }
   },
@@ -104,25 +131,32 @@ export const apiClient = {
    * @returns {data: Review} レビュー情報
    *
    */
-  getReviewById: async (reviewId: number): Promise<ApiResponse<Review>> => {
+  getReviewById: async (
+    reviewId: number,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<Review>> => {
     if (isMockMode()) {
-      return await mockReviewApi.getReviewById(reviewId);
+      return await mockReviewApi.getReviewById(reviewId, abortSignal);
     } else {
-      const review = await fetchJson<Review>(`/api/reviews/${reviewId}`);
+      // 実APIではconst optionとする
+      const options = abortSignal ? { signal: abortSignal } : undefined;
+
+      const review = await fetchJson<Review>(
+        `/api/reviews/${reviewId}`,
+        options,
+      );
       return { data: review };
     }
   },
   /**
    * レビュー一覧を取得
-   * @param bookId - 書籍 ID
-   * @returns {data: { reviews: Review[]; pagination?: Pagination }} レビューの配列
-   */
-  /**
-   * レビュー一覧を取得
-   * @param bookId - 書籍 ID (省略可)
+   * @param bookId - 書籍 ID（省略可。未指定の場合は全レビュー取得）
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<ApiResponse<{ reviews: Review[]; pagination?: Pagination }>>} レビューの配列とページネーション
    */
   getReviews: async (
     bookId?: number,
+    abortSignal?: AbortSignal,
   ): Promise<
     ApiResponse<{
       reviews: Review[];
@@ -131,30 +165,41 @@ export const apiClient = {
   > => {
     if (isMockMode()) {
       // モック側に同じシグネチャがある
-      return await mockReviewApi.getReviews(bookId);
+      return await mockReviewApi.getReviews(bookId, abortSignal);
     } else {
+      // 実APIではconst optionとする
+      const options = abortSignal ? { signal: abortSignal } : undefined;
+
       // クエリパラメータで絞り込み
       const url =
         bookId == null ? `/api/reviews` : `/api/reviews?bookId=${bookId}`;
       const data = await fetchJson<{
         reviews: Review[];
         pagination?: Pagination;
-      }>(url);
+      }>(url, options);
       return {
         data,
       };
     }
   },
 
-  // レビューの作成
+  /**
+   * レビューを作成する
+   * @param body - レビュー作成のリクエストボディ
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<ApiResponse<Review>>} 作成されたレビュー情報
+   */
   createReview: async (
     body: CreateReviewRequest,
+    abortSignal?: AbortSignal,
   ): Promise<ApiResponse<Review>> => {
     if (isMockMode()) {
       // モックのAPIを呼び出す
-      return await mockReviewApi.createReview(body);
+      return await mockReviewApi.createReview(body, abortSignal);
     } else {
+      const options = abortSignal ? { signal: abortSignal } : undefined;
       const review = await fetchJson<Review>(`/api/reviews`, {
+        ...options,
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -165,14 +210,24 @@ export const apiClient = {
     }
   },
 
-  // レビューの更新
+  /**
+   * レビューを更新する
+   * @param body - レビュー更新のリクエストボディ（reviewId を含む）
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<ApiResponse<Review>>} 更新されたレビュー情報
+   */
   updateReview: async (
     body: UpdateReviewRequest,
+    abortSignal?: AbortSignal,
   ): Promise<ApiResponse<Review>> => {
     if (isMockMode()) {
-      return await mockReviewApi.updateReview(body);
+      return await mockReviewApi.updateReview(body, abortSignal);
     } else {
+      // 実APIではconst optionとする
+      const options = abortSignal ? { signal: abortSignal } : undefined;
+
       const review = await fetchJson<Review>(`/api/reviews/${body.reviewId}`, {
+        ...options,
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -182,55 +237,195 @@ export const apiClient = {
       return { data: review };
     }
   },
-  // レビューの削除
-  deleteReview: async (body: DeleteReviewRequest): Promise<void> => {
+  /**
+   * レビューを削除する
+   * @param body - 削除対象のレビュー ID
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<void>} 削除完了
+   */
+  deleteReview: async (
+    body: DeleteReviewRequest,
+    abortSignal?: AbortSignal,
+  ): Promise<void> => {
     if (isMockMode()) {
-      await mockReviewApi.deleteReview(body.reviewId);
+      await mockReviewApi.deleteReview(body.reviewId, abortSignal);
     } else {
+      const options = abortSignal ? { signal: abortSignal } : undefined;
       await fetchVoid(`/api/reviews/${body.reviewId}`, {
+        ...options,
         method: "DELETE",
       });
     }
   },
 
   /**
-   * 全書籍一覧を取得する
-   * @returns {Promise<ApiResponse<{ books: Book[] }>>} 書籍の配列
+   * 全書籍一覧を取得する（クエリなし）
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<ApiResponse<BookListResponse>>} 全件の書籍一覧と集約済みページネーション
    */
-  getAllBooks: async (): Promise<ApiResponse<{ books: Book[] }>> => {
+  getAllBooks: async (
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<BookListResponse>> => {
     if (isMockMode()) {
-      // モックのAPIを呼び出す
-      return await mockBookApi.getAllBooks();
-    } else {
-      const data = await fetchJson<{ books: Book[] }>(`/api/books`);
-      return { data };
+      return await mockBookApi.getAllBooks(abortSignal);
     }
+
+    // 実 API はページング前提のため、全ページを順に取得して結合する。
+    const books: Book[] = [];
+    let page = 1;
+    let totalPages = 1;
+    let totalItems = 0;
+
+    while (page <= totalPages) {
+      ensureNotAborted(abortSignal);
+
+      const response = await apiClient.searchBooks(
+        {
+          page,
+          limit: DEFAULT_FETCH_ALL_BOOKS_PAGE_SIZE,
+        },
+        abortSignal,
+      );
+
+      books.push(...response.data.books);
+
+      const pagination = response.data.pagination;
+      if (!pagination) {
+        // ページ情報が返らない場合は、ここまでの取得結果を全件とみなす。
+        totalItems = books.length;
+        totalPages = page;
+        break;
+      }
+
+      totalItems = pagination.totalItems;
+      totalPages = pagination.totalPages;
+      page += 1;
+    }
+
+    return {
+      data: {
+        books,
+        pagination: {
+          currentPage: 1,
+          itemsPerPage: books.length,
+          totalItems,
+          totalPages: totalItems === 0 ? 0 : 1,
+        },
+      },
+    };
   },
 
-  // 書籍情報を取得する
-  getBookById: async (bookId: number): Promise<ApiResponse<Book>> => {
-    if (isMockMode()) {
-      // モックのAPIを呼び出す
-      return await mockBookApi.getBookById(bookId);
-    } else {
-      const book = await fetchJson<Book>(`/api/books/${bookId}`);
-      return { data: book };
-    }
-  },
-  // 書籍を作成する
-  createBook: async (
-    bookData: CreateBookRequest,
+  /**
+   * 書籍を ID から取得する
+   * @param bookId - 書籍 ID
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<ApiResponse<Book>>} 書籍情報
+   */
+  getBookById: async (
+    bookId: number,
+    abortSignal?: AbortSignal,
   ): Promise<ApiResponse<Book>> => {
     if (isMockMode()) {
       // モックのAPIを呼び出す
-      return await mockBookApi.createBook(bookData);
+      return await mockBookApi.getBookById(bookId, abortSignal);
     } else {
+      const options = abortSignal ? { signal: abortSignal } : undefined;
+      const book = await fetchJson<Book>(`/api/books/${bookId}`, options);
+      return { data: book };
+    }
+  },
+  /**
+   * 検索・フィルタ・ソート条件付きで書籍一覧を取得
+   * @param query - 検索・フィルタ・ソート条件（未指定時は全書籍一覧）
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<ApiResponse<BookListResponse>>} 書籍一覧とページネーション
+   */
+  searchBooks: async (
+    query?: BookListQuery,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<BookListResponse>> => {
+    if (isMockMode()) {
+      // モックのAPIを呼び出す
+      return await mockBookApi.searchBooks(query, abortSignal);
+    } else {
+      // 実APIではconst optionとする
+      const options = abortSignal ? { signal: abortSignal } : undefined;
+
+      // URLSearchParams で クエリパラメータを組み立てる
+      const params = new URLSearchParams();
+
+      // query が undefined のときは、そのまま /api/books にリクエスト
+      if (!query) {
+        const data = await fetchJson<BookListResponse>(`/api/books`, options);
+        return { data };
+      }
+
+      // query が指定されている場合、各フィルタを条件付きで追加（null/undefined は除外）
+      // これにより、未指定パラメータは URL に不要に含めない。
+      if (query.page != null) {
+        params.append("page", query.page.toString());
+      }
+      if (query.limit != null) {
+        params.append("limit", query.limit.toString());
+      }
+      if (query.keyword != null) {
+        params.append("keyword", query.keyword);
+      }
+      if (query.author != null) {
+        params.append("author", query.author);
+      }
+      if (query.publicationYearFrom != null) {
+        params.append(
+          "publicationYearFrom",
+          query.publicationYearFrom.toString(),
+        );
+      }
+      if (query.publicationYearTo != null) {
+        params.append("publicationYearTo", query.publicationYearTo.toString());
+      }
+      if (query.ratingMin != null) {
+        params.append("ratingMin", query.ratingMin.toString());
+      }
+      if (query.sort != null) {
+        params.append("sort", query.sort);
+      }
+      if (query.order != null) {
+        params.append("order", query.order);
+      }
+
+      // クエリ文字列を組み立てて URL に追加（空クエリは付与しない）
+      const queryString = params.toString();
+      const url = `/api/books${queryString ? `?${queryString}` : ""}`;
+
+      // API を呼び出して結果を返す
+      const data = await fetchJson<BookListResponse>(url, options);
+      return { data };
+    }
+  },
+  /**
+   * 書籍を作成する
+   * @param bookData - 書籍作成のリクエストボディ
+   * @param abortSignal - リクエストキャンセル用の AbortSignal
+   * @returns {Promise<ApiResponse<Book>>} 作成された書籍情報
+   */
+  createBook: async (
+    bookData: CreateBookRequest,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<Book>> => {
+    if (isMockMode()) {
+      // モックのAPIを呼び出す
+      return await mockBookApi.createBook(bookData, abortSignal);
+    } else {
+      // 実APIではconst optionとする
+      const options = abortSignal ? { signal: abortSignal } : undefined;
+
       const book = await fetchJson<Book>(`/api/books`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(bookData),
+        ...options,
       });
       return { data: book };
     }
@@ -244,16 +439,21 @@ export const apiClient = {
   updateBook: async (
     bookId: number,
     updatedData: Partial<Book>,
+    abortSignal?: AbortSignal,
   ): Promise<ApiResponse<Book>> => {
     if (isMockMode()) {
-      return await mockBookApi.updateBook(bookId, updatedData);
+      return await mockBookApi.updateBook(bookId, updatedData, abortSignal);
     } else {
+      // 実APIではconst optionとする
+      const options = abortSignal ? { signal: abortSignal } : undefined;
+
       const book = await fetchJson<Book>(`/api/books/${bookId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(updatedData),
+        ...options,
       });
       return { data: book };
     }
@@ -264,12 +464,19 @@ export const apiClient = {
    * @param bookId - 削除する書籍のID
    * @returns {Promise<void>} 削除成功のレスポンス
    */
-  deleteBook: async (bookId: number): Promise<void> => {
+  deleteBook: async (
+    bookId: number,
+    abortSignal?: AbortSignal,
+  ): Promise<void> => {
     if (isMockMode()) {
-      await mockBookApi.deleteBook(bookId);
+      await mockBookApi.deleteBook(bookId, abortSignal);
     } else {
+      // 実APIではconst optionとする
+      const options = abortSignal ? { signal: abortSignal } : undefined;
+
       await fetchVoid(`/api/books/${bookId}`, {
         method: "DELETE",
+        ...options,
       });
     }
   },

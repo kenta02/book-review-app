@@ -1,6 +1,11 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+/* global global, AbortController, DOMException */
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { ApiHttpError } from "../errors/AppError";
 import { mockUserApi } from "./mockUserApi";
+
+// Vitest で AbortController を使用可能にする
+global.AbortController = AbortController;
+global.DOMException = DOMException;
 
 describe("mockUserApi", () => {
   beforeEach(() => {
@@ -11,7 +16,7 @@ describe("mockUserApi", () => {
     vi.useRealTimers();
   });
 
-  it("getUserById returns existing user", async () => {
+  it("getUserById が既存ユーザーを返す", async () => {
     const promise = mockUserApi.getUserById(1);
     vi.advanceTimersByTime(500);
 
@@ -20,10 +25,21 @@ describe("mockUserApi", () => {
     expect(user.data.username).toBe("john_doe");
   });
 
-  it("getUserById throws ApiHttpError when user not found", async () => {
+  it("getUserById がユーザー未登録時に ApiHttpError を投げる", async () => {
     const promise = mockUserApi.getUserById(999);
     vi.advanceTimersByTime(500);
 
-    await expect(promise).rejects.toEqual(new ApiHttpError(404, "User 999 not found"));
+    await expect(promise).rejects.toEqual(
+      new ApiHttpError(404, "User 999 not found"),
+    );
+  });
+
+  it("signal が中断されたとき getUserById が中止される", async () => {
+    const controller = new AbortController();
+    const promise = mockUserApi.getUserById(1, controller.signal);
+    vi.advanceTimersByTime(250);
+    controller.abort();
+    await expect(promise).rejects.toThrow(DOMException);
+    await expect(promise).rejects.toHaveProperty("name", "AbortError");
   });
 });

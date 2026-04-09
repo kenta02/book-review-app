@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "../api/apiClient";
 import { DashboardPage } from "./DashBoard";
@@ -10,6 +10,7 @@ vi.mock("../api/apiClient", () => {
   return {
     apiClient: {
       getAllBooks: vi.fn(),
+      searchBooks: vi.fn(),
     },
   };
 });
@@ -51,6 +52,7 @@ describe("DashboardPage", () => {
   beforeEach(() => {
     // reset api mock and localStorage stub
     (apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>).mockReset();
+    (apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>).mockReset();
     Object.defineProperty(globalThis, "localStorage", {
       value: localStorageMock,
       writable: true,
@@ -58,11 +60,19 @@ describe("DashboardPage", () => {
     globalThis.localStorage.clear();
   });
 
-  it("renders loading and then book cards", async () => {
+  it("読み込み後に書籍カードをレンダリングする", async () => {
     (
-      apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
+      apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValue({
-      data: { books: sample },
+      data: {
+        books: sample,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 1,
+          itemsPerPage: 10,
+        },
+      },
     });
     render(
       <MemoryRouter>
@@ -77,9 +87,9 @@ describe("DashboardPage", () => {
     });
   });
 
-  it("shows error message when request fails", async () => {
+  it("リクエスト失敗時にエラーメッセージを表示する", async () => {
     (
-      apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
+      apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>
     ).mockRejectedValue(new Error("err"));
     render(
       <MemoryRouter>
@@ -89,11 +99,21 @@ describe("DashboardPage", () => {
     await waitFor(() => expect(screen.getByText(/Error:/)).toBeInTheDocument());
   });
 
-  it("renders search controls and filter inputs", async () => {
+  it("検索コントロールとフィルター入力をレンダリングする", async () => {
     // resolve empty list so we don't need cards
     (
-      apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>
-    ).mockResolvedValue({ data: { books: [] } });
+      apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({
+      data: {
+        books: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalItems: 0,
+          itemsPerPage: 10,
+        },
+      },
+    });
 
     render(
       <MemoryRouter>
@@ -107,7 +127,7 @@ describe("DashboardPage", () => {
     );
 
     expect(
-      screen.getByRole("textbox", { name: /書籍名、著者名、ISBNで検索/ }),
+      screen.getByRole("textbox", { name: /書籍名、著者名、要約で検索/ }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("clear-filters-button")).toBeInTheDocument();
     expect(screen.getByTestId("search-button")).toBeInTheDocument();
@@ -115,5 +135,202 @@ describe("DashboardPage", () => {
     expect(screen.getByLabelText(/出版年 From/)).toBeInTheDocument();
     expect(screen.getByLabelText(/出版年 to/)).toBeInTheDocument();
     expect(screen.getByLabelText(/並び替え/)).toBeInTheDocument();
+  });
+
+  it("検索ボタンがクリックされたときクエリを更新して searchBooks を呼ぶ", async () => {
+    const searchBooksMock = apiClient.searchBooks as unknown as ReturnType<
+      typeof vi.fn
+    >;
+    searchBooksMock
+      .mockResolvedValueOnce({
+        data: {
+          books: [],
+          pagination: {
+            currentPage: 1,
+            totalPages: 0,
+            totalItems: 0,
+            itemsPerPage: 10,
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          books: sample,
+          pagination: {
+            currentPage: 1,
+            totalPages: 1,
+            totalItems: 1,
+            itemsPerPage: 10,
+          },
+        },
+      });
+
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Loading/)).not.toBeInTheDocument(),
+    );
+
+    fireEvent.change(
+      screen.getByRole("textbox", { name: /書籍名、著者名、要約で検索/ }),
+      { target: { value: "Sample" } },
+    );
+    fireEvent.change(screen.getByLabelText(/評価/), {
+      target: { value: "4" },
+    });
+    const previousCallCount = searchBooksMock.mock.calls.length;
+    fireEvent.click(screen.getByTestId("search-button"));
+
+    await waitFor(() => {
+      expect(searchBooksMock.mock.calls.length).toBeGreaterThan(
+        previousCallCount,
+      );
+      expect(searchBooksMock.mock.calls.at(-1)?.[0]).toEqual({
+        page: 1,
+        limit: 20,
+        keyword: "Sample",
+        ratingMin: 4,
+        sort: "createdAt",
+        order: "desc",
+      });
+    });
+  });
+
+  it("クリアボタンがクリックされたときクエリと入力をリセットする", async () => {
+    const searchBooksMock = apiClient.searchBooks as unknown as ReturnType<
+      typeof vi.fn
+    >;
+    searchBooksMock.mockResolvedValue({
+      data: {
+        books: sample,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 1,
+          itemsPerPage: 10,
+        },
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Loading/)).not.toBeInTheDocument(),
+    );
+
+    fireEvent.change(
+      screen.getByRole("textbox", { name: /書籍名、著者名、要約で検索/ }),
+      { target: { value: "Sample" } },
+    );
+    fireEvent.change(screen.getByLabelText(/評価/), {
+      target: { value: "4" },
+    });
+    fireEvent.click(screen.getByTestId("search-button"));
+
+    await waitFor(() =>
+      expect(searchBooksMock.mock.calls.length).toBeGreaterThan(1),
+    );
+
+    fireEvent.click(screen.getByTestId("clear-filters-button"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("textbox", { name: /書籍名、著者名、要約で検索/ }),
+      ).toHaveValue("");
+      expect(screen.getByLabelText(/評価/)).toHaveValue("");
+      expect(searchBooksMock.mock.calls.length).toBeGreaterThan(2);
+      expect(searchBooksMock.mock.calls.at(-1)?.[0]).toEqual({
+        page: 1,
+        limit: 20,
+        keyword: "",
+        sort: "createdAt",
+        order: "desc",
+      });
+    });
+  });
+
+  it("URL クエリパラメータからフィルタを初期化する", async () => {
+    (
+      apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({
+      data: {
+        books: sample,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 1,
+          itemsPerPage: 10,
+        },
+      },
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          "/dashboard?keyword=Sample&ratingMin=4&sort=title&order=asc",
+        ]}
+      >
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Loading/)).not.toBeInTheDocument(),
+    );
+
+    expect(
+      screen.getByRole("textbox", { name: /書籍名、著者名、要約で検索/ }),
+    ).toHaveValue("Sample");
+    expect(screen.getByLabelText(/評価/)).toHaveValue("4");
+    expect(screen.getByLabelText(/並び替え/)).toHaveValue("title-asc");
+  });
+
+  it("URL クエリパラメータの不正な数値は安全な既定値に丸める", async () => {
+    const searchBooksMock = apiClient.searchBooks as unknown as ReturnType<
+      typeof vi.fn
+    >;
+    searchBooksMock.mockResolvedValue({
+      data: {
+        books: sample,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 1,
+          itemsPerPage: 10,
+        },
+      },
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          "/dashboard?page=0&limit=-1&ratingMin=4.4&publicationYearFrom=-2000&sort=title&order=desc",
+        ]}
+      >
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(searchBooksMock.mock.calls.length).toBeGreaterThan(0),
+    );
+
+    expect(searchBooksMock.mock.calls.at(-1)?.[0]).toEqual({
+      page: 1,
+      limit: 20,
+      keyword: "",
+      sort: "title",
+      order: "desc",
+    });
+    expect(screen.getByLabelText(/評価/)).toHaveValue("");
+    expect(screen.getByLabelText(/並び替え/)).toHaveValue("title-desc");
   });
 });

@@ -30,7 +30,7 @@ describe("BookCard", () => {
     bookId: 123,
   };
 
-  it("renders basic fields and navigates on click", () => {
+  it("基本フィールドをレンダリングしクリック時に遷移する", () => {
     render(<BookCard {...baseProps} />);
 
     expect(screen.getAllByText(/タイトル/).length).toBeGreaterThan(0);
@@ -44,7 +44,7 @@ describe("BookCard", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/books/123");
   });
 
-  it("shows liked heart when liked prop true and prevents propagation", () => {
+  it("liked prop が true のときハートを表示し伝播を防ぐ", () => {
     const stopPropagation = vi.fn();
     render(<BookCard {...baseProps} liked />);
 

@@ -1,5 +1,12 @@
-import type { ApiResponse, Book, CreateBookRequest } from "../types";
+import type {
+  ApiResponse,
+  Book,
+  BookListQuery,
+  BookListResponse,
+  CreateBookRequest,
+} from "../types";
 import { ApiHttpError } from "../errors/AppError";
+import { waitWithAbort } from "./waitWithAbort";
 
 const mockBooks: Record<number, Book> = {
   1: {
@@ -11,6 +18,8 @@ const mockBooks: Record<number, Book> = {
     summary: "日本近代文学の古典。猫の目線で人間社会を描く風刺小説。",
     createdAt: "2022-01-01T00:00:00.000Z",
     updatedAt: "2022-01-01T00:00:00.000Z",
+    averageRating: 4.2,
+    reviewCount: 120,
   },
   2: {
     id: 2,
@@ -21,6 +30,8 @@ const mockBooks: Record<number, Book> = {
     summary: "豪雪地帯を舞台に、男女の切ない恋愛を描いた名作。",
     createdAt: "2022-02-01T00:00:00.000Z",
     updatedAt: "2022-02-01T00:00:00.000Z",
+    averageRating: 4.5,
+    reviewCount: 85,
   },
   3: {
     id: 3,
@@ -31,6 +42,8 @@ const mockBooks: Record<number, Book> = {
     summary: "短編小説。人間のエゴと道徳を問う名作。",
     createdAt: "2022-03-01T00:00:00.000Z",
     updatedAt: "2022-03-01T00:00:00.000Z",
+    averageRating: 4.0,
+    reviewCount: 60,
   },
   4: {
     id: 4,
@@ -41,6 +54,8 @@ const mockBooks: Record<number, Book> = {
     summary: "村上春樹のデビュー作。東京の若者たちの日常と孤独。",
     createdAt: "2022-04-01T00:00:00.000Z",
     updatedAt: "2022-04-01T00:00:00.000Z",
+    averageRating: 3.8,
+    reviewCount: 150,
   },
   5: {
     id: 5,
@@ -51,6 +66,8 @@ const mockBooks: Record<number, Book> = {
     summary: "漫才師の葛藤と友情を描いた直木賞受賞作。",
     createdAt: "2022-05-01T00:00:00.000Z",
     updatedAt: "2022-05-01T00:00:00.000Z",
+    averageRating: 4.3,
+    reviewCount: 200,
   },
   6: {
     id: 6,
@@ -61,6 +78,8 @@ const mockBooks: Record<number, Book> = {
     summary: "コンビニで働く女性の日常を通して社会を問う作品。",
     createdAt: "2022-06-01T00:00:00.000Z",
     updatedAt: "2022-06-01T00:00:00.000Z",
+    averageRating: 4.1,
+    reviewCount: 90,
   },
 };
 
@@ -71,8 +90,11 @@ export const mockBookApi = {
    * @param bookId 取得する書籍のID
    * @returns {Promise<ApiResponse<Book>>} 書籍データを含むAPIレスポンス
    */
-  async getBookById(bookId: number): Promise<ApiResponse<Book>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
+  async getBookById(
+    bookId: number,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<Book>> {
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
 
     // mockBooksから該当書籍を取得
     const book = mockBooks[bookId];
@@ -87,16 +109,122 @@ export const mockBookApi = {
   },
 
   /**
-   * 全書籍一覧を取得するモック関数
-   * @returns {Promise<ApiResponse<{ books: Book[] }>>} 書籍の配列を含むAPIレスポンス
+   * クエリで書籍を検索するモック関数
+   *
    */
-  async getAllBooks(): Promise<ApiResponse<{ books: Book[] }>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
 
-    const books = Object.values(mockBooks);
+  async searchBooks(
+    query?: BookListQuery,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<BookListResponse>> {
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
+
+    // クエリに基づいて mockBooks をフィルタリング
+    let books = Object.values(mockBooks);
+
+    if (query) {
+      if (query.keyword) {
+        const keyword = query.keyword.toLowerCase();
+        books = books.filter(
+          (book) =>
+            book.title.toLowerCase().includes(keyword) ||
+            book.author.toLowerCase().includes(keyword) ||
+            book.summary.toLowerCase().includes(keyword),
+        );
+      }
+      if (query.author) {
+        const author = query.author.toLowerCase();
+        books = books.filter((book) =>
+          book.author.toLowerCase().includes(author),
+        );
+      }
+      if (query.publicationYearFrom != null) {
+        books = books.filter(
+          (book) => book.publicationYear >= query.publicationYearFrom!,
+        );
+      }
+      if (query.publicationYearTo != null) {
+        books = books.filter(
+          (book) => book.publicationYear <= query.publicationYearTo!,
+        );
+      }
+      if (query.ratingMin != null) {
+        books = books.filter(
+          (book) =>
+            book.averageRating != null &&
+            book.averageRating >= query.ratingMin!,
+        );
+      }
+      if (query.sort) {
+        books.sort((a, b) => {
+          let compare = 0;
+          switch (query.sort) {
+            case "title":
+              compare = a.title.localeCompare(b.title);
+              break;
+            case "author":
+              compare = a.author.localeCompare(b.author);
+              break;
+            case "publicationYear":
+              compare = a.publicationYear - b.publicationYear;
+              break;
+            case "rating":
+              compare = (a.averageRating ?? 0) - (b.averageRating ?? 0);
+              break;
+            case "createdAt":
+              compare =
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime();
+              break;
+          }
+          return query.order === "desc" ? -compare : compare;
+        });
+      }
+    }
+
+    const page = Math.max(1, query?.page ?? 1);
+    const limit = Math.max(1, query?.limit ?? 20);
+    const totalItems = books.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+    const offset = (page - 1) * limit;
+    const pagedBooks = books.slice(offset, offset + limit);
 
     return {
-      data: { books },
+      data: {
+        books: pagedBooks,
+        pagination: {
+          currentPage: page,
+          itemsPerPage: limit,
+          totalItems,
+          totalPages,
+        },
+      },
+    };
+  },
+
+  /**
+   * 全書籍一覧を取得するモック関数
+   * @returns {Promise<ApiResponse<BookListResponse>>} 書籍の配列 + ページネーションを含むAPIレスポンス
+   */
+  async getAllBooks(
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<BookListResponse>> {
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
+
+    const books = Object.values(mockBooks);
+    const totalItems = books.length;
+    const itemsPerPage = totalItems;
+
+    return {
+      data: {
+        books,
+        pagination: {
+          currentPage: 1,
+          itemsPerPage,
+          totalItems,
+          totalPages: 1,
+        },
+      },
     };
   },
 
@@ -105,8 +233,11 @@ export const mockBookApi = {
    * @param bookData 作成する書籍のデータ
    * @returns {Promise<ApiResponse<Book>>} 作成された書籍データを含むAPIレスポンス
    */
-  async createBook(bookData: CreateBookRequest): Promise<ApiResponse<Book>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
+  async createBook(
+    bookData: CreateBookRequest,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<Book>> {
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
 
     // IDを自動採番（既存の最大IDに1を加える）
     const maxId =
@@ -140,8 +271,9 @@ export const mockBookApi = {
   async updateBook(
     bookId: number,
     updatedData: Partial<Book>,
+    abortSignal?: AbortSignal,
   ): Promise<ApiResponse<Book>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
 
     // mockBooksから該当書籍を取得
     const existingBook = mockBooks[bookId];
@@ -166,8 +298,11 @@ export const mockBookApi = {
    * @param bookId 削除する書籍のID
    * @returns {Promise<ApiResponse<null>>} 削除結果を含むAPIレスポンス
    */
-  async deleteBook(bookId: number): Promise<ApiResponse<null>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
+  async deleteBook(
+    bookId: number,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<null>> {
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
 
     // mockBooksから該当書籍を削除
     if (!mockBooks[bookId]) {

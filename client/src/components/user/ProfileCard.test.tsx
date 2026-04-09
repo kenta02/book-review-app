@@ -5,12 +5,12 @@ import { ProfileCard } from "./ProfileCard";
 import { ERROR_CODES } from "../../errors/errorCodes";
 
 describe("ProfileCard", () => {
-  it("displays loading state", () => {
+  it("読み込み状態を表示する", () => {
     render(<ProfileCard user={null} loading={true} errorCode={null} />);
     expect(screen.getByText(/Loading/)).toBeInTheDocument();
   });
 
-  it("displays error state", () => {
+  it("エラー状態を表示する", () => {
     render(
       <ProfileCard
         user={null}
@@ -24,12 +24,12 @@ describe("ProfileCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("displays empty when user is null and no error", () => {
+  it("user が null でエラーなしのとき空表示する", () => {
     render(<ProfileCard user={null} loading={false} errorCode={null} />);
     expect(screen.getByText(/ユーザー情報がありません。/)).toBeInTheDocument();
   });
 
-  it("displays user info when user available", () => {
+  it("user があるときユーザー情報を表示する", () => {
     render(
       <ProfileCard
         user={{

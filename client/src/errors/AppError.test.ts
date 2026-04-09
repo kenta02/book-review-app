@@ -3,7 +3,7 @@ import { ApiHttpError, AppError, createUnknownAppError } from "./AppError";
 import { ERROR_CODES } from "./errorCodes";
 
 describe("AppError", () => {
-  it("should retain message and codes", () => {
+  it("メッセージとコードを保持する", () => {
     const err = new AppError(ERROR_CODES.VALIDATION_ERROR, "bad", 400);
     expect(err).toBeInstanceOf(Error);
     expect(err.name).toBe("AppError");
@@ -12,7 +12,7 @@ describe("AppError", () => {
     expect(err.message).toBe("bad");
   });
 
-  it("ApiHttpError should set statusCode and default message", () => {
+  it("ApiHttpError が statusCode とデフォルトメッセージを設定する", () => {
     const err = new ApiHttpError(500);
     expect(err).toBeInstanceOf(Error);
     expect(err.name).toBe("ApiHttpError");
@@ -20,7 +20,7 @@ describe("AppError", () => {
     expect(err.message).toBe("HTTP 500");
   });
 
-  it("createUnknownAppError returns UNKNOWN code", () => {
+  it("createUnknownAppError が UNKNOWN コードを返す", () => {
     const err = createUnknownAppError("something");
     expect(err.errorCode).toBe(ERROR_CODES.UNKNOWN);
     expect(err.message).toBe("something");

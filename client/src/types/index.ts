@@ -1,3 +1,5 @@
+import type { ErrorCode } from "../errors/errorCodes";
+
 // ユーザープロフィール用に型を定義する
 export interface User {
   id: number;
@@ -96,3 +98,32 @@ export interface UpdateBookRequest {
 export interface DeleteBookRequest {
   bookId: number;
 }
+
+// 書籍一覧のクエリパラメータの型
+export interface BookListQuery {
+  page?: number;
+  limit?: number;
+  keyword?: string;
+  author?: string;
+  publicationYearFrom?: number | undefined;
+  publicationYearTo?: number | undefined;
+  ratingMin?: number | undefined;
+  sort?: "title" | "author" | "publicationYear" | "rating" | "createdAt";
+  order?: "asc" | "desc";
+}
+
+// 書籍一覧のレスポンスの型
+export interface BookListResponse {
+  books: Book[];
+  pagination?: Pagination;
+}
+
+// useBooks フックの戻り値の型を定義する
+export type useBooksResult = {
+  books: Book[];
+  loading: boolean;
+  errorCode: ErrorCode | null;
+  pagination: Pagination | null;
+  refresh: () => Promise<void>;
+  isFetched?: boolean; // データが初回取得されたかどうかを示すフラグ
+};

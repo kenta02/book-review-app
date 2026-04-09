@@ -76,7 +76,7 @@ describe("BookDetailPage", () => {
     (apiClient.getReviews as unknown as ReturnType<typeof vi.fn>).mockReset();
   });
 
-  it("loads book and reviews and renders contents", async () => {
+  it("書籍とレビューを読み込み内容をレンダリングする", async () => {
     (
       apiClient.getBookById as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValue({ data: book });
@@ -102,7 +102,7 @@ describe("BookDetailPage", () => {
     expect(mockNavigate).toHaveBeenCalledWith(-1);
   });
 
-  it("shows error text when detail fetch fails", async () => {
+  it("詳細取得に失敗したときエラーテキストを表示する", async () => {
     (
       apiClient.getBookById as unknown as ReturnType<typeof vi.fn>
     ).mockRejectedValue(new Error("fail book"));
@@ -122,7 +122,7 @@ describe("BookDetailPage", () => {
     });
   });
 
-  it("shows error when review fetch fails", async () => {
+  it("レビュー取得に失敗したときエラーを表示する", async () => {
     (
       apiClient.getBookById as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValue({ data: book });
@@ -139,7 +139,7 @@ describe("BookDetailPage", () => {
     });
   });
 
-  it("does not call APIs when bookId is missing", async () => {
+  it("bookId がないとき API を呼ばない", async () => {
     mockUseParams.mockReturnValue({ bookId: undefined });
     render(<BookDetailPage />);
 

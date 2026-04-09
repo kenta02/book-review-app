@@ -24,12 +24,12 @@ const reviews: Review[] = [
 ];
 
 describe("ReviewList", () => {
-  it("shows empty message when no reviews", () => {
+  it("レビューがないとき空メッセージを表示する", () => {
     render(<ReviewList reviews={[]} />);
     expect(screen.getByText(/見つかりません/)).toBeInTheDocument();
   });
 
-  it("renders items when reviews exist", () => {
+  it("レビューがあるとき項目をレンダリングする", () => {
     render(<ReviewList reviews={reviews} />);
     const items = screen.getAllByRole("listitem");
     expect(items).toHaveLength(2);

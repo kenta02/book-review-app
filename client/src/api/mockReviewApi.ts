@@ -6,6 +6,7 @@ import type {
   UpdateReviewRequest,
 } from "../types";
 import { ApiHttpError } from "../errors/AppError";
+import { waitWithAbort } from "./waitWithAbort";
 
 // レビューのモックデータ
 const mockReviews: Record<number, Review> = {
@@ -42,8 +43,11 @@ export const mockReviewApi = {
    * @param reviewId - レビュー ID
    * @returns レビュー情報
    */
-  async getReviewById(reviewId: number): Promise<ApiResponse<Review>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
+  async getReviewById(
+    reviewId: number,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<Review>> {
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
 
     // mockReviewsのidをキーに該当レビューを取得
     const review = mockReviews[reviewId];
@@ -63,13 +67,16 @@ export const mockReviewApi = {
    * @param bookId - 書籍ID（オプション）
    * @returns { reviews: Review[], pagination?: Pagination } レビューの配列とページネーション情報
    */
-  async getReviews(bookId?: number): Promise<
+  async getReviews(
+    bookId?: number,
+    abortSignal?: AbortSignal,
+  ): Promise<
     ApiResponse<{
       reviews: Review[];
       pagination?: Pagination;
     }>
   > {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 遅延をシミュレート
+    await waitWithAbort(500, abortSignal); // 遅延をシミュレート
 
     // 値だけ取り出して配列に変換する
     let reviews = Object.values(mockReviews);
@@ -102,8 +109,11 @@ export const mockReviewApi = {
    * content: レビュー本文
    * @returns { data: Review } 作成されたレビュー情報
    */
-  async createReview(body: CreateReviewRequest): Promise<ApiResponse<Review>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 遅延をシミュレート
+  async createReview(
+    body: CreateReviewRequest,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<Review>> {
+    await waitWithAbort(500, abortSignal); // 遅延をシミュレート
 
     // 新しいレビューIDを生成（mockReviewsの最大ID + 1）
     const newId = Math.max(...Object.keys(mockReviews).map(Number)) + 1;
@@ -133,8 +143,11 @@ export const mockReviewApi = {
    * content: 更新後のレビュー本文（オプション）
    * @returns { data: Review } 更新されたレビュー情報
    */
-  async updateReview(body: UpdateReviewRequest): Promise<ApiResponse<Review>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 遅延をシミュレート
+  async updateReview(
+    body: UpdateReviewRequest,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<Review>> {
+    await waitWithAbort(500, abortSignal); // 遅延をシミュレート
 
     const review = mockReviews[body.reviewId];
     if (!review) {
@@ -160,8 +173,11 @@ export const mockReviewApi = {
    * @param reviewId - 削除するレビューのID
    * @returns { data: null } 削除成功のレスポンス
    */
-  async deleteReview(reviewId: number): Promise<ApiResponse<null>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 遅延をシミュレート
+  async deleteReview(
+    reviewId: number,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<null>> {
+    await waitWithAbort(500, abortSignal); // 遅延をシミュレート
 
     const review = mockReviews[reviewId];
     if (!review) {

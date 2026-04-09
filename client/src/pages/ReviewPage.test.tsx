@@ -28,7 +28,7 @@ describe("ReviewPage", () => {
     (apiClient.getReviews as unknown as ReturnType<typeof vi.fn>).mockReset();
   });
 
-  it("renders loading then list", async () => {
+  it("読み込み後にリストをレンダリングする", async () => {
     (
       apiClient.getReviews as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValue({
@@ -50,7 +50,7 @@ describe("ReviewPage", () => {
     expect(screen.getByText("Content: a")).toBeInTheDocument();
   });
 
-  it("shows empty message when api returns []", async () => {
+  it("API が [] を返したとき空メッセージを表示する", async () => {
     (
       apiClient.getReviews as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValue({
@@ -70,7 +70,7 @@ describe("ReviewPage", () => {
     );
   });
 
-  it("shows error on failure", async () => {
+  it("失敗したときエラーを表示する", async () => {
     (
       apiClient.getReviews as unknown as ReturnType<typeof vi.fn>
     ).mockRejectedValue(new Error("fail"));

@@ -36,7 +36,7 @@ describe("Header", () => {
     resetEnv();
   });
 
-  it("renders brand and menu button and calls onMenuClick", () => {
+  it("ブランドとメニューボタンをレンダリングし onMenuClick を呼ぶ", () => {
     const onMenu = vi.fn();
     render(<Header onMenuClick={onMenu} />);
 
@@ -50,7 +50,7 @@ describe("Header", () => {
     expect(screen.getByText(/BookReview/)).toBeInTheDocument();
   });
 
-  it("toggles dark mode and persists state", () => {
+  it("ダークモードを切り替え状態を保持する", () => {
     render(<Header />);
     const darkBtn = screen.getByLabelText("ダークモード切り替え");
 
@@ -72,7 +72,7 @@ describe("Header", () => {
     expect(localStorage.getItem("dark")).toBe(JSON.stringify(false));
   });
 
-  it("does not crash when localStorage throws", () => {
+  it("localStorage が例外を投げてもクラッシュしない", () => {
     const originalLocalStorage = globalThis.localStorage;
     Object.defineProperty(globalThis, "localStorage", {
       value: {
