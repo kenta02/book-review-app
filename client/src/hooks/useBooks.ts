@@ -26,6 +26,8 @@ export function useBooks(query?: BookListQuery): useBooksResult {
   // コンポーネントがアンマウントされたかどうかを監視
   // unmounted状態で setState を呼ばないようにするために使用
   const isMountedRef = useRef(true);
+  // 最後に開始したリクエスト番号を保持し、古いレスポンスの上書きを防ぐ
+  const currentRequestIdRef = useRef(0);
 
   /**
    * 書籍データを取得し、状態を更新するコア関数
@@ -38,6 +40,10 @@ export function useBooks(query?: BookListQuery): useBooksResult {
         return;
       }
 
+      const requestId = currentRequestIdRef.current + 1;
+      currentRequestIdRef.current = requestId;
+
+      // 最新リクエストの開始時点でローディング表示に切り替える。
       setLoading(true);
       try {
         // 実またはモック API 呼び出し。query には検索・絞り込み条件が含まれる。
@@ -45,7 +51,11 @@ export function useBooks(query?: BookListQuery): useBooksResult {
         logger.log("API Response:", res);
 
         // 単純にアンマウントされていたら後続ステート更新しない
-        if (!isMountedRef.current) {
+        if (
+          !isMountedRef.current ||
+          currentRequestIdRef.current !== requestId
+        ) {
+          // 自分より新しいリクエストが開始済みなら、この結果は破棄する。
           return;
         }
 
@@ -58,6 +68,7 @@ export function useBooks(query?: BookListQuery): useBooksResult {
             setPagination(res.data.pagination);
           } else {
             logger.warn("Pagination data is missing in the response");
+            setPagination(null);
           }
 
           // 正常なケース：エラー解除して書籍データをセット
@@ -69,7 +80,11 @@ export function useBooks(query?: BookListQuery): useBooksResult {
           throw createUnknownAppError("Unexpected response payload");
         }
       } catch (e) {
-        if (!isMountedRef.current) {
+        if (
+          !isMountedRef.current ||
+          currentRequestIdRef.current !== requestId
+        ) {
+          // 古いリクエストの失敗で最新状態を汚染しない。
           return;
         }
 
@@ -91,13 +106,21 @@ export function useBooks(query?: BookListQuery): useBooksResult {
         // API 呼び出しは試行済みとしてフラグを立てる
         setIsFetched(true);
       } finally {
-        if (isMountedRef.current) {
+        if (
+          isMountedRef.current &&
+          currentRequestIdRef.current === requestId
+        ) {
           setLoading(false);
         }
       }
     },
     [query],
   );
+
+  const refresh = useCallback(async () => {
+    // ボタンイベントなどの引数を受け取らない再取得専用関数として公開する。
+    await fetchBooks();
+  }, [fetchBooks]);
 
   // コンポーネントのマウント時とクエリの変更時に書籍データを取得する
   useEffect(() => {
@@ -121,7 +144,7 @@ export function useBooks(query?: BookListQuery): useBooksResult {
     loading,
     errorCode,
     pagination,
-    refresh: fetchBooks,
+    refresh,
     isFetched,
   };
 }

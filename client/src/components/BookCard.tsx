@@ -13,7 +13,7 @@ interface BookCardProps {
 
 /**
  * 書籍のカードコンポーネント
- * @param props -書籍の情報を含むプロパティ
+ * @param props - 書籍の情報を含むプロパティ
  * @returns - 書籍のカードを表示するReactコンポーネント
  */
 export function BookCard(props: Readonly<BookCardProps>) {

@@ -115,7 +115,7 @@ export interface BookListQuery {
 // 書籍一覧のレスポンスの型
 export interface BookListResponse {
   books: Book[];
-  pagination: Pagination;
+  pagination?: Pagination;
 }
 
 // useBooks フックの戻り値の型を定義する

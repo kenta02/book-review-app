@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "../api/apiClient";
 import { ApiHttpError } from "../errors/AppError";
@@ -27,6 +27,7 @@ const dummyBooks: Book[] = [
     updatedAt: "",
   },
 ];
+const firstDummyBook = dummyBooks[0]!;
 
 // helper component that uses the hook
 function TestComponent() {
@@ -45,6 +46,14 @@ function TestComponent() {
       <div>{books.map((b) => b.title).join(",")}</div>
     </>
   );
+}
+
+function QueryTestComponent({ query }: { query?: { keyword?: string } }) {
+  const { books, loading } = useBooks(query);
+
+  if (loading) return <div>loading</div>;
+
+  return <div>{books.map((b) => b.title).join(",")}</div>;
 }
 
 describe("useBooks hook", () => {
@@ -111,11 +120,15 @@ describe("useBooks hook", () => {
       expect(screen.getByText("refresh")).toBeInTheDocument();
     });
 
-    screen.getByText("refresh").click();
+    fireEvent.click(screen.getByText("refresh"));
 
     await waitFor(() => {
       expect(screen.getByText(/Test A/)).toBeInTheDocument();
     });
+
+    expect(
+      (apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0],
+    ).toBeUndefined();
   });
 
   it("API が失敗したときエラーを表示する", async () => {
@@ -140,5 +153,59 @@ describe("useBooks hook", () => {
     expect(
       screen.getByText(new RegExp(BOOK_LIST_ERROR_MESSAGES.UNKNOWN)),
     ).toBeInTheDocument();
+  });
+
+  it("古いリクエスト結果で新しい状態を上書きしない", async () => {
+    let resolveFirst: ((value: unknown) => void) | undefined;
+    let resolveSecond: ((value: unknown) => void) | undefined;
+
+    (
+      apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>
+    ).mockImplementation(({ keyword }: { keyword?: string } = {}) => {
+      return new Promise((resolve) => {
+        if (keyword === "new") {
+          resolveSecond = resolve;
+          return;
+        }
+
+        resolveFirst = resolve;
+      });
+    });
+
+    const { rerender } = render(<QueryTestComponent query={{ keyword: "old" }} />);
+    rerender(<QueryTestComponent query={{ keyword: "new" }} />);
+
+    resolveSecond?.({
+      data: {
+        books: [{ ...firstDummyBook, id: 2, title: "New Book" }],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 1,
+          itemsPerPage: 10,
+        },
+      },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("New Book")).toBeInTheDocument();
+    });
+
+    resolveFirst?.({
+      data: {
+        books: [{ ...firstDummyBook, id: 3, title: "Old Book" }],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 1,
+          itemsPerPage: 10,
+        },
+      },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("New Book")).toBeInTheDocument();
+      expect(screen.queryByText("Old Book")).not.toBeInTheDocument();
+    });
   });
 });

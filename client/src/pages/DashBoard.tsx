@@ -6,21 +6,166 @@ import { useEffect, useState } from "react";
 import type { BookListQuery } from "../types";
 import { useLocation, useSearchParams } from "react-router-dom";
 
-export function DashboardPage() {
-  // クエリの初期値を定義する
-  const initialQuery: BookListQuery = {
-    page: 1,
-    limit: 20,
-    keyword: "",
-    // author: "",
-    sort: "createdAt",
-    order: "desc",
+const MIN_PUBLICATION_YEAR = 1;
+const MAX_RATING = 5;
+// URL 未指定時やクリア時に戻す検索条件の既定値
+const INITIAL_QUERY: BookListQuery = {
+  page: 1,
+  limit: 20,
+  keyword: "",
+  sort: "createdAt",
+  order: "desc",
+};
+
+// UI と URL が受け入れる並び替えキーを列挙する
+const allowedSortValues = [
+  "title",
+  "author",
+  "publicationYear",
+  "rating",
+  "createdAt",
+] as const;
+
+type SortValue = (typeof allowedSortValues)[number];
+
+const allowedOrderValues = ["asc", "desc"] as const;
+type OrderValue = (typeof allowedOrderValues)[number];
+
+/**
+ * sort パラメータが許可済みの値かを判定する。
+ * @param value - URL や UI から受け取った文字列
+ * @returns 許可済みの sort 値であれば true
+ */
+const isValidSort = (value: string | null): value is SortValue => {
+  return value !== null && allowedSortValues.includes(value as SortValue);
+};
+
+/**
+ * order パラメータが許可済みの値かを判定する。
+ * @param value - URL や UI から受け取った文字列
+ * @returns 許可済みの order 値であれば true
+ */
+const isValidOrder = (value: string | null): value is OrderValue => {
+  return value !== null && allowedOrderValues.includes(value as OrderValue);
+};
+
+/**
+ * sort パラメータを安全に既定値付きで解釈する。
+ * @param value - URL から取得した sort 値
+ * @returns 有効な sort 値。無効時は `createdAt`
+ */
+const parseSort = (value: string | null): SortValue => {
+  return isValidSort(value) ? value : "createdAt";
+};
+
+/**
+ * order パラメータを安全に既定値付きで解釈する。
+ * @param value - URL から取得した order 値
+ * @returns 有効な order 値。無効時は `desc`
+ */
+const parseOrder = (value: string | null): OrderValue => {
+  return isValidOrder(value) ? value : "desc";
+};
+
+/**
+ * sort-order セレクトの値を sort と order に分解して正規化する。
+ * `split()` の結果に undefined が含まれる可能性を吸収し、既定値へ丸める。
+ * @param value - `"createdAt-desc"` のような複合値
+ * @returns 安全な sort / order の組み合わせ
+ */
+function parseSortOrderValue(value: string): {
+  sort: SortValue;
+  order: OrderValue;
+} {
+  const [rawSort, rawOrder] = value.split("-", 2);
+
+  return {
+    sort: parseSort(rawSort ?? null),
+    order: parseOrder(rawOrder ?? null),
+  };
+}
+
+/**
+ * URL クエリ文字列を画面用の BookListQuery に変換する。
+ * 不正な数値や未許可の sort/order は安全な既定値へ丸める。
+ * @param search - `location.search` から受け取るクエリ文字列
+ * @returns 画面初期化に使う検索条件
+ */
+function parseQueryParams(search: string): BookListQuery {
+  const params = new URLSearchParams(search);
+
+  // page / limit のような正の整数だけを受け付ける。
+  const parsePositiveIntegerParam = (
+    value: string | null,
+    fallback: number,
+  ): number => {
+    if (value === null || value.trim() === "") {
+      return fallback;
+    }
+
+    const parsed = Number(value);
+    if (Number.isInteger(parsed) && parsed > 0) {
+      return parsed;
+    }
+
+    return fallback;
   };
 
+  // rating や publicationYear のような範囲付き整数を安全に解釈する。
+  const parseOptionalIntegerParam = (
+    value: string | null,
+    minimum: number,
+    maximum?: number,
+  ): number | undefined => {
+    if (value === null || value.trim() === "") {
+      return undefined;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed)) {
+      return undefined;
+    }
+
+    if (parsed < minimum) {
+      return undefined;
+    }
+
+    if (maximum === undefined || parsed <= maximum) {
+      return parsed;
+    }
+
+    return undefined;
+  };
+
+  return {
+    ...INITIAL_QUERY,
+    keyword: params.get("keyword") ?? "",
+    page: parsePositiveIntegerParam(params.get("page"), 1),
+    limit: parsePositiveIntegerParam(params.get("limit"), 20),
+    ratingMin: parseOptionalIntegerParam(
+      params.get("ratingMin"),
+      1,
+      MAX_RATING,
+    ),
+    publicationYearFrom: parseOptionalIntegerParam(
+      params.get("publicationYearFrom"),
+      MIN_PUBLICATION_YEAR,
+    ),
+    publicationYearTo: parseOptionalIntegerParam(
+      params.get("publicationYearTo"),
+      MIN_PUBLICATION_YEAR,
+    ),
+    sort: parseSort(params.get("sort")),
+    order: parseOrder(params.get("order")),
+  };
+}
+
+export function DashboardPage() {
   // 入力中のクエリ
-  const [draftQuery, setDraftQuery] = useState<BookListQuery>(initialQuery);
+  const [draftQuery, setDraftQuery] = useState<BookListQuery>(INITIAL_QUERY);
   // 適用済みのクエリ（APIに反映されているクエリ）
-  const [appliedQuery, setAppliedQuery] = useState<BookListQuery>(initialQuery);
+  const [appliedQuery, setAppliedQuery] =
+    useState<BookListQuery>(INITIAL_QUERY);
 
   // hooksの戻り値から書籍データと状態を取得するために定義
   const { books, loading, errorCode, isFetched } = useBooks(appliedQuery);
@@ -42,43 +187,31 @@ export function DashboardPage() {
   const buildSearchParams = (query: BookListQuery) => {
     const params = new URLSearchParams();
 
-    const setparam = (key: string, value: string | number | undefined) => {
-      if (value !== undefined && value !== "") {
-        params.set(key, String(value));
+    // 空文字や undefined は URL に載せず、共有しやすいクエリだけを残す。
+    const setParam = (key: string, value: string | number | undefined) => {
+      if (value === undefined || value === "") {
+        return;
       }
+
+        params.set(key, String(value));
     };
 
-    if (query.keyword) setparam("keyword", query.keyword);
-    // if (query.author) setparam("author", query.author);
-    if (query.ratingMin) setparam("ratingMin", query.ratingMin);
-    if (query.publicationYearFrom !== undefined) {
-      setparam("publicationYearFrom", query.publicationYearFrom);
-    }
-    if (query.publicationYearTo !== undefined) {
-      setparam("publicationYearTo", query.publicationYearTo);
-    }
-    if (query.sort) {
-      setparam("sort", query.sort);
-    }
-    if (query.order) {
-      setparam("order", query.order);
-    }
-    if (query.page) {
-      setparam("page", query.page);
-    }
-    if (query.limit) {
-      setparam("limit", query.limit);
-    }
-    return params;
-  };
+    const queryEntries: Array<[string, string | number | undefined]> = [
+      ["keyword", query.keyword],
+      ["ratingMin", query.ratingMin],
+      ["publicationYearFrom", query.publicationYearFrom],
+      ["publicationYearTo", query.publicationYearTo],
+      ["sort", query.sort],
+      ["order", query.order],
+      ["page", query.page],
+      ["limit", query.limit],
+    ];
 
-  // URLクエリから数値を安全にパースする
-  const parseNumberParam = (value: string | null, fallback: number): number => {
-    if (value === null || value.trim() === "") {
-      return fallback;
-    }
-    const parsed = Number(value);
-    return Number.isNaN(parsed) ? fallback : parsed;
+    queryEntries.forEach(([key, value]) => {
+      setParam(key, value);
+    });
+
+    return params;
   };
 
   /**
@@ -95,66 +228,26 @@ export function DashboardPage() {
     setSearchParams(params);
   };
 
-  const allowedSortValues = [
-    "title",
-    "author",
-    "publicationYear",
-    "rating",
-    "createdAt",
-  ] as const;
-
-  type SortValue = (typeof allowedSortValues)[number];
-
-  const allowedOrderValues = ["asc", "desc"] as const;
-  type OrderValue = (typeof allowedOrderValues)[number];
-
-  const isValidSort = (value: string | null): value is SortValue => {
-    return value !== null && allowedSortValues.includes(value as SortValue);
-  };
-
-  const isValidOrder = (value: string | null): value is OrderValue => {
-    return value !== null && allowedOrderValues.includes(value as OrderValue);
-  };
-
-  const parseSort = (value: string | null): SortValue => {
-    return isValidSort(value) ? value : "createdAt";
-  };
-
-  const parseOrder = (value: string | null): OrderValue => {
-    return isValidOrder(value) ? value : "desc";
-  };
-
-  // location.searchのクエリパラメータを解析して、クエリオブジェクトに変換する
-  const parseQueryParams = (search: string): BookListQuery => {
-    const params = new URLSearchParams(search);
-    const query: BookListQuery = {
-      ...initialQuery,
-      keyword: params.get("keyword") ?? "",
-      // author: params.get("author") ?? "",
-      page: parseNumberParam(params.get("page"), 1),
-      limit: parseNumberParam(params.get("limit"), 20),
-      ratingMin: params.get("ratingMin")
-        ? Number(params.get("ratingMin"))
-        : undefined,
-      publicationYearFrom: params.get("publicationYearFrom")
-        ? Number(params.get("publicationYearFrom"))
-        : undefined,
-      publicationYearTo: params.get("publicationYearTo")
-        ? Number(params.get("publicationYearTo"))
-        : undefined,
-      sort: parseSort(params.get("sort")),
-      order: parseOrder(params.get("order")),
-    };
-
-    // 結果をdraftQueryとappliedQueryの両方に反映するために、クエリオブジェクトを返す
-    return query;
-  };
-
   useEffect(() => {
+    // URL 直打ちや戻る/進む操作でも画面状態を復元する。
     const queryFromUrl = parseQueryParams(location.search);
     setDraftQuery(queryFromUrl);
     setAppliedQuery(queryFromUrl);
   }, [location.search]);
+
+  // セレクト 1 つで sort/order の全組み合わせを表現する。
+  const sortOptions = [
+    { value: "createdAt-desc", label: "登録日が新しい順" },
+    { value: "createdAt-asc", label: "登録日が古い順" },
+    { value: "rating-desc", label: "評価が高い順" },
+    { value: "rating-asc", label: "評価が低い順" },
+    { value: "title-asc", label: "タイトル昇順" },
+    { value: "title-desc", label: "タイトル降順" },
+    { value: "author-asc", label: "著者名昇順" },
+    { value: "author-desc", label: "著者名降順" },
+    { value: "publicationYear-desc", label: "出版年が新しい順" },
+    { value: "publicationYear-asc", label: "出版年が古い順" },
+  ] as const;
 
   if (errorMessage) {
     return <MainLayout>Error: {errorMessage}</MainLayout>;
@@ -284,23 +377,7 @@ export function DashboardPage() {
               id="sort-order"
               value={`${draftQuery.sort}-${draftQuery.order}`}
               onChange={(e) => {
-                const mapping = {
-                  "rating-desc": { sort: "rating", order: "desc" } as const,
-                  "createdAt-desc": {
-                    sort: "createdAt",
-                    order: "desc",
-                  } as const,
-                  "title-asc": { sort: "title", order: "asc" } as const,
-                  "author-asc": { sort: "author", order: "asc" } as const,
-                  "publicationYear-desc": {
-                    sort: "publicationYear",
-                    order: "desc",
-                  } as const,
-                } as const;
-
-                const { sort, order } = mapping[
-                  e.target.value as keyof typeof mapping
-                ] ?? { sort: "createdAt", order: "desc" };
+                const { sort, order } = parseSortOrderValue(e.target.value);
 
                 setDraftQuery({
                   ...draftQuery,
@@ -310,11 +387,11 @@ export function DashboardPage() {
               }}
               className="min-w-[220px] py-2 px-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded cursor-pointer focus:border-purple-600 focus:ring-2 focus:ring-purple-400"
             >
-              <option value="rating-desc">評価が高い順</option>
-              <option value="createdAt-desc">登録日が新しい順</option>
-              <option value="title-asc">タイトル順</option>
-              <option value="author-asc">著者名順</option>
-              <option value="publicationYear-desc">出版年が新しい順</option>
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -324,8 +401,8 @@ export function DashboardPage() {
           <button
             onClick={() => {
               setSearchParams({});
-              setAppliedQuery(initialQuery);
-              setDraftQuery(initialQuery);
+              setAppliedQuery(INITIAL_QUERY);
+              setDraftQuery(INITIAL_QUERY);
             }}
             type="button"
             data-testid="clear-filters-button"

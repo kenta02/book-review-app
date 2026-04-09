@@ -292,4 +292,45 @@ describe("DashboardPage", () => {
     expect(screen.getByLabelText(/評価/)).toHaveValue("4");
     expect(screen.getByLabelText(/並び替え/)).toHaveValue("title-asc");
   });
+
+  it("URL クエリパラメータの不正な数値は安全な既定値に丸める", async () => {
+    const searchBooksMock = apiClient.searchBooks as unknown as ReturnType<
+      typeof vi.fn
+    >;
+    searchBooksMock.mockResolvedValue({
+      data: {
+        books: sample,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 1,
+          itemsPerPage: 10,
+        },
+      },
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          "/dashboard?page=0&limit=-1&ratingMin=4.4&publicationYearFrom=-2000&sort=title&order=desc",
+        ]}
+      >
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(searchBooksMock.mock.calls.length).toBeGreaterThan(0),
+    );
+
+    expect(searchBooksMock.mock.calls.at(-1)?.[0]).toEqual({
+      page: 1,
+      limit: 20,
+      keyword: "",
+      sort: "title",
+      order: "desc",
+    });
+    expect(screen.getByLabelText(/評価/)).toHaveValue("");
+    expect(screen.getByLabelText(/並び替え/)).toHaveValue("title-desc");
+  });
 });
