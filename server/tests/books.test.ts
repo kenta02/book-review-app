@@ -1,8 +1,17 @@
 import express from 'express';
 import request from 'supertest';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { Op, type FindAndCountOptions, type Transaction } from 'sequelize';
+import { Op, type FindAndCountOptions, type Transaction, type WhereOptions } from 'sequelize';
 import jwt from 'jsonwebtoken';
+
+// Op.or など symbol キーを含む WhereOptions の型を明示
+type WhereOptionsWithOp = WhereOptions & { [Op.or]?: unknown };
+
+function getOpOr(where: WhereOptions | undefined): unknown {
+  if (!where || typeof where !== 'object') return undefined;
+  const cast = where as WhereOptionsWithOp;
+  return cast[Op.or];
+}
 
 import bookRouter from '../src/routes/books';
 import Book from '../src/models/Book';
@@ -12,10 +21,11 @@ import User from '../src/models/Users';
 import { sequelize } from '../src/sequelize';
 import * as bookService from '../src/services/book.service';
 import { ApiError } from '../src/errors/ApiError';
-import { logger } from '../src/utils/logger';
 
 // このファイルの目的：書籍 API の CRUD とページネーションを検証するテスト
 // - findAndCountAll のモックを用いてページング動作を確認
+// - GET /api/books のクエリ受け取り（page/sort/order/keywordなど）を検証
+// - 既存の POST/PUT/DELETE でエラーハンドリングや認証・権限（401/403/400/409）を検証
 
 type BookInstance = InstanceType<typeof Book>;
 type UserInstance = InstanceType<typeof User>;
@@ -67,6 +77,8 @@ function mockAuthenticatedUser(role: 'admin' | 'user' = 'admin', userId = 1) {
 let app: express.Express;
 
 beforeEach(() => {
+  process.env.JWT_SECRET = 'test-secret';
+
   app = makeApp();
   vi.restoreAllMocks();
   vi.spyOn(sequelize, 'transaction').mockImplementation((async (callback: TransactionCallback) => {
@@ -115,6 +127,33 @@ describe('GET /api/books', () => {
     expect(res.body.data.pagination.totalItems).toBe(2);
   });
 
+  it('applies page and limit and sort/order keyword correctly', async () => {
+    // このテストは page/limit および sort/order、keyword のクエリをまとめて検証する
+    // page=2, limit=1 だと offset=1 になる
+    const book = {
+      toJSON: () => ({ id: 10, title: 'Z', averageRating: '5.0', reviewCount: '1' }),
+      get: (key: string) =>
+        key === 'averageRating' ? '5.0' : key === 'reviewCount' ? '1' : undefined,
+    } as unknown as BookInstance;
+
+    const spy = mockFindAndCountAll({ rows: [book], count: 1 });
+
+    const res = await request(app).get('/api/books?page=2&limit=1&keyword=Z&sort=title&order=desc');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.books).toHaveLength(1);
+    expect(res.body.data.pagination.currentPage).toBe(2);
+    expect(res.body.data.pagination.itemsPerPage).toBe(1);
+
+    const options = spy.mock.calls[0]?.[0] as FindAndCountOptions | undefined;
+    expect(options?.offset).toBe(1);
+    expect(options?.limit).toBe(1);
+    expect(options?.order).toEqual([['title', 'DESC']]);
+    expect(options?.where).toBeDefined();
+    const opOr = getOpOr(options?.where);
+    expect(opOr).toBeDefined();
+  });
+
   it('returns 400 for large limit values', async () => {
     const spy = vi.spyOn(Book, 'findAndCountAll');
 
@@ -126,14 +165,15 @@ describe('GET /api/books', () => {
   });
 
   it('applies keyword search across title, author, and summary', async () => {
+    // keyword フィルタが title/author/summary の or 条件で渡されることを検証
     const spy = mockFindAndCountAll({ rows: [], count: [] });
 
     await request(app).get('/api/books?keyword=React');
 
     const options = spy.mock.calls[0]?.[0] as FindAndCountOptions | undefined;
-    const where = options?.where as Record<string | symbol, unknown>;
+    const opOr = getOpOr(options?.where);
 
-    expect(where[Op.or]).toEqual([
+    expect(opOr).toEqual([
       { title: { [Op.like]: '%React%' } },
       { author: { [Op.like]: '%React%' } },
       { summary: { [Op.like]: '%React%' } },
