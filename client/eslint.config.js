@@ -26,6 +26,14 @@ export default [
     },
     rules: {
       "no-unused-vars": ["error", { varsIgnorePattern: "^[A-Z_]" }],
+    },
+  },
+  {
+    files: ["**/*.{js,jsx,ts,tsx}"],
+    plugins: {
+      "react-hooks": reactHooksPlugin,
+    },
+    rules: {
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
     },
