@@ -6,6 +6,7 @@ import type {
   UpdateReviewRequest,
 } from "../types";
 import { ApiHttpError } from "../errors/AppError";
+import { waitWithAbort } from "./waitWithAbort";
 
 // レビューのモックデータ
 const mockReviews: Record<number, Review> = {
@@ -46,11 +47,7 @@ export const mockReviewApi = {
     reviewId: number,
     abortSignal?: AbortSignal,
   ): Promise<ApiResponse<Review>> {
-    if (abortSignal?.aborted) {
-      throw new DOMException("Aborted", "AbortError");
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
 
     // mockReviewsのidをキーに該当レビューを取得
     const review = mockReviews[reviewId];
@@ -79,11 +76,7 @@ export const mockReviewApi = {
       pagination?: Pagination;
     }>
   > {
-    if (abortSignal?.aborted) {
-      throw new DOMException("Aborted", "AbortError");
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 遅延をシミュレート
+    await waitWithAbort(500, abortSignal); // 遅延をシミュレート
 
     // 値だけ取り出して配列に変換する
     let reviews = Object.values(mockReviews);
@@ -120,11 +113,7 @@ export const mockReviewApi = {
     body: CreateReviewRequest,
     abortSignal?: AbortSignal,
   ): Promise<ApiResponse<Review>> {
-    if (abortSignal?.aborted) {
-      throw new DOMException("Aborted", "AbortError");
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 遅延をシミュレート
+    await waitWithAbort(500, abortSignal); // 遅延をシミュレート
 
     // 新しいレビューIDを生成（mockReviewsの最大ID + 1）
     const newId = Math.max(...Object.keys(mockReviews).map(Number)) + 1;
@@ -158,11 +147,7 @@ export const mockReviewApi = {
     body: UpdateReviewRequest,
     abortSignal?: AbortSignal,
   ): Promise<ApiResponse<Review>> {
-    if (abortSignal?.aborted) {
-      throw new DOMException("Aborted", "AbortError");
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 遅延をシミュレート
+    await waitWithAbort(500, abortSignal); // 遅延をシミュレート
 
     const review = mockReviews[body.reviewId];
     if (!review) {
@@ -192,11 +177,7 @@ export const mockReviewApi = {
     reviewId: number,
     abortSignal?: AbortSignal,
   ): Promise<ApiResponse<null>> {
-    if (abortSignal?.aborted) {
-      throw new DOMException("Aborted", "AbortError");
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 遅延をシミュレート
+    await waitWithAbort(500, abortSignal); // 遅延をシミュレート
 
     const review = mockReviews[reviewId];
     if (!review) {

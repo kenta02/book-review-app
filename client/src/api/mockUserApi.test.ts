@@ -36,8 +36,9 @@ describe("mockUserApi", () => {
 
   it("signal が中断されたとき getUserById が中止される", async () => {
     const controller = new AbortController();
-    controller.abort();
     const promise = mockUserApi.getUserById(1, controller.signal);
+    vi.advanceTimersByTime(250);
+    controller.abort();
     await expect(promise).rejects.toThrow(DOMException);
     await expect(promise).rejects.toHaveProperty("name", "AbortError");
   });

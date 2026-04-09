@@ -6,6 +6,7 @@ import type {
   CreateBookRequest,
 } from "../types";
 import { ApiHttpError } from "../errors/AppError";
+import { waitWithAbort } from "./waitWithAbort";
 
 const mockBooks: Record<number, Book> = {
   1: {
@@ -93,11 +94,7 @@ export const mockBookApi = {
     bookId: number,
     abortSignal?: AbortSignal,
   ): Promise<ApiResponse<Book>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
-
-    if (abortSignal?.aborted) {
-      throw new DOMException("Aborted", "AbortError");
-    }
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
 
     // mockBooksから該当書籍を取得
     const book = mockBooks[bookId];
@@ -120,11 +117,7 @@ export const mockBookApi = {
     query?: BookListQuery,
     abortSignal?: AbortSignal,
   ): Promise<ApiResponse<BookListResponse>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
-
-    if (abortSignal?.aborted) {
-      throw new DOMException("Aborted", "AbortError");
-    }
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
 
     // クエリに基づいて mockBooks をフィルタリング
     let books = Object.values(mockBooks);
@@ -216,16 +209,11 @@ export const mockBookApi = {
   async getAllBooks(
     abortSignal?: AbortSignal,
   ): Promise<ApiResponse<BookListResponse>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
 
     const books = Object.values(mockBooks);
     const totalItems = books.length;
     const itemsPerPage = totalItems;
-
-    // クエリパラメータがない場合は全件返す
-    if (abortSignal?.aborted) {
-      throw new DOMException("Aborted", "AbortError");
-    }
 
     return {
       data: {
@@ -249,10 +237,7 @@ export const mockBookApi = {
     bookData: CreateBookRequest,
     abortSignal?: AbortSignal,
   ): Promise<ApiResponse<Book>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
-    if (abortSignal?.aborted) {
-      throw new DOMException("Aborted", "AbortError");
-    }
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
 
     // IDを自動採番（既存の最大IDに1を加える）
     const maxId =
@@ -288,10 +273,7 @@ export const mockBookApi = {
     updatedData: Partial<Book>,
     abortSignal?: AbortSignal,
   ): Promise<ApiResponse<Book>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
-    if (abortSignal?.aborted) {
-      throw new DOMException("Aborted", "AbortError");
-    }
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
 
     // mockBooksから該当書籍を取得
     const existingBook = mockBooks[bookId];
@@ -320,10 +302,7 @@ export const mockBookApi = {
     bookId: number,
     abortSignal?: AbortSignal,
   ): Promise<ApiResponse<null>> {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
-    if (abortSignal?.aborted) {
-      throw new DOMException("Aborted", "AbortError");
-    }
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
 
     // mockBooksから該当書籍を削除
     if (!mockBooks[bookId]) {

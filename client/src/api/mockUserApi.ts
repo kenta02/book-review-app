@@ -1,5 +1,6 @@
 import type { ApiResponse, User } from "../types";
 import { ApiHttpError } from "../errors/AppError";
+import { waitWithAbort } from "./waitWithAbort";
 
 const mockUsers: Record<number, User> = {
   1: {
@@ -26,11 +27,7 @@ export const mockUserApi = {
     userId: number,
     abortSignal?: AbortSignal,
   ): Promise<ApiResponse<User>> {
-    if (abortSignal?.aborted) {
-      throw new DOMException("Aborted", "AbortError");
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 500)); // 500msの遅延をシミュレート
+    await waitWithAbort(500, abortSignal); // 500msの遅延をシミュレート
 
     // mockUsersから該当ユーザーを取得
     const user = mockUsers[userId];

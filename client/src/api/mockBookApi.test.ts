@@ -40,8 +40,8 @@ describe("mockBookApi", () => {
   it("signal が中断されたとき getAllBooks が中止される", async () => {
     const controller = new AbortController();
     const promise = mockBookApi.getAllBooks(controller.signal);
+    vi.advanceTimersByTime(250);
     controller.abort();
-    vi.advanceTimersByTime(500);
     await expect(promise).rejects.toThrow(DOMException);
     await expect(promise).rejects.toHaveProperty("name", "AbortError");
   });
@@ -72,16 +72,16 @@ describe("mockBookApi", () => {
     vi.advanceTimersByTime(500);
     const pageResult = await pageLimit;
     expect(pageResult.data.books.length).toBe(2);
-    expect(pageResult.data.pagination.totalItems).toBeGreaterThanOrEqual(2);
+    expect(pageResult.data.pagination?.totalItems).toBeGreaterThanOrEqual(2);
   });
 
   it("searchBooks が並び替えと最低評価条件をサポートする", async () => {
-    const rating = mockBookApi.searchBooks({ ratingMin: 4.4 });
+    const rating = mockBookApi.searchBooks({ ratingMin: 4 });
     vi.advanceTimersByTime(500);
     const ratingResult = await rating;
     expect(
       ratingResult.data.books.every(
-        (b) => b.averageRating != null && b.averageRating >= 4.4,
+        (b) => b.averageRating != null && b.averageRating >= 4,
       ),
     ).toBe(true);
 

@@ -40,10 +40,38 @@ describe("mockReviewApi", () => {
 
   it("signal が中断されたとき getReviews が中止される", async () => {
     const controller = new AbortController();
-    controller.abort();
     const promise = mockReviewApi.getReviews(undefined, controller.signal);
+    vi.advanceTimersByTime(250);
+    controller.abort();
     await expect(promise).rejects.toThrow(DOMException);
     await expect(promise).rejects.toHaveProperty("name", "AbortError");
+  });
+
+  it("signal が中断されたとき createReview は状態を変更しない", async () => {
+    const baselinePromise = mockReviewApi.getReviews();
+    vi.advanceTimersByTime(500);
+    const baseline = await baselinePromise;
+
+    const controller = new AbortController();
+    const createPromise = mockReviewApi.createReview(
+      {
+        bookId: 120,
+        rating: 5,
+        content: "途中で中断",
+      },
+      controller.signal,
+    );
+
+    vi.advanceTimersByTime(250);
+    controller.abort();
+
+    await expect(createPromise).rejects.toHaveProperty("name", "AbortError");
+
+    const afterPromise = mockReviewApi.getReviews();
+    vi.advanceTimersByTime(500);
+    const after = await afterPromise;
+
+    expect(after.data.reviews).toHaveLength(baseline.data.reviews.length);
   });
 
   it("レビューの作成・更新・削除と未登録ケース", async () => {
