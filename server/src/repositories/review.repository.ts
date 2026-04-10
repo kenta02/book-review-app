@@ -1,20 +1,13 @@
-import { Transaction } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 
 import Book from '../models/Book';
 import Comment from '../models/Comment';
 import Review from '../models/Review';
 import User from '../models/Users';
-import { sequelize } from '../sequelize';
+import { ListReviewsQueryDto } from '../modules/review/dto/review.dto';
 
 export type ReviewInstance = InstanceType<typeof Review>;
-export type BookInstance = InstanceType<typeof Book>;
 export type CommentInstance = InstanceType<typeof Comment>;
-
-export type FindReviewsWithPaginationInput = {
-  where: Record<string, unknown>;
-  limit: number;
-  offset: number;
-};
 
 export type CreateReviewRepositoryInput = {
   bookId: number;
@@ -34,15 +27,34 @@ export type FindReviewsWithPaginationResult = {
   count: number;
 };
 
+function createReviewsWhereClause(
+  queryDto: Pick<ListReviewsQueryDto, 'bookId' | 'userId'>
+): Record<string | symbol, unknown> {
+  const where: Record<string | symbol, unknown> = {};
+
+  if (queryDto.bookId !== undefined) {
+    where.bookId = { [Op.eq]: queryDto.bookId };
+  }
+
+  if (queryDto.userId !== undefined) {
+    where.userId = { [Op.eq]: queryDto.userId };
+  }
+
+  return where;
+}
+
 export async function findReviewsWithPagination(
-  input: FindReviewsWithPaginationInput
+  queryDto: ListReviewsQueryDto
 ): Promise<FindReviewsWithPaginationResult> {
+  const offset = (queryDto.page - 1) * queryDto.limit;
+  const where = createReviewsWhereClause(queryDto);
+
   const result = await Review.findAndCountAll({
-    where: input.where,
+    where,
     attributes: ['id', 'bookId', 'userId', 'content', 'rating', 'createdAt', 'updatedAt'],
     order: [['createdAt', 'DESC']],
-    limit: input.limit,
-    offset: input.offset,
+    limit: queryDto.limit,
+    offset,
   });
 
   // `group` を指定していないため、`count` は数値（number）として返されます。
@@ -75,16 +87,6 @@ export async function findReviewDetailById(reviewId: number): Promise<ReviewInst
  */
 export async function findReviewById(reviewId: number): Promise<ReviewInstance | null> {
   return Review.findByPk(reviewId);
-}
-
-/**
- * 主キーで本を取得する。
- *
- * @param bookId - 本 ID
- * @returns 本、未存在時は null
- */
-export async function findBookById(bookId: number): Promise<BookInstance | null> {
-  return Book.findByPk(bookId);
 }
 
 /**
@@ -140,13 +142,4 @@ export async function deleteReview(
   transaction: Transaction
 ): Promise<void> {
   await review.destroy({ transaction });
-}
-
-/**
- * レビュー削除で使うトランザクションを作成する。
- *
- * @returns Sequelize transaction
- */
-export async function createTransaction(): Promise<Transaction> {
-  return sequelize.transaction();
 }

@@ -1,18 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import * as bookRepository from '../src/repositories/book.repository';
 import * as reviewRepository from '../src/repositories/review.repository';
+import { sequelize } from '../src/sequelize';
 import * as reviewService from '../src/services/review.service';
+
+vi.mock('../src/repositories/book.repository', () => ({
+  findBookById: vi.fn(),
+}));
 
 vi.mock('../src/repositories/review.repository', () => ({
   findReviewsWithPagination: vi.fn(),
   findReviewDetailById: vi.fn(),
   findReviewById: vi.fn(),
-  findBookById: vi.fn(),
   createReview: vi.fn(),
   updateReviewContent: vi.fn(),
   findAnyCommentByReviewId: vi.fn(),
   deleteReview: vi.fn(),
-  createTransaction: vi.fn(),
+}));
+
+vi.mock('../src/sequelize', () => ({
+  sequelize: {
+    transaction: vi.fn(),
+  },
 }));
 
 function makeReviewModel(input: Record<string, unknown>) {
@@ -47,9 +57,9 @@ describe('review.service', () => {
       const result = await reviewService.listReviews({ page: 2, limit: 10, bookId: 3 });
 
       expect(reviewRepository.findReviewsWithPagination).toHaveBeenCalledWith({
-        where: { bookId: 3 },
+        page: 2,
         limit: 10,
-        offset: 10,
+        bookId: 3,
       });
       expect(result.pagination).toEqual({
         currentPage: 2,
@@ -63,7 +73,7 @@ describe('review.service', () => {
 
   describe('createReview', () => {
     it('throws 404 when book does not exist', async () => {
-      vi.mocked(reviewRepository.findBookById).mockResolvedValue(null);
+      vi.mocked(bookRepository.findBookById).mockResolvedValue(null);
 
       await expect(
         reviewService.createReview({ bookId: 1, content: 'x', rating: 5, userId: 1 })
@@ -71,7 +81,7 @@ describe('review.service', () => {
     });
 
     it('creates review when book exists', async () => {
-      vi.mocked(reviewRepository.findBookById).mockResolvedValue({} as never);
+      vi.mocked(bookRepository.findBookById).mockResolvedValue({} as never);
       vi.mocked(reviewRepository.createReview).mockResolvedValue(
         makeReviewModel({
           id: 2,
@@ -84,7 +94,12 @@ describe('review.service', () => {
         }) as never
       );
 
-      const result = await reviewService.createReview({ bookId: 1, content: 'nice', rating: 4, userId: 1 });
+      const result = await reviewService.createReview({
+        bookId: 1,
+        content: 'nice',
+        rating: 4,
+        userId: 1,
+      });
 
       expect(reviewRepository.createReview).toHaveBeenCalledWith({
         bookId: 1,
@@ -93,6 +108,45 @@ describe('review.service', () => {
         rating: 4,
       });
       expect(result.id).toBe(2);
+    });
+  });
+
+  describe('deleteReview', () => {
+    it('deletes review inside a sequelize transaction when no related comments exist', async () => {
+      const transaction = { id: 'tx' };
+      vi.mocked(reviewRepository.findReviewById).mockResolvedValue(
+        makeReviewModel({ id: 3, userId: 7 }) as never
+      );
+      vi.mocked(reviewRepository.findAnyCommentByReviewId).mockResolvedValue(null);
+      vi.mocked(sequelize.transaction).mockImplementation(async (callback) => {
+        return callback(transaction as never);
+      });
+
+      await reviewService.deleteReview({ reviewId: 3, userId: 7 });
+
+      expect(sequelize.transaction).toHaveBeenCalledTimes(1);
+      expect(reviewRepository.findAnyCommentByReviewId).toHaveBeenCalledWith(3, transaction);
+      expect(reviewRepository.deleteReview).toHaveBeenCalledWith(
+        expect.objectContaining({ get: expect.any(Function) }),
+        transaction
+      );
+    });
+
+    it('throws 409 when related comments exist', async () => {
+      const transaction = { id: 'tx' };
+      vi.mocked(reviewRepository.findReviewById).mockResolvedValue(
+        makeReviewModel({ id: 3, userId: 7 }) as never
+      );
+      vi.mocked(reviewRepository.findAnyCommentByReviewId).mockResolvedValue({ id: 99 } as never);
+      vi.mocked(sequelize.transaction).mockImplementation(async (callback) => {
+        return callback(transaction as never);
+      });
+
+      await expect(reviewService.deleteReview({ reviewId: 3, userId: 7 })).rejects.toMatchObject({
+        statusCode: 409,
+        code: 'RELATED_DATA_EXISTS',
+      });
+      expect(reviewRepository.deleteReview).not.toHaveBeenCalled();
     });
   });
 });

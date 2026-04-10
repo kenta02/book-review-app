@@ -9,7 +9,9 @@ import {
 import { logger } from '../utils/logger';
 import { ApiError } from '../errors/ApiError';
 import { ERROR_MESSAGES } from '../constants/error-messages';
+import * as bookRepository from '../repositories/book.repository';
 import * as reviewRepository from '../repositories/review.repository';
+import { sequelize } from '../sequelize';
 
 /**
  * モデルインスタンスを ReviewDto に変換するヘルパー。
@@ -50,20 +52,11 @@ export async function listReviews(queryDto: ListReviewsQueryDto): Promise<{
     itemsPerPage: number;
   };
 }> {
-  const { page, limit, bookId, userId } = queryDto;
-  const offset = (page - 1) * limit;
+  const { page, limit } = queryDto;
 
-  const where: Record<string, unknown> = {};
-  if (bookId !== undefined) where.bookId = bookId;
-  if (userId !== undefined) where.userId = userId;
+  logger.info('[REVIEWS SERVICE] executing DB query', queryDto);
 
-  logger.info('[REVIEWS SERVICE] executing DB query', { where, page, limit, offset });
-
-  const { rows, count } = await reviewRepository.findReviewsWithPagination({
-    where,
-    limit,
-    offset,
-  });
+  const { rows, count } = await reviewRepository.findReviewsWithPagination(queryDto);
 
   logger.info('[REVIEWS SERVICE] db returned rows=', rows.length, 'count=', count);
 
@@ -125,7 +118,7 @@ export async function getReviewDetail(reviewId: number): Promise<ReviewDetailDto
 export async function createReview(serviceDto: CreateReviewServiceDto): Promise<ReviewDto> {
   const { bookId, content, rating, userId } = serviceDto;
 
-  const book = await reviewRepository.findBookById(bookId);
+  const book = await bookRepository.findBookById(bookId);
   if (!book) {
     throw new ApiError(404, 'BOOK_NOT_FOUND', ERROR_MESSAGES.BOOK_NOT_FOUND);
   }
@@ -194,8 +187,7 @@ export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<
     throw new ApiError(403, 'FORBIDDEN', ERROR_MESSAGES.FORBIDDEN_REVIEW_DELETE);
   }
 
-  const transaction = await reviewRepository.createTransaction();
-  try {
+  await sequelize.transaction(async (transaction) => {
     const hasComments = await reviewRepository.findAnyCommentByReviewId(reviewId, transaction);
 
     if (hasComments) {
@@ -203,11 +195,7 @@ export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<
     }
 
     await reviewRepository.deleteReview(review, transaction);
-    await transaction.commit();
+  });
 
-    logger.info('[REVIEWS SERVICE] review deleted', { reviewId, userId });
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  logger.info('[REVIEWS SERVICE] review deleted', { reviewId, userId });
 }

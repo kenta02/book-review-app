@@ -4,6 +4,7 @@ import type { CommentDto, CreateCommentServiceDto } from '../modules/comment/dto
 import { ApiError } from '../errors/ApiError';
 import { ERROR_MESSAGES } from '../constants/error-messages';
 import * as commentRepository from '../repositories/comment.repository';
+import * as reviewRepository from '../repositories/review.repository';
 
 /**
  * reviewId に紐づくコメントを取得し、返信をネストした形で返す。
@@ -35,7 +36,7 @@ export async function listComments(reviewId: number): Promise<CommentDto[]> {
 export async function createComment(serviceDto: CreateCommentServiceDto): Promise<CommentDto> {
   const { reviewId, content, parentId = null, userId } = serviceDto;
 
-  const foundReview = await commentRepository.findReviewById(reviewId);
+  const foundReview = await reviewRepository.findReviewById(reviewId);
   if (!foundReview) {
     throw new ApiError(404, 'REVIEW_NOT_FOUND', ERROR_MESSAGES.REVIEW_NOT_FOUND);
   }

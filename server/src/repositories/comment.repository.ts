@@ -1,8 +1,6 @@
 import Comment from '../models/Comment';
-import Review from '../models/Review';
 
 export type CommentInstance = InstanceType<typeof Comment>;
-export type ReviewInstance = InstanceType<typeof Review>;
 
 export type CreateCommentRepositoryInput = {
   content: string;
@@ -19,16 +17,6 @@ export type CreateCommentRepositoryInput = {
  */
 export async function findCommentsByReviewId(reviewId: number): Promise<CommentInstance[]> {
   return Comment.findAll({ where: { reviewId }, order: [['createdAt', 'DESC']] });
-}
-
-/**
- * 主キーでレビューを取得する。
- *
- * @param reviewId - レビュー ID
- * @returns レビュー、未存在時は null
- */
-export async function findReviewById(reviewId: number): Promise<ReviewInstance | null> {
-  return Review.findByPk(reviewId);
 }
 
 /**
