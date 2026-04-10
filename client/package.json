@@ -35,7 +35,7 @@
     "husky": "^9.1.7",
     "jsdom": "^29.0.1",
     "lint-staged": "^16.2.7",
-    "postcss": "^8.4.25",
+    "postcss": "^8.5.9",
     "react-doctor": "^0.0.30",
     "tailwindcss": "^4.2.2",
     "typedoc": "^0.28.18",
