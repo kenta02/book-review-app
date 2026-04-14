@@ -113,14 +113,12 @@ describe('review.service', () => {
 
   describe('deleteReview', () => {
     it('deletes review inside a sequelize transaction when no related comments exist', async () => {
-      const transaction = { id: 'tx' };
+      const transaction = { id: 'tx', commit: vi.fn(), rollback: vi.fn() };
       vi.mocked(reviewRepository.findReviewById).mockResolvedValue(
         makeReviewModel({ id: 3, userId: 7 }) as never
       );
       vi.mocked(reviewRepository.findAnyCommentByReviewId).mockResolvedValue(null);
-      vi.mocked(sequelize.transaction).mockImplementation(async (callback) => {
-        return callback(transaction as never);
-      });
+      vi.mocked(sequelize.transaction).mockResolvedValue(transaction as never);
 
       await reviewService.deleteReview({ reviewId: 3, userId: 7 });
 
@@ -130,23 +128,23 @@ describe('review.service', () => {
         expect.objectContaining({ get: expect.any(Function) }),
         transaction
       );
+      expect(transaction.commit).toHaveBeenCalled();
     });
 
     it('throws 409 when related comments exist', async () => {
-      const transaction = { id: 'tx' };
+      const transaction = { id: 'tx', commit: vi.fn(), rollback: vi.fn() };
       vi.mocked(reviewRepository.findReviewById).mockResolvedValue(
         makeReviewModel({ id: 3, userId: 7 }) as never
       );
       vi.mocked(reviewRepository.findAnyCommentByReviewId).mockResolvedValue({ id: 99 } as never);
-      vi.mocked(sequelize.transaction).mockImplementation(async (callback) => {
-        return callback(transaction as never);
-      });
+      vi.mocked(sequelize.transaction).mockResolvedValue(transaction as never);
 
       await expect(reviewService.deleteReview({ reviewId: 3, userId: 7 })).rejects.toMatchObject({
         statusCode: 409,
         code: 'RELATED_DATA_EXISTS',
       });
       expect(reviewRepository.deleteReview).not.toHaveBeenCalled();
+      expect(transaction.rollback).toHaveBeenCalled();
     });
   });
 });

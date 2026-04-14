@@ -164,7 +164,8 @@ export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<
     throw new ApiError(403, 'FORBIDDEN', ERROR_MESSAGES.FORBIDDEN_REVIEW_DELETE);
   }
 
-  await sequelize.transaction(async (transaction) => {
+  const transaction = await sequelize.transaction();
+  try {
     const hasComments = await reviewRepository.findAnyCommentByReviewId(reviewId, transaction);
 
     if (hasComments) {
@@ -172,7 +173,11 @@ export async function deleteReview(serviceDto: DeleteReviewServiceDto): Promise<
     }
 
     await reviewRepository.deleteReview(review, transaction);
-  });
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 
   logger.info('[REVIEWS SERVICE] review deleted', { reviewId, userId });
 }
