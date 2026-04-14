@@ -33,11 +33,11 @@ function createReviewsWhereClause(
   const where: Record<string | symbol, unknown> = {};
 
   if (queryDto.bookId !== undefined) {
-    where.bookId = { [Op.eq]: queryDto.bookId };
+    where.bookId = queryDto.bookId;
   }
 
   if (queryDto.userId !== undefined) {
-    where.userId = { [Op.eq]: queryDto.userId };
+    where.userId = queryDto.userId;
   }
 
   return where;
