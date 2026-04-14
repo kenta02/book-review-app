@@ -58,6 +58,20 @@ export const apiErrorHandler: ErrorRequestHandler = (error, _req, res, _next) =>
     return;
   }
 
+  const status = (error as any).status || (error as any).statusCode;
+  const errorType = (error as any).type;
+
+  if (status === 413 || errorType === 'entity.too.large') {
+    res.status(413).json({
+      success: false,
+      error: {
+        message: (error as Error).message || 'Payload too large',
+        code: 'PAYLOAD_TOO_LARGE',
+      },
+    });
+    return;
+  }
+
   logger.error('[ERROR-HANDLER] unexpected error occurred', error);
   res.status(500).json({
     success: false,
