@@ -1,10 +1,9 @@
-import { NextFunction, Request, Response } from 'express';
+import { Request, Response } from 'express';
 
 import { ERROR_MESSAGES } from '../constants/error-messages';
-import { ApiError } from '../errors/ApiError';
-import { sendApiError, sendAuthenticationRequired } from '../middleware/errorHandler';
+import { sendAuthenticationRequired } from '../middleware/errorHandler';
 import * as reviewService from '../services/review.service';
-import { logger } from '../utils/logger';
+import { asyncHandler } from '../utils/asyncHandler';
 import {
   validateCreateReview,
   validateDeleteReview,
@@ -20,47 +19,27 @@ import {
  * @param res - Express Response
  * @returns レビュー一覧
  */
-export async function listReviews(
-  req: Request,
-  res: Response,
-  next?: NextFunction
-): Promise<Response> {
-  try {
-    const parseResult = validateListReviewsQuery(req);
+export const listReviews = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+  const parseResult = validateListReviewsQuery(req);
 
-    if (!parseResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.VALIDATION_FAILED,
-          code: 'VALIDATION_ERROR',
-          details: parseResult.errors,
-        },
-      });
-    }
-
-    const result = await reviewService.listReviews(parseResult.data);
-
-    return res.json({
-      success: true,
-      data: result,
-    });
-  } catch (error) {
-    if (error instanceof ApiError) {
-      if (next) {
-        next(error);
-        return res;
-      }
-      return sendApiError(res, error);
-    }
-
-    logger.error('[REVIEWS GET] unexpected error occurred');
-    return res.status(500).json({
+  if (!parseResult.success) {
+    return res.status(400).json({
       success: false,
-      error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
+      error: {
+        message: ERROR_MESSAGES.VALIDATION_FAILED,
+        code: 'VALIDATION_ERROR',
+        details: parseResult.errors,
+      },
     });
   }
-}
+
+  const result = await reviewService.listReviews(parseResult.data);
+
+  return res.json({
+    success: true,
+    data: result,
+  });
+});
 
 /**
  * レビュー詳細取得 API ハンドラー。
@@ -69,12 +48,8 @@ export async function listReviews(
  * @param res - Express Response
  * @returns レビュー詳細
  */
-export async function getReviewDetail(
-  req: Request,
-  res: Response,
-  next?: NextFunction
-): Promise<Response> {
-  try {
+export const getReviewDetail = asyncHandler(
+  async (req: Request, res: Response): Promise<Response> => {
     const parseResult = validateGetReviewDetail(req);
 
     if (!parseResult.success) {
@@ -92,22 +67,8 @@ export async function getReviewDetail(
     const data = await reviewService.getReviewDetail(parseResult.data.reviewId);
 
     return res.json({ success: true, data });
-  } catch (error) {
-    if (error instanceof ApiError) {
-      if (next) {
-        next(error);
-        return res;
-      }
-      return sendApiError(res, error);
-    }
-
-    logger.error('[REVIEWS GET DETAIL] unexpected error occurred');
-    return res.status(500).json({
-      success: false,
-      error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
-    });
   }
-}
+);
 
 /**
  * レビュー削除 API ハンドラー。
@@ -116,12 +77,8 @@ export async function getReviewDetail(
  * @param res - Express Response
  * @returns 204 No Content
  */
-export async function deleteReview(
-  req: Request,
-  res: Response,
-  next?: NextFunction
-): Promise<Response> {
-  try {
+export const deleteReview = asyncHandler(
+  async (req: Request, res: Response): Promise<Response> => {
     const userId = req.userId;
     if (!userId) {
       return sendAuthenticationRequired(res);
@@ -148,25 +105,8 @@ export async function deleteReview(
     });
 
     return res.sendStatus(204);
-  } catch (error) {
-    if (error instanceof ApiError) {
-      if (next) {
-        next(error);
-        return res;
-      }
-      return sendApiError(res, error);
-    }
-
-    logger.error('[REVIEWS DELETE] unexpected error occurred');
-    return res.status(500).json({
-      success: false,
-      error: {
-        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-        code: 'INTERNAL_SERVER_ERROR',
-      },
-    });
   }
-}
+);
 
 /**
  * レビュー更新 API ハンドラー。
@@ -175,12 +115,8 @@ export async function deleteReview(
  * @param res - Express Response
  * @returns 更新後レビュー
  */
-export async function updateReview(
-  req: Request,
-  res: Response,
-  next?: NextFunction
-): Promise<Response> {
-  try {
+export const updateReview = asyncHandler(
+  async (req: Request, res: Response): Promise<Response> => {
     const userId = req.userId;
     if (!userId) {
       return sendAuthenticationRequired(res);
@@ -208,25 +144,8 @@ export async function updateReview(
     });
 
     return res.json({ success: true, data });
-  } catch (error) {
-    if (error instanceof ApiError) {
-      if (next) {
-        next(error);
-        return res;
-      }
-      return sendApiError(res, error);
-    }
-
-    logger.error('[REVIEWS PUT] unexpected error occurred');
-    return res.status(500).json({
-      success: false,
-      error: {
-        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-        code: 'INTERNAL_SERVER_ERROR',
-      },
-    });
   }
-}
+);
 
 /**
  * レビュー作成 API ハンドラー。
@@ -235,12 +154,8 @@ export async function updateReview(
  * @param res - Express Response
  * @returns 作成後レビュー
  */
-export async function createReview(
-  req: Request,
-  res: Response,
-  next?: NextFunction
-): Promise<Response> {
-  try {
+export const createReview = asyncHandler(
+  async (req: Request, res: Response): Promise<Response> => {
     const userId = req.userId;
     if (!userId) {
       return sendAuthenticationRequired(res);
@@ -265,22 +180,5 @@ export async function createReview(
     });
 
     return res.status(201).json({ success: true, data });
-  } catch (error) {
-    if (error instanceof ApiError) {
-      if (next) {
-        next(error);
-        return res;
-      }
-      return sendApiError(res, error);
-    }
-
-    logger.error('[REVIEWS POST] unexpected error occurred');
-    return res.status(500).json({
-      success: false,
-      error: {
-        message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-        code: 'INTERNAL_SERVER_ERROR',
-      },
-    });
   }
-}
+);
