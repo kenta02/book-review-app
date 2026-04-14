@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Transaction } from 'sequelize';
 
 import reviewRouter from '../src/routes/reviews';
+import { apiErrorHandler } from '../src/middleware/errorHandler';
 import Review from '../src/models/Review';
 import Comment from '../src/models/Comment';
 import { sequelize } from '../src/sequelize';
@@ -28,6 +29,7 @@ function makeApp(setUserId?: number, setUserRole?: string) {
     next();
   });
   app.use('/api', reviewRouter);
+  app.use(apiErrorHandler);
   return app;
 }
 
@@ -44,7 +46,7 @@ afterEach(() => {
 
 describe('DELETE /api/reviews/:reviewId', () => {
   // 無効なレビューID（整数以外）のテスト
-  it('returns 400 for invalid id (non-integer)', async () => {
+  it('reviewId が不正（非整数）のとき 400 を返す', async () => {
     const spyFind = vi.spyOn(Review, 'findByPk');
     const res = await request(app).delete('/api/reviews/1.5');
     expect(res.status).toBe(400);
@@ -54,7 +56,7 @@ describe('DELETE /api/reviews/:reviewId', () => {
   });
 
   // 未認証のリクエストのテスト
-  it('returns 401 when unauthenticated', async () => {
+  it('未認証時は 401 を返す', async () => {
     const unauthApp = makeApp(); // do not set userId
     const res = await request(unauthApp).delete('/api/reviews/1');
     expect(res.status).toBe(401);
@@ -62,7 +64,7 @@ describe('DELETE /api/reviews/:reviewId', () => {
   });
 
   // レビューが見つからない場合のテスト
-  it('returns 404 when review not found', async () => {
+  it('レビューが存在しないとき 404 を返す', async () => {
     vi.spyOn(Review, 'findByPk').mockResolvedValue(null);
     const res = await request(app).delete('/api/reviews/999');
     expect(res.status).toBe(404);
@@ -70,7 +72,7 @@ describe('DELETE /api/reviews/:reviewId', () => {
   });
 
   // 禁止されたアクセス（所有者でない）のテスト
-  it('returns 403 when not owner', async () => {
+  it('所有者でない場合は 403 を返す', async () => {
     type FakeReview = { get: (key: string) => number | null };
     const fakeReview: FakeReview = { get: (k: string) => (k === 'userId' ? 99 : null) };
     vi.spyOn(Review, 'findByPk').mockResolvedValue(fakeReview as unknown as ReviewInstance);
@@ -80,7 +82,7 @@ describe('DELETE /api/reviews/:reviewId', () => {
     expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
-  it('allows admin to delete non-owned review', async () => {
+  it('admin は非所有レビューでも削除できる', async () => {
     const adminApp = makeApp(2, 'admin');
     type FakeReviewWithDestroy = {
       get: (key: string) => number | null;
@@ -102,7 +104,7 @@ describe('DELETE /api/reviews/:reviewId', () => {
   });
 
   // 関連コメントが存在する場合の競合のテスト
-  it('returns 409 when related comments exist', async () => {
+  it('関連コメントが存在するとき 409 を返す', async () => {
     type FakeReview = { get: (key: string) => number | null };
     const fakeReview: FakeReview = { get: (k: string) => (k === 'userId' ? 2 : null) };
 
@@ -119,7 +121,7 @@ describe('DELETE /api/reviews/:reviewId', () => {
   });
 
   // 正常な削除のテスト
-  it('returns 204 and deletes review when ok', async () => {
+  it('正常系では 204 を返してレビューを削除する', async () => {
     type FakeReviewWithDestroy = {
       get: (key: string) => number | null;
       destroy: ReturnType<typeof vi.fn>;
@@ -141,7 +143,7 @@ describe('DELETE /api/reviews/:reviewId', () => {
   });
 
   // トランザクション失敗時の内部サーバーエラーのテスト
-  it('returns 500 when transaction creation fails', async () => {
+  it('トランザクション生成失敗時は 500 を返す', async () => {
     type FakeReview = { get: (key: string) => number | null };
     const fakeReview: FakeReview = { get: (k: string) => (k === 'userId' ? 2 : null) };
     vi.spyOn(Review, 'findByPk').mockResolvedValue(fakeReview as unknown as ReviewInstance);

@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 import authRouter from '../src/routes/auth';
+import { apiErrorHandler } from '../src/middleware/errorHandler';
 import User from '../src/models/Users';
 
 // このファイルの目的：認証関連ルートの正常系／異常系を確認するテスト
@@ -24,6 +25,7 @@ function makeApp(setUserId?: number) {
     next();
   });
   app.use('/api/auth', authRouter);
+  app.use(apiErrorHandler);
   return app;
 }
 
@@ -39,8 +41,8 @@ afterEach(() => {
 });
 
 // POST /api/auth/register のテスト
-describe('POST /api/auth/register', () => {
-  it('returns 400 when validation fails', async () => {
+describe('認証登録 API: POST /api/auth/register', () => {
+  it('バリデーションエラー時は 400 を返す', async () => {
     const res = await request(app).post('/api/auth/register').send({
       username: 'ab',
       email: 'bad',
@@ -51,7 +53,7 @@ describe('POST /api/auth/register', () => {
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 
-  it('returns 409 when username already exists', async () => {
+  it('username 重複時は 409 を返す', async () => {
     // User.findOne をモックして「既存ユーザーあり」の挙動を再現
     vi.spyOn(User, 'findOne').mockResolvedValue({ id: 1 } as unknown as UserInstance);
 
@@ -65,7 +67,7 @@ describe('POST /api/auth/register', () => {
     expect(res.body.error.code).toBe('DUPLICATE_RESOURCE');
   });
 
-  it('returns 201 and token when registration succeeds', async () => {
+  it('登録成功時は 201 と token を返す', async () => {
     // bcrypt/hash, User.create, jwt.sign をモックして正常系を検証
     vi.spyOn(User, 'findOne').mockResolvedValue(null);
     vi.spyOn(bcrypt, 'hash').mockImplementation((async () => 'hashed') as typeof bcrypt.hash);
@@ -88,8 +90,8 @@ describe('POST /api/auth/register', () => {
 });
 
 // POST /api/auth/login のテスト
-describe('POST /api/auth/login', () => {
-  it('returns 400 when validation fails', async () => {
+describe('認証ログイン API: POST /api/auth/login', () => {
+  it('バリデーションエラー時は 400 を返す', async () => {
     const res = await request(app).post('/api/auth/login').send({
       email: 'bad',
       password: 'short',
@@ -99,7 +101,7 @@ describe('POST /api/auth/login', () => {
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 
-  it('returns 401 when user not found', async () => {
+  it('ユーザー未存在時は 401 を返す', async () => {
     vi.spyOn(User, 'findOne').mockResolvedValue(null);
 
     const res = await request(app).post('/api/auth/login').send({
@@ -111,7 +113,7 @@ describe('POST /api/auth/login', () => {
     expect(res.body.error.code).toBe('AUTHENTICATION_FAILED');
   });
 
-  it('returns 401 when password is invalid', async () => {
+  it('パスワード不一致時は 401 を返す', async () => {
     // findOne, bcrypt.compare をモックしてパスワード不一致を再現
     vi.spyOn(User, 'findOne').mockResolvedValue({
       toJSON: () => ({ id: 1, username: 'u', email: 'u@example.com', password: 'hashed' }),
@@ -127,7 +129,7 @@ describe('POST /api/auth/login', () => {
     expect(res.body.error.code).toBe('AUTHENTICATION_FAILED');
   });
 
-  it('returns 200 and token when login succeeds', async () => {
+  it('ログイン成功時は 200 と token を返す', async () => {
     // 正常系：findOne, bcrypt.compare, jwt.sign をモック
     vi.spyOn(User, 'findOne').mockResolvedValue({
       toJSON: () => ({ id: 1, username: 'u', email: 'u@example.com', password: 'hashed' }),
@@ -147,14 +149,14 @@ describe('POST /api/auth/login', () => {
 });
 
 // GET /api/auth/me のテスト
-describe('GET /api/auth/me', () => {
-  it('returns 401 when unauthenticated', async () => {
+describe('プロフィール API: GET /api/auth/me', () => {
+  it('未認証時は 401 を返す', async () => {
     const res = await request(app).get('/api/auth/me');
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe('AUTHENTICATION_REQUIRED');
   });
 
-  it('returns 401 when authenticated user id is stale and user is not found', async () => {
+  it('認証済みでもユーザー未存在なら 401 を返す', async () => {
     const authApp = makeApp(123);
     vi.spyOn(User, 'findByPk').mockResolvedValue(null);
 
@@ -164,7 +166,7 @@ describe('GET /api/auth/me', () => {
     expect(res.body.error.code).toBe('USER_NOT_FOUND');
   });
 
-  it('returns 200 with user data when authenticated', async () => {
+  it('認証済みユーザーなら 200 で user を返す', async () => {
     const authApp = makeApp(5);
     vi.spyOn(User, 'findByPk').mockResolvedValue({
       toJSON: () => ({ id: 5, username: 'me', email: 'me@example.com' }),

@@ -3,6 +3,7 @@ import request from 'supertest';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 import reviewRouter from '../src/routes/reviews';
+import { apiErrorHandler } from '../src/middleware/errorHandler';
 import Review from '../src/models/Review';
 
 // テスト目的：レビュー更新（PUT）のバリデーション、権限、更新処理を検証します
@@ -21,6 +22,7 @@ function makeApp(setUserId?: number, setUserRole?: string) {
     next();
   });
   app.use('/api', reviewRouter);
+  app.use(apiErrorHandler);
   return app;
 }
 
@@ -37,7 +39,7 @@ afterEach(() => {
 
 describe('PUT /api/reviews/:reviewId', () => {
   // 無効なレビューID（整数以外）のテスト
-  it('returns 400 for invalid id (non-integer)', async () => {
+  it('reviewId が不正（非整数）のとき 400 を返す', async () => {
     const spyFind = vi.spyOn(Review, 'findByPk');
     const res = await request(app).put('/api/reviews/1.5').send({ content: 'x' });
     expect(res.status).toBe(400);
@@ -47,7 +49,7 @@ describe('PUT /api/reviews/:reviewId', () => {
   });
 
   // 未認証のリクエストのテスト
-  it('returns 401 when unauthenticated', async () => {
+  it('未認証時は 401 を返す', async () => {
     const unauthApp = makeApp(); // do not set userId
     const res = await request(unauthApp).put('/api/reviews/1').send({ content: 'ok' });
     expect(res.status).toBe(401);
@@ -55,7 +57,7 @@ describe('PUT /api/reviews/:reviewId', () => {
   });
 
   // レビューが見つからない場合のテスト
-  it('returns 404 when review not found', async () => {
+  it('レビューが存在しないとき 404 を返す', async () => {
     vi.spyOn(Review, 'findByPk').mockResolvedValue(null);
     const res = await request(app).put('/api/reviews/999').send({ content: 'ok' });
     expect(res.status).toBe(404);
@@ -63,7 +65,7 @@ describe('PUT /api/reviews/:reviewId', () => {
   });
 
   // 禁止されたアクセス（所有者でない）のテスト
-  it('returns 403 when not owner', async () => {
+  it('所有者でない場合は 403 を返す', async () => {
     type FakeReview = { get: (key: string) => number | null };
     const fakeReview: FakeReview = { get: (k: string) => (k === 'userId' ? 99 : null) };
     vi.spyOn(Review, 'findByPk').mockResolvedValue(fakeReview as unknown as ReviewInstance);
@@ -73,7 +75,7 @@ describe('PUT /api/reviews/:reviewId', () => {
     expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
-  it('allows admin to update non-owned review', async () => {
+  it('admin は非所有レビューでも更新できる', async () => {
     const adminApp = makeApp(2, 'admin');
     const createdAt = new Date().toISOString();
     const updatedAt = new Date().toISOString();
@@ -110,7 +112,7 @@ describe('PUT /api/reviews/:reviewId', () => {
   });
 
   // コンテンツのバリデーションエラーのテスト
-  it('returns 400 when content is missing or invalid', async () => {
+  it('content が不足または不正なとき 400 を返す', async () => {
     type FakeReview = { get: (key: string) => number | null };
     const fakeReview: FakeReview = { get: (k: string) => (k === 'userId' ? 2 : null) };
     vi.spyOn(Review, 'findByPk').mockResolvedValue(fakeReview as unknown as ReviewInstance);
@@ -129,7 +131,7 @@ describe('PUT /api/reviews/:reviewId', () => {
   });
 
   // 正常な更新のテスト
-  it('returns 200 and updated review when ok', async () => {
+  it('正常系では 200 と更新済みレビューを返す', async () => {
     type FakeReviewWithUpdate = {
       get: (key: string) => number | null;
       update: ReturnType<typeof vi.fn>;
@@ -148,7 +150,7 @@ describe('PUT /api/reviews/:reviewId', () => {
   });
 
   // 更新失敗時の内部サーバーエラーのテスト
-  it('returns 500 when update fails', async () => {
+  it('更新処理で例外が発生したとき 500 を返す', async () => {
     type FakeReviewWithUpdate = {
       get: (key: string) => number | null;
       update: ReturnType<typeof vi.fn>;

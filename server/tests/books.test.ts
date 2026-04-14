@@ -21,6 +21,7 @@ import User from '../src/models/Users';
 import { sequelize } from '../src/sequelize';
 import * as bookService from '../src/services/book.service';
 import { ApiError } from '../src/errors/ApiError';
+import { apiErrorHandler } from '../src/middleware/errorHandler';
 
 // このファイルの目的：書籍 API の CRUD とページネーションを検証するテスト
 // - findAndCountAll のモックを用いてページング動作を確認
@@ -44,6 +45,7 @@ function makeApp() {
   const app = express();
   app.use(express.json());
   app.use('/api/books', bookRouter);
+  app.use(apiErrorHandler);
   return app;
 }
 

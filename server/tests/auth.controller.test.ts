@@ -39,7 +39,7 @@ describe('auth.controller', () => {
     vi.clearAllMocks();
   });
 
-  it('register: returns 400 when validation fails', async () => {
+  it('register: バリデーションエラー時は 400 を返す', async () => {
     const req = makeRequest({ body: { username: 'a', email: 'bad', password: '123' } }); // NOSONAR
     const res = makeResponse();
 
@@ -55,7 +55,7 @@ describe('auth.controller', () => {
     );
   });
 
-  it('register: returns 201 on success', async () => {
+  it('register: 正常系では 201 を返す', async () => {
     const req = makeRequest({
       body: { username: 'alice', email: 'alice@example.com', password: 'password123' }, // NOSONAR
     });
@@ -77,7 +77,7 @@ describe('auth.controller', () => {
     expect(res.json).toHaveBeenCalledWith({ success: true, data });
   });
 
-  it('register: forwards ApiError when service throws ApiError', async () => {
+  it('register: service の ApiError をそのまま返す', async () => {
     const req = makeRequest({
       body: { username: 'alice', email: 'alice@example.com', password: 'password123' }, // NOSONAR
     });
@@ -94,11 +94,12 @@ describe('auth.controller', () => {
       error: {
         message: 'test error',
         code: 'TEST_ERROR',
+        details: [{ field: 'email', message: 'invalid' }],
       },
     });
   });
 
-  it('login: returns 400 when validation fails', async () => {
+  it('login: バリデーションエラー時は 400 を返す', async () => {
     const req = makeRequest({ body: { email: 'not-an-email', password: '' } });
     const res = makeResponse();
 
@@ -113,7 +114,7 @@ describe('auth.controller', () => {
     );
   });
 
-  it('login: returns 200 on success', async () => {
+  it('login: 正常系では 200 を返す', async () => {
     const req = makeRequest({ body: { email: 'a@example.com', password: 'password123' } }); // NOSONAR
     const res = makeResponse();
     const data = { token: 'token', user: { id: 1, username: 'alice', email: 'a@example.com' } };
@@ -125,7 +126,7 @@ describe('auth.controller', () => {
     expect(res.json).toHaveBeenCalledWith({ success: true, data });
   });
 
-  it('login: returns ApiError as-is even when details are present', async () => {
+  it('login: details 付き ApiError をそのまま返す', async () => {
     const req = makeRequest({ body: { email: 'a@example.com', password: 'password123' } }); // NOSONAR
     const res = makeResponse();
     vi.mocked(authService.login).mockRejectedValue(
@@ -140,11 +141,12 @@ describe('auth.controller', () => {
       error: {
         message: 'test error',
         code: 'TEST_ERROR',
+        details: [{ field: 'email', message: 'invalid' }],
       },
     });
   });
 
-  it('me: returns 401 when unauthenticated', async () => {
+  it('me: 未認証時は 401 を返す', async () => {
     const req = makeRequest();
     const res = makeResponse();
 
@@ -161,7 +163,7 @@ describe('auth.controller', () => {
     });
   });
 
-  it('me: returns 200 with profile on success', async () => {
+  it('me: 正常系では 200 とプロフィールを返す', async () => {
     const req = makeRequest({ userId: 7 });
     const res = makeResponse();
     vi.mocked(authService.getMyProfile).mockResolvedValue({
@@ -178,7 +180,7 @@ describe('auth.controller', () => {
     });
   });
 
-  it('me: forwards ApiError when service throws ApiError', async () => {
+  it('me: service の ApiError をそのまま返す', async () => {
     const req = makeRequest({ userId: 7 });
     const res = makeResponse();
     vi.mocked(authService.getMyProfile).mockRejectedValue(
@@ -197,7 +199,7 @@ describe('auth.controller', () => {
     });
   });
 
-  it('me: returns 500 when unexpected error occurs', async () => {
+  it('me: 予期しない例外時は 500 を返す', async () => {
     const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
     const req = makeRequest({ userId: 7 });
     const res = makeResponse();
@@ -216,7 +218,7 @@ describe('auth.controller', () => {
     expect(loggerSpy).toHaveBeenCalledWith('[AUTH ME] unexpected error occurred');
   });
 
-  it('register: returns 500 when unexpected error occurs', async () => {
+  it('register: 予期しない例外時は 500 を返す', async () => {
     const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
     const req = makeRequest({
       body: { username: 'alice', email: 'alice@example.com', password: 'password123' }, // NOSONAR
@@ -237,7 +239,7 @@ describe('auth.controller', () => {
     expect(loggerSpy).toHaveBeenCalledWith('[AUTH REGISTER] unexpected error occurred');
   });
 
-  it('login: returns 500 when unexpected error occurs', async () => {
+  it('login: 予期しない例外時は 500 を返す', async () => {
     const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
     const req = makeRequest({ body: { email: 'a@example.com', password: 'password123' } }); // NOSONAR
     const res = makeResponse();
@@ -256,7 +258,7 @@ describe('auth.controller', () => {
     expect(loggerSpy).toHaveBeenCalledWith('[AUTH LOGIN] unexpected error occurred');
   });
 
-  it('login: returns ApiError as-is even when details are present', async () => {
+  it('login: details 付き ApiError をそのまま返す（重複ケース）', async () => {
     const req = makeRequest({ body: { email: 'a@example.com', password: 'password123' } }); // NOSONAR
     const res = makeResponse();
     vi.mocked(authService.login).mockRejectedValue(
@@ -271,6 +273,7 @@ describe('auth.controller', () => {
       error: {
         message: 'test error',
         code: 'TEST_ERROR',
+        details: [{ field: 'email', message: 'invalid' }],
       },
     });
   });
