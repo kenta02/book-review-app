@@ -12,30 +12,7 @@ import { ERROR_MESSAGES } from '../constants/error-messages';
 import * as bookRepository from '../repositories/book.repository';
 import * as reviewRepository from '../repositories/review.repository';
 import { sequelize } from '../sequelize';
-
-/**
- * モデルインスタンスを ReviewDto に変換するヘルパー。
- *
- * @param model - Review モデルまたは toJSON を持つオブジェクト
- * @returns ReviewDto
- */
-function reviewModelToDto(model: unknown): ReviewDto {
-  const json = (
-    typeof (model as { toJSON?: unknown }).toJSON === 'function'
-      ? (model as { toJSON: () => Record<string, unknown> }).toJSON()
-      : model
-  ) as Record<string, unknown>;
-
-  return {
-    id: Number(json.id),
-    bookId: Number(json.bookId),
-    userId: json.userId === null || json.userId === undefined ? null : Number(json.userId),
-    content: String(json.content),
-    rating: json.rating === undefined ? undefined : Number(json.rating),
-    createdAt: String(json.createdAt),
-    updatedAt: String(json.updatedAt),
-  };
-}
+import { reviewModelToDto } from '../utils/mapper';
 
 /**
  * レビューのページング取得。bookId/userId による絞り込み可。

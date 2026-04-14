@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { commentModelToDto } from '../src/utils/mapper';
+import { commentModelToDto, normalizeListBook, reviewModelToDto } from '../src/utils/mapper';
 
 // 内部ヘルパーはエクスポートされていないため、各ケースを commentModelToDto 経由で
 // テストします。
@@ -56,5 +56,41 @@ describe('mapper utilities', () => {
     // 日時は formatDate 関数がエラーを抑制して空文字列を返す
     expect(dto.createdAt).toBe('');
     expect(dto.updatedAt).toBe('');
+  });
+
+  it('reviewModelToDto が Review モデルを DTO へ変換できる', () => {
+    const dto = reviewModelToDto({
+      toJSON: () => ({
+        id: '11',
+        bookId: '20',
+        userId: '3',
+        content: 'review text',
+        rating: '4',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-02T00:00:00.000Z',
+      }),
+    });
+
+    expect(dto).toMatchObject({
+      id: 11,
+      bookId: 20,
+      userId: 3,
+      content: 'review text',
+      rating: 4,
+    });
+  });
+
+  it('normalizeListBook が集計列を API 返却用に正規化する', () => {
+    const normalized = normalizeListBook({
+      toJSON: () => ({
+        id: 1,
+        title: 'Book A',
+        averageRating: '4.5',
+        reviewCount: null,
+      }),
+    });
+
+    expect(normalized.averageRating).toBe(4.5);
+    expect(normalized.reviewCount).toBe(0);
   });
 });

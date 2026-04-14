@@ -1,4 +1,4 @@
-import { ForeignKeyConstraintError, UniqueConstraintError, ValidationErrorItem } from 'sequelize';
+import { ForeignKeyConstraintError } from 'sequelize';
 
 import { ERROR_MESSAGES } from '../constants/error-messages';
 import { ApiError } from '../errors/ApiError';
@@ -8,59 +8,14 @@ import { sequelize } from '../sequelize';
 import * as reviewService from './review.service';
 import { CreateBookDto, ListBooksQueryDto, UpdateBookDto } from '../modules/book/dto/book.dto';
 import { logger } from '../utils/logger';
+import { normalizeListBook } from '../utils/mapper';
+import { isUniqueConstraintError } from '../utils/sequelizeErrors';
 
 type ListBookReviewsInput = {
   bookId: number;
   page: number;
   limit: number;
 };
-
-type BookListRow = {
-  toJSON?: () => Record<string, unknown>;
-  get?: (key: string) => unknown;
-};
-
-/**
- * 集計列に混在しうる値を有限数へ寄せます。
- *
- * @param value - DB / Sequelize から返る生値
- * @returns 有限数なら number、そうでなければ null
- */
-function toFiniteNumber(value: unknown): number | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
-  const numericValue = Number(value);
-  return Number.isFinite(numericValue) ? numericValue : null;
-}
-
-/**
- * 書籍一覧クエリの 1 行を API レスポンス形式へ正規化します。
- *
- * Sequelize の一覧結果は、モデルインスタンス経由で集計列を持つ場合と
- * plain object に近い shape で扱う場合があるため、ここで吸収します。
- * 集計列は API 契約に合わせて `averageRating` は `number | null`、
- * `reviewCount` は未評価時でも `0` へ揃えます。
- *
- * @param row - repository から返された書籍一覧の 1 行
- * @returns API レスポンスへ載せる正規化済み書籍データ
- */
-function normalizeListBook(row: BookListRow) {
-  const raw = typeof row.toJSON === 'function' ? row.toJSON() : (row as Record<string, unknown>);
-  const averageRatingValue =
-    raw.averageRating ?? (typeof row.get === 'function' ? row.get('averageRating') : undefined);
-  const reviewCountValue =
-    raw.reviewCount ?? (typeof row.get === 'function' ? row.get('reviewCount') : undefined);
-  const averageRating = toFiniteNumber(averageRatingValue);
-  const reviewCount = toFiniteNumber(reviewCountValue);
-
-  return {
-    ...raw,
-    averageRating,
-    reviewCount: reviewCount ?? 0,
-  };
-}
 
 /**
  * Sequelize の一意制約違反が「ISBN 重複」または「title + author 重複」に該当するか判定します。
@@ -72,32 +27,10 @@ function normalizeListBook(row: BookListRow) {
  * @returns 重複エラーとして扱うべき場合は true
  */
 function isIsbnUniqueConstraintError(error: unknown): boolean {
-  const hasDuplicateFields = (paths: string[]) => {
-    const hasIsbn = paths.includes('ISBN');
-    const hasTitleAuthor = paths.includes('title') && paths.includes('author');
-    return hasIsbn || hasTitleAuthor;
-  };
-
-  if (error instanceof UniqueConstraintError) {
-    const paths = error.errors.map((item: ValidationErrorItem) => item.path || '').filter(Boolean);
-    return hasDuplicateFields(paths);
-  }
-
-  if (typeof error !== 'object' || error === null) {
-    return false;
-  }
-
-  const candidate = error as {
-    name?: string;
-    errors?: Array<{ path?: string }>;
-  };
-
-  if (candidate.name !== 'SequelizeUniqueConstraintError') {
-    return false;
-  }
-
-  const paths = (candidate.errors || []).map((item) => item.path || '').filter(Boolean);
-  return hasDuplicateFields(paths);
+  const hasIsbn = isUniqueConstraintError(error, ['ISBN']);
+  const hasTitle = isUniqueConstraintError(error, ['title']);
+  const hasAuthor = isUniqueConstraintError(error, ['author']);
+  return hasIsbn || (hasTitle && hasAuthor);
 }
 
 /**

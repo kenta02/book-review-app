@@ -1,10 +1,10 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { UniqueConstraintError, ValidationErrorItem } from 'sequelize';
 
 import { ERROR_MESSAGES } from '../constants/error-messages';
 import { ApiError } from '../errors/ApiError';
 import * as userRepository from '../repositories/user.repository';
+import { isUniqueConstraintError } from '../utils/sequelizeErrors';
 import type { LoginPayload, RegisterPayload } from '../validators/auth.validator';
 
 export type AuthUserDto = {
@@ -24,51 +24,6 @@ function getJwtSecret(): string {
     throw new Error('JWT_SECRET is required');
   }
   return secretKey;
-}
-
-function hasUniqueConstraintPath(error: unknown, targetPath: 'username' | 'email'): boolean {
-  if (error instanceof UniqueConstraintError) {
-    return error.errors.some((item: ValidationErrorItem) => item.path === targetPath);
-  }
-
-  if (typeof error !== 'object' || error === null) {
-    return false;
-  }
-
-  const candidate = error as {
-    name?: string;
-    errors?: Array<{ path?: string }>;
-    fields?: Record<string, unknown>;
-    message?: string;
-    sqlMessage?: string;
-    original?: { sqlMessage?: string };
-    parent?: { sqlMessage?: string };
-  };
-
-  if (candidate.name !== 'SequelizeUniqueConstraintError') {
-    return false;
-  }
-
-  const hasErrorPath = (candidate.errors || []).some((item) => item.path === targetPath);
-  if (hasErrorPath) {
-    return true;
-  }
-
-  if (candidate.fields && targetPath in candidate.fields) {
-    return true;
-  }
-
-  const raw = [
-    candidate.message,
-    candidate.sqlMessage,
-    candidate.original?.sqlMessage,
-    candidate.parent?.sqlMessage,
-  ]
-    .filter((value): value is string => typeof value === 'string')
-    .join(' ')
-    .toLowerCase();
-
-  return raw.includes(targetPath);
 }
 
 function toAuthUserDto(model: userRepository.UserInstance): AuthUserDto {
@@ -111,11 +66,11 @@ export async function register(payload: RegisterPayload): Promise<AuthSuccessDto
       password: hashedPassword,
     });
   } catch (error) {
-    if (hasUniqueConstraintPath(error, 'username')) {
+    if (isUniqueConstraintError(error, ['username'])) {
       throw new ApiError(409, 'DUPLICATE_RESOURCE', ERROR_MESSAGES.DUPLICATE_USERNAME);
     }
 
-    if (hasUniqueConstraintPath(error, 'email')) {
+    if (isUniqueConstraintError(error, ['email'])) {
       throw new ApiError(409, 'DUPLICATE_RESOURCE', ERROR_MESSAGES.DUPLICATE_EMAIL);
     }
 
