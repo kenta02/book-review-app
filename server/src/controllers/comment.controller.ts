@@ -1,32 +1,14 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 
 import { ERROR_MESSAGES } from '../constants/error-messages';
 import { ApiError } from '../errors/ApiError';
+import { sendApiError, sendAuthenticationRequired } from '../middleware/errorHandler';
 import * as commentService from '../services/comment.service';
 import { logger } from '../utils/logger';
 import {
   validateCreateComment,
   validateGetCommentsForReview,
 } from '../validators/comment.validator';
-
-type ErrorResponse = {
-  message: string;
-  code: string;
-  details?: { field: string; message: string }[];
-};
-
-function sendApiError(res: Response, error: ApiError) {
-  const err: ErrorResponse = {
-    message: error.message,
-    code: error.code,
-  };
-
-  if (error.details) {
-    err.details = error.details;
-  }
-
-  return res.status(error.statusCode).json({ success: false, error: err });
-}
 
 /**
  * コメント一覧取得 API ハンドラー。
@@ -35,7 +17,11 @@ function sendApiError(res: Response, error: ApiError) {
  * @param res - Express Response
  * @returns コメント一覧
  */
-export async function listComments(req: Request, res: Response): Promise<Response> {
+export async function listComments(
+  req: Request,
+  res: Response,
+  next?: NextFunction
+): Promise<Response> {
   try {
     const parseResult = validateGetCommentsForReview(req);
     if (!parseResult.success) {
@@ -55,6 +41,10 @@ export async function listComments(req: Request, res: Response): Promise<Respons
     return res.json({ success: true, data: { comments } });
   } catch (error: unknown) {
     if (error instanceof ApiError) {
+      if (next) {
+        next(error);
+        return res;
+      }
       return sendApiError(res, error);
     }
 
@@ -73,17 +63,15 @@ export async function listComments(req: Request, res: Response): Promise<Respons
  * @param res - Express Response
  * @returns 作成後コメント
  */
-export async function createComment(req: Request, res: Response): Promise<Response> {
+export async function createComment(
+  req: Request,
+  res: Response,
+  next?: NextFunction
+): Promise<Response> {
   try {
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
-          code: 'AUTHENTICATION_REQUIRED',
-        },
-      });
+      return sendAuthenticationRequired(res);
     }
 
     const parseResult = validateCreateComment(req);
@@ -102,6 +90,10 @@ export async function createComment(req: Request, res: Response): Promise<Respon
     return res.status(201).json({ success: true, data: created });
   } catch (error: unknown) {
     if (error instanceof ApiError) {
+      if (next) {
+        next(error);
+        return res;
+      }
       return sendApiError(res, error);
     }
 

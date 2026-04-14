@@ -1,7 +1,8 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 
 import { ERROR_MESSAGES } from '../constants/error-messages';
 import { ApiError } from '../errors/ApiError';
+import { sendApiError, sendAuthenticationRequired } from '../middleware/errorHandler';
 import * as reviewService from '../services/review.service';
 import { logger } from '../utils/logger';
 import {
@@ -12,23 +13,6 @@ import {
   validateUpdateReview,
 } from '../validators/review.validator';
 
-function sendApiError(res: Response, error: ApiError) {
-  return res.status(error.statusCode).json({
-    success: false,
-    error: { message: error.message, code: error.code },
-  });
-}
-
-function sendAuthenticationRequired(res: Response) {
-  return res.status(401).json({
-    success: false,
-    error: {
-      message: ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
-      code: 'AUTHENTICATION_REQUIRED',
-    },
-  });
-}
-
 /**
  * レビュー一覧取得 API ハンドラー。
  *
@@ -36,7 +20,11 @@ function sendAuthenticationRequired(res: Response) {
  * @param res - Express Response
  * @returns レビュー一覧
  */
-export async function listReviews(req: Request, res: Response): Promise<Response> {
+export async function listReviews(
+  req: Request,
+  res: Response,
+  next?: NextFunction
+): Promise<Response> {
   try {
     const parseResult = validateListReviewsQuery(req);
 
@@ -59,6 +47,10 @@ export async function listReviews(req: Request, res: Response): Promise<Response
     });
   } catch (error) {
     if (error instanceof ApiError) {
+      if (next) {
+        next(error);
+        return res;
+      }
       return sendApiError(res, error);
     }
 
@@ -77,7 +69,11 @@ export async function listReviews(req: Request, res: Response): Promise<Response
  * @param res - Express Response
  * @returns レビュー詳細
  */
-export async function getReviewDetail(req: Request, res: Response): Promise<Response> {
+export async function getReviewDetail(
+  req: Request,
+  res: Response,
+  next?: NextFunction
+): Promise<Response> {
   try {
     const parseResult = validateGetReviewDetail(req);
 
@@ -98,6 +94,10 @@ export async function getReviewDetail(req: Request, res: Response): Promise<Resp
     return res.json({ success: true, data });
   } catch (error) {
     if (error instanceof ApiError) {
+      if (next) {
+        next(error);
+        return res;
+      }
       return sendApiError(res, error);
     }
 
@@ -116,7 +116,11 @@ export async function getReviewDetail(req: Request, res: Response): Promise<Resp
  * @param res - Express Response
  * @returns 204 No Content
  */
-export async function deleteReview(req: Request, res: Response): Promise<Response> {
+export async function deleteReview(
+  req: Request,
+  res: Response,
+  next?: NextFunction
+): Promise<Response> {
   try {
     const userId = req.userId;
     if (!userId) {
@@ -146,6 +150,10 @@ export async function deleteReview(req: Request, res: Response): Promise<Respons
     return res.sendStatus(204);
   } catch (error) {
     if (error instanceof ApiError) {
+      if (next) {
+        next(error);
+        return res;
+      }
       return sendApiError(res, error);
     }
 
@@ -167,7 +175,11 @@ export async function deleteReview(req: Request, res: Response): Promise<Respons
  * @param res - Express Response
  * @returns 更新後レビュー
  */
-export async function updateReview(req: Request, res: Response): Promise<Response> {
+export async function updateReview(
+  req: Request,
+  res: Response,
+  next?: NextFunction
+): Promise<Response> {
   try {
     const userId = req.userId;
     if (!userId) {
@@ -198,6 +210,10 @@ export async function updateReview(req: Request, res: Response): Promise<Respons
     return res.json({ success: true, data });
   } catch (error) {
     if (error instanceof ApiError) {
+      if (next) {
+        next(error);
+        return res;
+      }
       return sendApiError(res, error);
     }
 
@@ -219,7 +235,11 @@ export async function updateReview(req: Request, res: Response): Promise<Respons
  * @param res - Express Response
  * @returns 作成後レビュー
  */
-export async function createReview(req: Request, res: Response): Promise<Response> {
+export async function createReview(
+  req: Request,
+  res: Response,
+  next?: NextFunction
+): Promise<Response> {
   try {
     const userId = req.userId;
     if (!userId) {
@@ -247,6 +267,10 @@ export async function createReview(req: Request, res: Response): Promise<Respons
     return res.status(201).json({ success: true, data });
   } catch (error) {
     if (error instanceof ApiError) {
+      if (next) {
+        next(error);
+        return res;
+      }
       return sendApiError(res, error);
     }
 

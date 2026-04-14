@@ -1,21 +1,19 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 
 import { ERROR_MESSAGES } from '../constants/error-messages';
 import { ApiError } from '../errors/ApiError';
+import { sendApiError, sendAuthenticationRequired } from '../middleware/errorHandler';
 import * as authService from '../services/auth.service';
 import { logger } from '../utils/logger';
 import { validateLogin, validateRegister } from '../validators/auth.validator';
 
-function sendApiError(res: Response, error: ApiError) {
-  return res.status(error.statusCode).json({
-    success: false,
-    error: {
-      message: error.message,
-      code: error.code,
-    },
-  });
-}
-
+/**
+ * 予期しない例外時に共通の 500 レスポンスを返します。
+ *
+ * @param res - Express Response
+ * @param logMessage - ログ出力する固定メッセージ
+ * @returns 500 エラーレスポンス
+ */
 function sendInternalServerError(res: Response, logMessage: string) {
   logger.error(logMessage);
   return res.status(500).json({
@@ -34,7 +32,11 @@ function sendInternalServerError(res: Response, logMessage: string) {
  * @param res - Express Response
  * @returns 登録結果
  */
-export async function register(req: Request, res: Response): Promise<Response> {
+export async function register(
+  req: Request,
+  res: Response,
+  next?: NextFunction
+): Promise<Response> {
   try {
     const parseResult = validateRegister(req);
     if (!parseResult.success) {
@@ -52,6 +54,10 @@ export async function register(req: Request, res: Response): Promise<Response> {
     return res.status(201).json({ success: true, data });
   } catch (error) {
     if (error instanceof ApiError) {
+      if (next) {
+        next(error);
+        return res;
+      }
       return sendApiError(res, error);
     }
 
@@ -66,7 +72,7 @@ export async function register(req: Request, res: Response): Promise<Response> {
  * @param res - Express Response
  * @returns ログイン結果
  */
-export async function login(req: Request, res: Response): Promise<Response> {
+export async function login(req: Request, res: Response, next?: NextFunction): Promise<Response> {
   try {
     const parseResult = validateLogin(req);
     if (!parseResult.success) {
@@ -84,6 +90,10 @@ export async function login(req: Request, res: Response): Promise<Response> {
     return res.status(200).json({ success: true, data });
   } catch (error) {
     if (error instanceof ApiError) {
+      if (next) {
+        next(error);
+        return res;
+      }
       return sendApiError(res, error);
     }
 
@@ -98,23 +108,21 @@ export async function login(req: Request, res: Response): Promise<Response> {
  * @param res - Express Response
  * @returns プロフィール情報
  */
-export async function me(req: Request, res: Response): Promise<Response> {
+export async function me(req: Request, res: Response, next?: NextFunction): Promise<Response> {
   try {
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
-          code: 'AUTHENTICATION_REQUIRED',
-        },
-      });
+      return sendAuthenticationRequired(res);
     }
 
     const data = await authService.getMyProfile(userId);
     return res.status(200).json({ success: true, data });
   } catch (error) {
     if (error instanceof ApiError) {
+      if (next) {
+        next(error);
+        return res;
+      }
       return sendApiError(res, error);
     }
 

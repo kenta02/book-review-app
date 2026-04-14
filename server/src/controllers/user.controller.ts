@@ -1,21 +1,11 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 
 import { ERROR_MESSAGES } from '../constants/error-messages';
 import { ApiError } from '../errors/ApiError';
+import { sendApiError } from '../middleware/errorHandler';
 import * as userService from '../services/user.service';
 import { logger } from '../utils/logger';
 import { validateGetUserProfile } from '../validators/user.validator';
-
-function sendApiError(res: Response, error: ApiError) {
-  return res.status(error.statusCode).json({
-    success: false,
-    error: {
-      message: error.message,
-      code: error.code,
-      ...(error.details && { details: error.details }),
-    },
-  });
-}
 
 /**
  * ユーザープロフィール取得 API ハンドラー。
@@ -24,7 +14,11 @@ function sendApiError(res: Response, error: ApiError) {
  * @param res - Express Response
  * @returns ユーザー情報
  */
-export async function getUserProfile(req: Request, res: Response): Promise<Response> {
+export async function getUserProfile(
+  req: Request,
+  res: Response,
+  next?: NextFunction
+): Promise<Response> {
   try {
     const parseResult = validateGetUserProfile(req);
     if (!parseResult.success) {
@@ -42,6 +36,10 @@ export async function getUserProfile(req: Request, res: Response): Promise<Respo
     return res.json({ success: true, data });
   } catch (error) {
     if (error instanceof ApiError) {
+      if (next) {
+        next(error);
+        return res;
+      }
       return sendApiError(res, error);
     }
 

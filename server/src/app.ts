@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import bookRouter from './routes/books';
 import authRouter from './routes/auth';
 import commentRouter from './routes/comments';
+import { apiErrorHandler } from './middleware/errorHandler';
 import reviewRouter from './routes/reviews';
 import usersRouter from './routes/users';
 import { logger } from './utils/logger';
@@ -62,4 +63,7 @@ app.use('/api', reviewRouter);
 
 // グローバルな認証なしでコメントルートをマウント; 必要な個々のルートで認証を強制
 app.use('/api', commentRouter);
+
+// API エラーのレスポンス整形はミドルウェアで一元化する
+app.use(apiErrorHandler);
 export default app;
