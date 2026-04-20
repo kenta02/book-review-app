@@ -22,6 +22,15 @@ describe('sequelizeErrors', () => {
     expect(isUniqueConstraintError(error, ['username'])).toBe(true);
   });
 
+  it('sqlMessage フォールバックで重複を検出できる', () => {
+    const error = {
+      name: 'SequelizeUniqueConstraintError',
+      sqlMessage: "Duplicate entry 'alice' for key 'username'",
+    };
+
+    expect(isUniqueConstraintError(error, ['username'])).toBe(true);
+  });
+
   it('ターゲットなしの場合は一意制約違反として true を返す', () => {
     const error = {
       name: 'SequelizeUniqueConstraintError',

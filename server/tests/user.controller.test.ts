@@ -27,7 +27,7 @@ function makeResponse(): MockResponse {
 }
 
 function makeNext() {
-  return vi.fn<Parameters<NextFunction>, ReturnType<NextFunction>>();
+  return vi.fn<NextFunction>();
 }
 
 describe('user.controller', () => {
@@ -62,7 +62,13 @@ describe('user.controller', () => {
 
     await getUserProfile(req, res, next);
     expect(next).toHaveBeenCalledOnce();
-    expect(next).toHaveBeenCalledWith(expect.any(ApiError));
+    const [error] = next.mock.calls[0];
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      statusCode: 404,
+      code: 'USER_NOT_FOUND',
+      message: ERROR_MESSAGES.USER_NOT_FOUND,
+    });
   });
 
   it('returns 200 with profile on success', async () => {

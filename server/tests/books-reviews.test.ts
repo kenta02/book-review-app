@@ -59,7 +59,7 @@ describe('GET /api/books/:bookId/reviews', () => {
     bookSpy.mockResolvedValue({ id: testBookId } as unknown as BookInstance);
 
     // reviewService.listReviews をモック
-    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews');
     reviewServiceSpy.mockResolvedValue({
       reviews: mockReviews,
       pagination: {
@@ -82,7 +82,7 @@ describe('GET /api/books/:bookId/reviews', () => {
     const bookSpy = vi.spyOn(Book, 'findByPk');
     bookSpy.mockResolvedValue({ id: testBookId } as unknown as BookInstance);
 
-    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews');
     reviewServiceSpy.mockResolvedValue({
       reviews: [],
       pagination: {
@@ -114,7 +114,7 @@ describe('GET /api/books/:bookId/reviews', () => {
     const testBookId = 1;
     vi.spyOn(Book, 'findByPk').mockResolvedValue({ id: testBookId } as unknown as BookInstance);
 
-    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews');
     reviewServiceSpy.mockResolvedValue({
       reviews: [],
       pagination: {
@@ -172,7 +172,7 @@ describe('GET /api/books/:bookId/reviews', () => {
     const bookSpy = vi.spyOn(Book, 'findByPk');
     bookSpy.mockResolvedValue({ id: testBookId } as unknown as BookInstance);
 
-    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews');
     reviewServiceSpy.mockResolvedValue({
       reviews: [],
       pagination: {
@@ -195,7 +195,7 @@ describe('GET /api/books/:bookId/reviews', () => {
     const bookSpy = vi.spyOn(Book, 'findByPk');
     bookSpy.mockResolvedValue({ id: testBookId } as unknown as BookInstance);
 
-    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews');
     reviewServiceSpy.mockResolvedValue({
       reviews: [],
       pagination: {
@@ -219,7 +219,7 @@ describe('GET /api/books/:bookId/reviews', () => {
   });
 
   it('page が 0 以下の場合は 400 を返す', async () => {
-    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews');
 
     const res = await request(app).get('/api/books/1/reviews').query({ page: -1 }).expect(400);
 
@@ -229,7 +229,7 @@ describe('GET /api/books/:bookId/reviews', () => {
   });
 
   it('limit が 0 以下の場合は 400 を返す', async () => {
-    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews');
 
     const res = await request(app).get('/api/books/1/reviews').query({ limit: 0 }).expect(400);
 

@@ -113,7 +113,7 @@ describe('review.service', () => {
 
   describe('deleteReview', () => {
     it('deletes review inside a sequelize transaction when no related comments exist', async () => {
-      const transaction = { id: 'tx', commit: vi.fn(), rollback: vi.fn() };
+      const transaction = { commit: vi.fn(), rollback: vi.fn() };
       vi.mocked(reviewRepository.findReviewById).mockResolvedValue(
         makeReviewModel({ id: 3, userId: 7 }) as never
       );
@@ -132,7 +132,7 @@ describe('review.service', () => {
     });
 
     it('throws 409 when related comments exist', async () => {
-      const transaction = { id: 'tx', commit: vi.fn(), rollback: vi.fn() };
+      const transaction = { commit: vi.fn(), rollback: vi.fn() };
       vi.mocked(reviewRepository.findReviewById).mockResolvedValue(
         makeReviewModel({ id: 3, userId: 7 }) as never
       );

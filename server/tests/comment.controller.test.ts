@@ -40,7 +40,7 @@ function makeResponse(): MockResponse {
 }
 
 function makeNext() {
-  return vi.fn<Parameters<NextFunction>, ReturnType<NextFunction>>();
+  return vi.fn<NextFunction>();
 }
 
 describe('comment.controller', () => {
@@ -89,6 +89,8 @@ describe('comment.controller', () => {
     await listComments(req, res, next);
     expect(next).toHaveBeenCalledOnce();
     expect(next).toHaveBeenCalledWith(expect.any(ApiError));
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
   });
 
   it('listComments: returns 500 when service fails', async () => {
@@ -100,6 +102,8 @@ describe('comment.controller', () => {
     await listComments(req, res, next);
     expect(next).toHaveBeenCalledOnce();
     expect(next).toHaveBeenCalledWith(expect.any(Error));
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
   });
 
   it('createComment: returns 401 when unauthenticated', async () => {
@@ -149,6 +153,8 @@ describe('comment.controller', () => {
     await createComment(req, res, next);
     expect(next).toHaveBeenCalledOnce();
     expect(next).toHaveBeenCalledWith(expect.any(ApiError));
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
   });
 
   it('createComment: returns 500 when service fails', async () => {
@@ -160,5 +166,7 @@ describe('comment.controller', () => {
     await createComment(req, res, next);
     expect(next).toHaveBeenCalledOnce();
     expect(next).toHaveBeenCalledWith(expect.any(Error));
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
   });
 });
