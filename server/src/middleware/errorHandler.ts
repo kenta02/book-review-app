@@ -69,6 +69,17 @@ export const apiErrorHandler: ErrorRequestHandler = (error, _req, res, _next) =>
   const status = typedError.status ?? typedError.statusCode;
   const errorType = typedError.type;
 
+  if (status === 400 || errorType === 'entity.parse.failed') {
+    res.status(400).json({
+      success: false,
+      error: {
+        message: typedError.message || 'Invalid JSON',
+        code: 'INVALID_JSON',
+      },
+    });
+    return;
+  }
+
   if (status === 413 || errorType === 'entity.too.large') {
     res.status(413).json({
       success: false,

@@ -1,10 +1,10 @@
-import { NextFunction, Request, Response } from 'express';
+import { NextFunction, Request, RequestHandler, Response } from 'express';
 
 type AsyncControllerHandler<TReq extends Request = Request> = (
   req: TReq,
   res: Response,
   next: NextFunction
-) => Promise<void>;
+) => Promise<unknown>;
 
 /**
  * 非同期 controller ハンドラーの例外を `next` へ委譲する高階関数です。
@@ -17,7 +17,7 @@ type AsyncControllerHandler<TReq extends Request = Request> = (
  */
 export function asyncHandler<TReq extends Request = Request>(
   handler: AsyncControllerHandler<TReq>
-): (req: Request, res: Response, next: NextFunction) => Promise<void> {
-  return (req: Request, res: Response, next: NextFunction): Promise<void> =>
+): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction): Promise<unknown> =>
     handler(req as TReq, res, next).catch(next);
 }

@@ -81,8 +81,8 @@ export function reviewModelToDto(model: unknown): ReviewDto {
     userId: json.userId === null || json.userId === undefined ? null : Number(json.userId),
     content: String(json.content),
     rating: json.rating === undefined ? undefined : Number(json.rating),
-    createdAt: String(json.createdAt),
-    updatedAt: String(json.updatedAt),
+    createdAt: formatDate(json.createdAt),
+    updatedAt: formatDate(json.updatedAt),
   };
 }
 

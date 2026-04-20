@@ -10,6 +10,10 @@ type UniqueConstraintCandidate = {
   parent?: { sqlMessage?: string };
 };
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * Sequelize の一意制約違反かどうかを判定します。
  *
@@ -68,7 +72,8 @@ export function isUniqueConstraintError(error: unknown, fields?: string[]): bool
     .toLowerCase();
 
   for (const field of targets) {
-    if (raw.includes(field)) {
+    const pattern = new RegExp(`\\b${escapeRegExp(field)}\\b`);
+    if (pattern.test(raw)) {
       return true;
     }
   }
