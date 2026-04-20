@@ -33,8 +33,8 @@ function makeResponse(): MockResponse {
   return res;
 }
 
-function makeNext() {
-  return vi.fn<Parameters<NextFunction>, ReturnType<NextFunction>>();
+function makeNext(): NextFunction {
+  return vi.fn() as unknown as NextFunction;
 }
 
 describe('auth.controller', () => {

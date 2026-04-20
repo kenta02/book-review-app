@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import type { Mock } from 'vitest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ERROR_MESSAGES } from '../src/constants/error-messages';
@@ -26,8 +27,10 @@ function makeResponse(): MockResponse {
   return res;
 }
 
-function makeNext() {
-  return vi.fn<NextFunction>();
+type MockNextFunction = NextFunction & Mock<NextFunction>;
+
+function makeNext(): MockNextFunction {
+  return vi.fn() as unknown as MockNextFunction;
 }
 
 describe('user.controller', () => {
