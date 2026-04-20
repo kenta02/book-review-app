@@ -71,9 +71,23 @@ export function isUniqueConstraintError(error: unknown, fields?: string[]): bool
     .join(' ')
     .toLowerCase();
 
+  const isWordCharacter = (character: string): boolean => /[a-z0-9_]/.test(character);
+
+  const containsTargetField = (text: string, target: string): boolean => {
+    let index = text.indexOf(target);
+    while (index !== -1) {
+      const before = index === 0 || !isWordCharacter(text[index - 1]);
+      const after = index + target.length === text.length || !isWordCharacter(text[index + target.length]);
+      if (before && after) {
+        return true;
+      }
+      index = text.indexOf(target, index + 1);
+    }
+    return false;
+  };
+
   for (const field of targets) {
-    const pattern = new RegExp(`\\b${escapeRegExp(field)}\\b`);
-    if (pattern.test(raw)) {
+    if (containsTargetField(raw, field)) {
       return true;
     }
   }
