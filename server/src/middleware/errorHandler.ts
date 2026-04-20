@@ -17,7 +17,7 @@ export type ErrorResponse = {
  * @param error - service / repository 層から送出されたアプリケーション例外
  * @returns 整形済みエラーレスポンス
  */
-export function sendApiError(res: Response, error: ApiError) {
+export function sendApiError(res: Response, error: ApiError): Response {
   const body: ErrorResponse = {
     message: error.message,
     code: error.code,
@@ -36,7 +36,7 @@ export function sendApiError(res: Response, error: ApiError) {
  * @param res - Express の Response
  * @returns 認証必須エラーレスポンス
  */
-export function sendAuthenticationRequired(res: Response) {
+export function sendAuthenticationRequired(res: Response): Response {
   return res.status(401).json({
     success: false,
     error: {
@@ -53,19 +53,27 @@ export function sendAuthenticationRequired(res: Response) {
  * controller では `next(error)` で本ハンドラに委譲することを想定します。
  */
 export const apiErrorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
+  void _next;
+
   if (error instanceof ApiError) {
     sendApiError(res, error);
     return;
   }
 
-  const status = (error as any).status || (error as any).statusCode;
-  const errorType = (error as any).type;
+  const typedError = error as {
+    status?: number;
+    statusCode?: number;
+    type?: string;
+    message?: string;
+  };
+  const status = typedError.status ?? typedError.statusCode;
+  const errorType = typedError.type;
 
   if (status === 413 || errorType === 'entity.too.large') {
     res.status(413).json({
       success: false,
       error: {
-        message: (error as Error).message || 'Payload too large',
+        message: typedError.message || 'Payload too large',
         code: 'PAYLOAD_TOO_LARGE',
       },
     });

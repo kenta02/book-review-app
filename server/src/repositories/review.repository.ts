@@ -1,4 +1,4 @@
-import { Op, Transaction } from 'sequelize';
+import { Transaction } from 'sequelize';
 
 import Book from '../models/Book';
 import Comment from '../models/Comment';
