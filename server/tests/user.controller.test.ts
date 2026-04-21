@@ -1,4 +1,5 @@
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
+import type { Mock } from 'vitest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ERROR_MESSAGES } from '../src/constants/error-messages';
@@ -26,6 +27,12 @@ function makeResponse(): MockResponse {
   return res;
 }
 
+type MockNextFunction = NextFunction & Mock<NextFunction>;
+
+function makeNext(): MockNextFunction {
+  return vi.fn() as unknown as MockNextFunction;
+}
+
 describe('user.controller', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -34,8 +41,9 @@ describe('user.controller', () => {
   it('returns 400 when id is invalid', async () => {
     const req = makeRequest('abc');
     const res = makeResponse();
+    const next = makeNext();
 
-    await getUserProfile(req, res);
+    await getUserProfile(req, res, next);
 
     expect(userService.getUserProfile).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(400);
@@ -50,25 +58,26 @@ describe('user.controller', () => {
   it('returns 404 for USER_NOT_FOUND', async () => {
     const req = makeRequest('10');
     const res = makeResponse();
+    const next = makeNext();
     vi.mocked(userService.getUserProfile).mockRejectedValue(
       new ApiError(404, 'USER_NOT_FOUND', ERROR_MESSAGES.USER_NOT_FOUND)
     );
 
-    await getUserProfile(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith({
-      success: false,
-      error: {
-        message: ERROR_MESSAGES.USER_NOT_FOUND,
-        code: 'USER_NOT_FOUND',
-      },
+    await getUserProfile(req, res, next);
+    expect(next).toHaveBeenCalledOnce();
+    const [error] = next.mock.calls[0];
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      statusCode: 404,
+      code: 'USER_NOT_FOUND',
+      message: ERROR_MESSAGES.USER_NOT_FOUND,
     });
   });
 
   it('returns 200 with profile on success', async () => {
     const req = makeRequest('10');
     const res = makeResponse();
+    const next = makeNext();
     const data = {
       id: 10,
       username: 'bob',
@@ -78,7 +87,7 @@ describe('user.controller', () => {
     };
     vi.mocked(userService.getUserProfile).mockResolvedValue(data);
 
-    await getUserProfile(req, res);
+    await getUserProfile(req, res, next);
 
     expect(userService.getUserProfile).toHaveBeenCalledWith(10);
     expect(res.json).toHaveBeenCalledWith({ success: true, data });

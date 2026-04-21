@@ -1,30 +1,39 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import * as commentService from '../src/services/comment.service';
-import Review from '../src/models/Review';
-import Comment from '../src/models/Comment';
-import { logger } from '../src/utils/logger';
 import type { CreateCommentServiceDto } from '../src/modules/comment/dto/comment.dto';
+import * as commentRepository from '../src/repositories/comment.repository';
+import * as reviewRepository from '../src/repositories/review.repository';
+import * as commentService from '../src/services/comment.service';
+import { logger } from '../src/utils/logger';
 
-// Sequelize インスタンス型を定義
-type CommentInstance = InstanceType<typeof Comment>;
+vi.mock('../src/repositories/comment.repository', () => ({
+  findCommentsByReviewId: vi.fn(),
+  findCommentById: vi.fn(),
+  createComment: vi.fn(),
+}));
 
-// モデルメソッドを spy して外部依存を排除
+vi.mock('../src/repositories/review.repository', () => ({
+  findReviewById: vi.fn(),
+}));
+
+function makeCommentModel(input: Record<string, unknown>) {
+  return {
+    toJSON: () => input,
+    get: (key: string) => input[key],
+  };
+}
 
 describe('comment.service', () => {
   beforeEach(() => {
-    // 各テスト用に spy をリセット
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('listComments', () => {
     it('returns nested replies in correct order and logs activity', async () => {
-      // logger.info のスパイ設定
       const infoSpy = vi.spyOn(logger, 'info').mockImplementation(() => {});
 
-      // 親コメント（parentId: null）をモック
-      const parent = {
-        toJSON: () => ({
+      vi.mocked(commentRepository.findCommentsByReviewId).mockResolvedValue([
+        makeCommentModel({
           id: 1,
           content: 'parent',
           parentId: null,
@@ -32,11 +41,8 @@ describe('comment.service', () => {
           userId: 2,
           createdAt: '2025-01-01T00:00:00.000Z',
           updatedAt: '2025-01-02T00:00:00.000Z',
-        }),
-      } as unknown as Comment;
-      // 返信コメント（parentId: 1）をモック
-      const reply = {
-        toJSON: () => ({
+        }) as never,
+        makeCommentModel({
           id: 2,
           content: 'reply',
           parentId: 1,
@@ -44,21 +50,14 @@ describe('comment.service', () => {
           userId: 3,
           createdAt: '2025-01-03T00:00:00.000Z',
           updatedAt: '2025-01-04T00:00:00.000Z',
-        }),
-      } as unknown as Comment;
+        }) as never,
+      ]);
 
-      // Comment.findAll をモック化
-      vi.spyOn(Comment, 'findAll').mockResolvedValue([parent, reply] as unknown as CommentInstance[]);
-
-      // listComments を実行
       const result = await commentService.listComments(10);
 
-      // logger.info が呼ばれたことを確認
       expect(infoSpy).toHaveBeenCalled();
-      // 親コメントのみが結果に含まれる（返信はネストされる）
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(1);
-      // 返信コメントがネストされていることを確認
       expect(result[0].replies).toHaveLength(1);
       expect(result[0].replies?.[0].id).toBe(2);
     });
@@ -66,19 +65,17 @@ describe('comment.service', () => {
 
   describe('createComment', () => {
     it('throws REVIEW_NOT_FOUND when review does not exist', async () => {
-      // Review が見つからないようにモック
-      vi.spyOn(Review, 'findByPk').mockResolvedValue(null);
+      vi.mocked(reviewRepository.findReviewById).mockResolvedValue(null);
 
       const dto: CreateCommentServiceDto = { reviewId: 123, content: 'x', userId: 1 };
-      // REVIEW_NOT_FOUND エラーが投げられることを確認
-      await expect(commentService.createComment(dto)).rejects.toMatchObject({ code: 'REVIEW_NOT_FOUND' });
+      await expect(commentService.createComment(dto)).rejects.toMatchObject({
+        code: 'REVIEW_NOT_FOUND',
+      });
     });
 
     it('throws VALIDATION_ERROR when parent comment is missing', async () => {
-      // Review は存在することをモック（型安全なキャスト）
-      vi.spyOn(Review, 'findByPk').mockResolvedValue({} as unknown as InstanceType<typeof Review>);
-      // 親コメント（parentId: 99）が見つからないようにモック
-      vi.spyOn(Comment, 'findByPk').mockResolvedValue(null);
+      vi.mocked(reviewRepository.findReviewById).mockResolvedValue({} as never);
+      vi.mocked(commentRepository.findCommentById).mockResolvedValue(null);
 
       const dto: CreateCommentServiceDto = {
         reviewId: 1,
@@ -86,16 +83,17 @@ describe('comment.service', () => {
         userId: 5,
         parentId: 99,
       };
-      // 親コメントが見つからないため VALIDATION_ERROR が投げられることを確認
-      await expect(commentService.createComment(dto)).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+      await expect(commentService.createComment(dto)).rejects.toMatchObject({
+        code: 'VALIDATION_ERROR',
+      });
     });
 
     it('throws VALIDATION_ERROR when parent belongs to another review', async () => {
-      // Review は存在することをモック
-      vi.spyOn(Review, 'findByPk').mockResolvedValue({} as unknown as InstanceType<typeof Review>);
-      // 親コメントは異なる reviewId（888）を持つようにモック
-      const parentCommentMock = { get: () => 888 } as unknown as InstanceType<typeof Comment>;
-      vi.spyOn(Comment, 'findByPk').mockResolvedValue(parentCommentMock);
+      vi.mocked(reviewRepository.findReviewById).mockResolvedValue({} as never);
+      vi.mocked(commentRepository.findCommentById).mockResolvedValue(
+        makeCommentModel({ reviewId: 888 }) as never
+      );
 
       const dto: CreateCommentServiceDto = {
         reviewId: 10,
@@ -103,21 +101,21 @@ describe('comment.service', () => {
         userId: 5,
         parentId: 7,
       };
-      // 親コメントが別のレビューに属するため VALIDATION_ERROR が投げられることを確認
-      await expect(commentService.createComment(dto)).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+      await expect(commentService.createComment(dto)).rejects.toMatchObject({
+        code: 'VALIDATION_ERROR',
+      });
     });
 
     it('creates a comment when all conditions are satisfied', async () => {
-      // logger.info のスパイ設定
       const infoSpy = vi.spyOn(logger, 'info').mockImplementation(() => {});
-      // Review は存在することをモック
-      vi.spyOn(Review, 'findByPk').mockResolvedValue({} as unknown as InstanceType<typeof Review>);
-      // 親コメントのレビュー ID（10）がリクエストのレビュー ID と一致するようにモック
-      const parentCommentMock = { get: () => 10 } as unknown as InstanceType<typeof Comment>;
-      vi.spyOn(Comment, 'findByPk').mockResolvedValue(parentCommentMock);
-      // 作成されたコメントのモック
-      const created = {
-        toJSON: () => ({
+
+      vi.mocked(reviewRepository.findReviewById).mockResolvedValue({} as never);
+      vi.mocked(commentRepository.findCommentById).mockResolvedValue(
+        makeCommentModel({ reviewId: 10 }) as never
+      );
+      vi.mocked(commentRepository.createComment).mockResolvedValue(
+        makeCommentModel({
           id: 77,
           content: 'created',
           parentId: null,
@@ -125,28 +123,24 @@ describe('comment.service', () => {
           userId: 2,
           createdAt: '2025-05-05T00:00:00.000Z',
           updatedAt: '2025-05-05T00:00:00.000Z',
-        }),
-        get: (key: string) => {
-          if (key === 'id') return 77;
-          return undefined;
-        },
-      } as unknown as Comment;
-      // Comment.create をモック化
-      vi.spyOn(Comment, 'create').mockResolvedValue(created);
+        }) as never
+      );
 
-      // コメント作成を実行
       const dto = await commentService.createComment({
         reviewId: 10,
         content: 'created',
         userId: 2,
         parentId: null,
-      } as CreateCommentServiceDto);
+      });
 
-      // logger が呼ばれたことを確認
       expect(infoSpy).toHaveBeenCalled();
-      // 作成されたコメントの ID を確認
+      expect(commentRepository.createComment).toHaveBeenCalledWith({
+        content: 'created',
+        reviewId: 10,
+        parentId: null,
+        userId: 2,
+      });
       expect(dto.id).toBe(77);
-      // 作成されたコメントの内容を確認
       expect(dto.content).toBe('created');
     });
   });

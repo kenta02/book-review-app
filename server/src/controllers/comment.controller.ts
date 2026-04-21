@@ -1,32 +1,13 @@
 import { Request, Response } from 'express';
 
 import { ERROR_MESSAGES } from '../constants/error-messages';
-import { ApiError } from '../errors/ApiError';
+import { sendAuthenticationRequired } from '../middleware/errorHandler';
 import * as commentService from '../services/comment.service';
-import { logger } from '../utils/logger';
+import { asyncHandler } from '../utils/asyncHandler';
 import {
   validateCreateComment,
   validateGetCommentsForReview,
 } from '../validators/comment.validator';
-
-type ErrorResponse = {
-  message: string;
-  code: string;
-  details?: { field: string; message: string }[];
-};
-
-function sendApiError(res: Response, error: ApiError) {
-  const err: ErrorResponse = {
-    message: error.message,
-    code: error.code,
-  };
-
-  if (error.details) {
-    err.details = error.details;
-  }
-
-  return res.status(error.statusCode).json({ success: false, error: err });
-}
 
 /**
  * コメント一覧取得 API ハンドラー。
@@ -35,8 +16,8 @@ function sendApiError(res: Response, error: ApiError) {
  * @param res - Express Response
  * @returns コメント一覧
  */
-export async function listComments(req: Request, res: Response): Promise<Response> {
-  try {
+export const listComments = asyncHandler(
+  async (req: Request, res: Response): Promise<Response> => {
     const parseResult = validateGetCommentsForReview(req);
     if (!parseResult.success) {
       const firstErrorCode = parseResult.errors?.[0]?.code || 'VALIDATION_ERROR';
@@ -53,18 +34,8 @@ export async function listComments(req: Request, res: Response): Promise<Respons
     const comments = await commentService.listComments(parseResult.data.reviewId);
 
     return res.json({ success: true, data: { comments } });
-  } catch (error: unknown) {
-    if (error instanceof ApiError) {
-      return sendApiError(res, error);
-    }
-
-    logger.error('[COMMENTS GET] unexpected error occurred');
-    return res.status(500).json({
-      success: false,
-      error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
-    });
   }
-}
+);
 
 /**
  * コメント作成 API ハンドラー。
@@ -73,17 +44,11 @@ export async function listComments(req: Request, res: Response): Promise<Respons
  * @param res - Express Response
  * @returns 作成後コメント
  */
-export async function createComment(req: Request, res: Response): Promise<Response> {
-  try {
+export const createComment = asyncHandler(
+  async (req: Request, res: Response): Promise<Response> => {
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          message: ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
-          code: 'AUTHENTICATION_REQUIRED',
-        },
-      });
+      return sendAuthenticationRequired(res);
     }
 
     const parseResult = validateCreateComment(req);
@@ -100,15 +65,5 @@ export async function createComment(req: Request, res: Response): Promise<Respon
 
     const created = await commentService.createComment({ ...parseResult.data, userId });
     return res.status(201).json({ success: true, data: created });
-  } catch (error: unknown) {
-    if (error instanceof ApiError) {
-      return sendApiError(res, error);
-    }
-
-    logger.error('[COMMENTS POST] unexpected error occurred');
-    return res.status(500).json({
-      success: false,
-      error: { message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
-    });
   }
-}
+);

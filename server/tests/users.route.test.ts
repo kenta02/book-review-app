@@ -3,6 +3,7 @@ import request from 'supertest';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import usersRouter from '../src/routes/users';
+import { apiErrorHandler } from '../src/middleware/errorHandler';
 import User from '../src/models/Users';
 import Review from '../src/models/Review';
 import Favorite from '../src/models/Favorite';
@@ -11,10 +12,11 @@ import Favorite from '../src/models/Favorite';
 function makeApp() {
   const app = express();
   app.use('/api/users', usersRouter);
+  app.use(apiErrorHandler);
   return app;
 }
 
-describe('Users route', () => {
+describe('Users ルート', () => {
   let app: express.Express;
 
   beforeEach(() => {
@@ -24,7 +26,7 @@ describe('Users route', () => {
     vi.restoreAllMocks();
   });
 
-  it('returns 400 when id is invalid (non positive integer)', async () => {
+  it('id が不正（非正整数）のとき 400 を返す', async () => {
     // 無効な ID （abc）でリクエスト
     const res = await request(app).get('/api/users/abc');
     // 400 Bad Request を確認
@@ -33,7 +35,7 @@ describe('Users route', () => {
     expect(res.body.error.code).toBe('INVALID_USER_ID');
   });
 
-  it('returns 404 when user does not exist', async () => {
+  it('ユーザーが存在しないとき 404 を返す', async () => {
     // User.findByPk が null を返すようにモック（ユーザーが存在しない）
     vi.spyOn(User, 'findByPk').mockResolvedValue(null);
     // ユーザー 123 を取得
@@ -44,7 +46,7 @@ describe('Users route', () => {
     expect(res.body.error.code).toBe('USER_NOT_FOUND');
   });
 
-  it('returns user profile when user exists', async () => {
+  it('ユーザーが存在する場合はプロフィールを返す', async () => {
     // モック用のユーザーオブジェクトを作成
     const fakeUser = { toJSON: () => ({ id: 1, username: 'u', createdAt: '2025-06-01' }) } as unknown as InstanceType<typeof User>;
     // User.findByPk がモックユーザーを返すようにモック
@@ -64,7 +66,7 @@ describe('Users route', () => {
     expect(res.body.data).toMatchObject({ id: 1, username: 'u', reviewCount: 5, favoriteCount: 3 });
   });
 
-  it('returns 500 if underlying service throws', async () => {
+  it('下位サービスが例外を投げたとき 500 を返す', async () => {
     // User.findByPk が正常なオブジェクトを返すようにモック
     vi.spyOn(User, 'findByPk').mockResolvedValue({ toJSON: () => ({ id: 2, username: 'foo' }) } as unknown as InstanceType<typeof User>);
     // Review.count がエラーをスロー（DB エラーを模擬）

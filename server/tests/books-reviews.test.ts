@@ -1,9 +1,9 @@
 import express from 'express';
 import request from 'supertest';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import type { SpyInstance } from 'vitest';
 
 import bookRouter from '../src/routes/books';
+import { apiErrorHandler } from '../src/middleware/errorHandler';
 import Book from '../src/models/Book';
 import Review from '../src/models/Review';
 import * as reviewService from '../src/services/review.service';
@@ -19,6 +19,7 @@ function makeApp() {
   const app = express();
   app.use(express.json());
   app.use('/api/books', bookRouter);
+  app.use(apiErrorHandler);
   return app;
 }
 
@@ -37,8 +38,20 @@ describe('GET /api/books/:bookId/reviews', () => {
   it('特定書籍のレビュー一覧をページネーション付きで取得できる', async () => {
     const testBookId = 1;
     const mockReviews = [
-      { id: 1, bookId: testBookId, userId: 1, content: 'Great!', rating: 5 } as unknown as ReviewInstance,
-      { id: 2, bookId: testBookId, userId: 1, content: 'Good', rating: 4 } as unknown as ReviewInstance,
+      {
+        id: 1,
+        bookId: testBookId,
+        userId: 1,
+        content: 'Great!',
+        rating: 5,
+      } as unknown as ReviewInstance,
+      {
+        id: 2,
+        bookId: testBookId,
+        userId: 1,
+        content: 'Good',
+        rating: 4,
+      } as unknown as ReviewInstance,
     ];
 
     // Book.findByPk をモック
@@ -46,7 +59,7 @@ describe('GET /api/books/:bookId/reviews', () => {
     bookSpy.mockResolvedValue({ id: testBookId } as unknown as BookInstance);
 
     // reviewService.listReviews をモック
-    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews');
     reviewServiceSpy.mockResolvedValue({
       reviews: mockReviews,
       pagination: {
@@ -57,9 +70,7 @@ describe('GET /api/books/:bookId/reviews', () => {
       },
     });
 
-    const res = await request(app)
-      .get(`/api/books/${testBookId}/reviews`)
-      .expect(200);
+    const res = await request(app).get(`/api/books/${testBookId}/reviews`).expect(200);
 
     expect(res.body.success).toBe(true);
     expect(res.body.data.reviews).toHaveLength(2);
@@ -71,7 +82,7 @@ describe('GET /api/books/:bookId/reviews', () => {
     const bookSpy = vi.spyOn(Book, 'findByPk');
     bookSpy.mockResolvedValue({ id: testBookId } as unknown as BookInstance);
 
-    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews');
     reviewServiceSpy.mockResolvedValue({
       reviews: [],
       pagination: {
@@ -103,7 +114,7 @@ describe('GET /api/books/:bookId/reviews', () => {
     const testBookId = 1;
     vi.spyOn(Book, 'findByPk').mockResolvedValue({ id: testBookId } as unknown as BookInstance);
 
-    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews');
     reviewServiceSpy.mockResolvedValue({
       reviews: [],
       pagination: {
@@ -114,10 +125,7 @@ describe('GET /api/books/:bookId/reviews', () => {
       },
     });
 
-    await request(app)
-      .get(`/api/books/${testBookId}/reviews`)
-      .query({ limit: 500 })
-      .expect(200);
+    await request(app).get(`/api/books/${testBookId}/reviews`).query({ limit: 500 }).expect(200);
 
     expect(reviewServiceSpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -129,9 +137,7 @@ describe('GET /api/books/:bookId/reviews', () => {
   });
 
   it('無効な書籍 ID（非整数）を返す場合 400 エラー', async () => {
-    const res = await request(app)
-      .get('/api/books/invalid/reviews')
-      .expect(400);
+    const res = await request(app).get('/api/books/invalid/reviews').expect(400);
 
     expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBe('INVALID_BOOK_ID');
@@ -141,27 +147,21 @@ describe('GET /api/books/:bookId/reviews', () => {
     const bookSpy = vi.spyOn(Book, 'findByPk');
     bookSpy.mockResolvedValue(null);
 
-    const res = await request(app)
-      .get('/api/books/99999/reviews')
-      .expect(404);
+    const res = await request(app).get('/api/books/99999/reviews').expect(404);
 
     expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBe('BOOK_NOT_FOUND');
   });
 
   it('負の書籍 ID を返す場合 400 エラー', async () => {
-    const res = await request(app)
-      .get('/api/books/-1/reviews')
-      .expect(400);
+    const res = await request(app).get('/api/books/-1/reviews').expect(400);
 
     expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBe('INVALID_BOOK_ID');
   });
 
   it('0 の書籍 ID を返す場合 400 エラー', async () => {
-    const res = await request(app)
-      .get('/api/books/0/reviews')
-      .expect(400);
+    const res = await request(app).get('/api/books/0/reviews').expect(400);
 
     expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBe('INVALID_BOOK_ID');
@@ -172,7 +172,7 @@ describe('GET /api/books/:bookId/reviews', () => {
     const bookSpy = vi.spyOn(Book, 'findByPk');
     bookSpy.mockResolvedValue({ id: testBookId } as unknown as BookInstance);
 
-    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews');
     reviewServiceSpy.mockResolvedValue({
       reviews: [],
       pagination: {
@@ -183,21 +183,19 @@ describe('GET /api/books/:bookId/reviews', () => {
       },
     });
 
-    const res = await request(app)
-      .get(`/api/books/${testBookId}/reviews`)
-      .expect(200);
+    const res = await request(app).get(`/api/books/${testBookId}/reviews`).expect(200);
 
     expect(res.body.success).toBe(true);
     expect(res.body.data.reviews).toEqual([]);
     expect(res.body.data.pagination.totalItems).toBe(0);
   });
 
-  it('デフォルトページペーションパラメータ（page=1, limit=20）が設定される', async () => {
+  it('デフォルトページング（page=1, limit=20）が設定される', async () => {
     const testBookId = 1;
     const bookSpy = vi.spyOn(Book, 'findByPk');
     bookSpy.mockResolvedValue({ id: testBookId } as unknown as BookInstance);
 
-    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews');
     reviewServiceSpy.mockResolvedValue({
       reviews: [],
       pagination: {
@@ -208,9 +206,7 @@ describe('GET /api/books/:bookId/reviews', () => {
       },
     });
 
-    await request(app)
-      .get(`/api/books/${testBookId}/reviews`)
-      .expect(200);
+    await request(app).get(`/api/books/${testBookId}/reviews`).expect(200);
 
     // デフォルト値で呼ばれたことを確認
     expect(reviewServiceSpy).toHaveBeenCalledWith(
@@ -223,12 +219,9 @@ describe('GET /api/books/:bookId/reviews', () => {
   });
 
   it('page が 0 以下の場合は 400 を返す', async () => {
-    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews');
 
-    const res = await request(app)
-      .get('/api/books/1/reviews')
-      .query({ page: -1 })
-      .expect(400);
+    const res = await request(app).get('/api/books/1/reviews').query({ page: -1 }).expect(400);
 
     expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBe('INVALID_PAGE');
@@ -236,12 +229,9 @@ describe('GET /api/books/:bookId/reviews', () => {
   });
 
   it('limit が 0 以下の場合は 400 を返す', async () => {
-    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews') as unknown as SpyInstance;
+    const reviewServiceSpy = vi.spyOn(reviewService, 'listReviews');
 
-    const res = await request(app)
-      .get('/api/books/1/reviews')
-      .query({ limit: 0 })
-      .expect(400);
+    const res = await request(app).get('/api/books/1/reviews').query({ limit: 0 }).expect(400);
 
     expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBe('INVALID_LIMIT');

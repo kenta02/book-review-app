@@ -3,6 +3,7 @@ import request from 'supertest';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 import reviewRouter from '../src/routes/reviews';
+import { apiErrorHandler } from '../src/middleware/errorHandler';
 import Review from '../src/models/Review';
 import Book from '../src/models/Book';
 
@@ -22,6 +23,7 @@ function makeApp(setUserId?: number, setUserRole?: string) {
     next();
   });
   app.use('/api', reviewRouter);
+  app.use(apiErrorHandler);
   return app;
 }
 
@@ -37,7 +39,7 @@ afterEach(() => {
 });
 
 describe('POST /api/reviews', () => {
-  it('returns 401 when unauthenticated', async () => {
+  it('未認証時は 401 を返す', async () => {
     const unauthApp = makeApp();
     const res = await request(unauthApp)
       .post('/api/reviews')
@@ -46,7 +48,7 @@ describe('POST /api/reviews', () => {
     expect(res.body.error.code).toBe('AUTHENTICATION_REQUIRED');
   });
 
-  it('returns 400 when validation fails', async () => {
+  it('バリデーションエラー時は 400 を返す', async () => {
     // バリデーションエラー時は details に該当フィールドが含まれることを確認
     const res = await request(app)
       .post('/api/reviews')
@@ -59,7 +61,7 @@ describe('POST /api/reviews', () => {
     expect(fields).toContain('rating');
   });
 
-  it('returns 404 when book not found', async () => {
+  it('対象書籍が存在しないとき 404 を返す', async () => {
     vi.spyOn(Book, 'findByPk').mockResolvedValue(null);
     const res = await request(app)
       .post('/api/reviews')
@@ -68,7 +70,7 @@ describe('POST /api/reviews', () => {
     expect(res.body.error.code).toBe('BOOK_NOT_FOUND');
   });
 
-  it('returns 201 and created review when ok (rating optional)', async () => {
+  it('正常系では 201 と作成済みレビューを返す（rating 任意）', async () => {
     // 正常系：Book 存在確認 -> Review.create の流れをモック
     vi.spyOn(Book, 'findByPk').mockResolvedValue({ id: 1 } as unknown as BookInstance);
     vi.spyOn(Review, 'create').mockResolvedValue({
@@ -93,7 +95,7 @@ describe('POST /api/reviews', () => {
     expect(res.body.data.userId).toBe(2);
   });
 
-  it('returns 500 when create fails', async () => {
+  it('作成処理で例外が発生したとき 500 を返す', async () => {
     vi.spyOn(Book, 'findByPk').mockResolvedValue({ id: 1 } as unknown as BookInstance);
     vi.spyOn(Review, 'create').mockRejectedValue(new Error('DB fail'));
 
