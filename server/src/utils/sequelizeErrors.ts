@@ -10,10 +10,6 @@ type UniqueConstraintCandidate = {
   parent?: { sqlMessage?: string };
 };
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 /**
  * Sequelize の一意制約違反かどうかを判定します。
  *
