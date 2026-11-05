@@ -127,3 +127,7 @@ PROJECT_MEMORY.md
 AGENTS.md
 .envrc
 .codex
+
+# 複数 AI エージェント共通の Skills 正本（ローカル専用）
+.agents/skills/
+CLAUDE.md
