@@ -92,17 +92,18 @@ book-review-app.code-workspace
 CODING_GUIDELINES.md
 server/docs.code-workspace
 .gitnexus
-.claude/skills/
-.github/skills/architecture/SKILL.md
-.github/skills/coding-standards/SKILL.md
-.github/skills/testing/SKILL.md
-.github/skills/ui-design/SKILL.md
-.github/skills/security/SKILL.md
+# .claude/skills/
+# .github/skills/architecture/SKILL.md
+# .github/skills/coding-standards/SKILL.md
+# .github/skills/testing/SKILL.md
+# .github/skills/ui-design/SKILL.md
+# .github/skills/security/SKILL.md
 
 # AI 設定のローカル専用ファイル
 CLAUDE.local.md
 PROJECT_MEMORY.local.md
 .claude/settings.local.json
+.claude/settings.json
 
 # AI 設定ファイル一式
 PROJECT_MEMORY.md
