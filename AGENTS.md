@@ -66,31 +66,33 @@ Skill の参照先は絶対パスで固定せず、以下の優先順で確認�
 
 ### ルート
 
-- `npm run seed-demo`: デモデータ投入（`server` に委譲）
+- `pnpm install --frozen-lockfile`: workspace 全体の依存関係をインストール
+- `pnpm run test`: workspace ロックファイルの整合性検証
+- `pnpm run seed-demo`: デモデータ投入（`server` に委譲）
 
 ### client
 
-- `cd client && npm run dev`: 開発サーバー起動
-- `cd client && npm run build`: ビルド
-- `cd client && npm run lint`: ESLint
+- `cd client && pnpm run dev`: 開発サーバー起動
+- `cd client && pnpm run build`: ビルド
+- `cd client && pnpm run lint`: ESLint
 
 ### server
 
-- `cd server && npm run dev`: API サーバー起動
-- `cd server && npm run swagger`: Swagger 用サーバー起動
-- `cd server && npm run token`: 手動トークン取得（デバッグ用）
-- `cd server && npm run test`: テスト実行（watch モード）
-- `cd server && npm run test:ci`: CI 相当テスト（--run）
-- `cd server && npm run test:ci-parity`: CI 同等テスト（テスト DB 環境変数付き）
-- `cd server && npm run coverage`: カバレッジ付きテスト
-- `cd server && npm run lint`: ESLint
-- `cd server && npm run lint:fix`: ESLint 自動修正
-- `cd server && npm run format`: Prettier フォーマット
-- `cd server && npm run check-types`: 型チェック
-- `cd server && npm run db:migrate`: マイグレーション適用（up）
-- `cd server && npm run db:migrate:down`: マイグレーションロールバック（down）
-- `cd server && npm run db:migrate:status`: マイグレーション状態確認
-- `cd server && npm run db:migrate:pending`: 未適用マイグレーション一覧
+- `cd server && pnpm run dev`: API サーバー起動
+- `cd server && pnpm run swagger`: Swagger 用サーバー起動
+- `cd server && pnpm run token`: 手動トークン取得（デバッグ用）
+- `cd server && pnpm run test`: テスト実行（watch モード）
+- `cd server && pnpm run test:ci`: CI 相当テスト（--run）
+- `cd server && pnpm run test:ci-parity`: CI 同等テスト（テスト DB 環境変数付き）
+- `cd server && pnpm run coverage`: カバレッジ付きテスト
+- `cd server && pnpm run lint`: ESLint
+- `cd server && pnpm run lint:fix`: ESLint 自動修正
+- `cd server && pnpm run format`: Prettier フォーマット
+- `cd server && pnpm run check-types`: 型チェック
+- `cd server && pnpm run db:migrate`: マイグレーション適用（up）
+- `cd server && pnpm run db:migrate:down`: マイグレーションロールバック（down）
+- `cd server && pnpm run db:migrate:status`: マイグレーション状態確認
+- `cd server && pnpm run db:migrate:pending`: 未適用マイグレーション一覧
 
 ## コーディング規約
 

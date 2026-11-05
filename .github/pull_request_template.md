@@ -16,7 +16,8 @@
 
 ```bash
 # テストコマンドの例
-npm run test
+pnpm --filter server run test:ci
+pnpm --filter client exec vitest --run
 ```
 
 ## 🔗 関連 Issue / PR

@@ -9,8 +9,8 @@ pnpm-debug.log*
 
 # lockファイル（使うパッケージマネージャ1つだけ残す）
 package-lock.json
-!server/package-lock.json
-!client/package-lock.json
+yarn.lock
+.pnpm-store/
 
 
 # ========================================
