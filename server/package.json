@@ -44,7 +44,7 @@
     "yaml": "^2.4.1"
   },
   "devDependencies": {
-    "@eslint/js": "8.57.1",
+    "@eslint/js": "10.0.1",
     "@rolldown/binding-linux-x64-gnu": "^1.0.0-rc.12",
     "@types/bcrypt": "6.0.0",
     "@types/cors": "2.8.19",
