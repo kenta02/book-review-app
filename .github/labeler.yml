@@ -27,14 +27,11 @@ dependencies:
   - changed-files:
       - any-glob-to-any-file:
           - "package.json"
-          - "package-lock.json"
-          - "yarn.lock"
           - "client/package.json"
-          - "client/package-lock.json"
-          - "client/yarn.lock"
           - "server/package.json"
-          - "server/package-lock.json"
-          - "server/yarn.lock"
+          - "pnpm-lock.yaml"
+          - "pnpm-workspace.yaml"
+          - ".npmrc"
 
 test:
   - changed-files:

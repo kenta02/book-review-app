@@ -2,6 +2,10 @@
 
 サーバーの起動と開発に関するコマンドをまとめています。
 
+Node.js 24.x と pnpm 11.25.0 を使用します。依存関係はリポジトリルートで
+`pnpm install --frozen-lockfile` を実行してインストールしてください。
+以下のコマンドは特記がなければ `server/` で実行します。
+
 ## 📋 事前準備
 
 ### MySQLのセットアップ
@@ -40,16 +44,16 @@ DB_NAME=book_review
 ### 0. テストデータ（Seeder）
 
 開発用のテストデータを投入するスクリプトを `server/scripts/seed-demo.ts` に用意しました。
-`package.json` に npm スクリプトも追加してあるので、プロジェクトルートから実行できます。
+`package.json` に pnpm スクリプトも追加してあるので、プロジェクトルートから実行できます。
 スクリプトは再実行しても既存データを重複作成せず、新規のみ追加するよう改善されています。
 
 ```bash
 # プロジェクトルートまたは server/ ディレクトリから実行
-npm run seed-demo
+pnpm run seed-demo
 
 # あるいは ts-node を直接使う場合
-# ts-node が未インストールなら npx を利用
-npx ts-node server/scripts/seed-demo.ts
+# プロジェクトルートから server の ts-node を実行
+pnpm --filter server exec ts-node scripts/seed-demo.ts
 
 # 実行後：users=3, books=6, reviews=8, comments=2, favorites=2 のデモデータ定義が適用されます
 # （既にレコードがある場合は重複せずにスキップされます）
@@ -62,7 +66,7 @@ npx ts-node server/scripts/seed-demo.ts
 ### 1. APIサーバーの起動
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 **目的：**
@@ -89,7 +93,7 @@ npm run dev
 ### 2. Swagger UIサーバーの起動
 
 ```bash
-npm run swagger
+pnpm run swagger
 ```
 
 **目的：**
@@ -113,7 +117,7 @@ npm run swagger
 - OpenAPI仕様に基づいて、APIエンドポイントの動作確認・テストが可能
 
 > ⚠️ **重要**: Swagger UI はバックエンドのプロキシとして動作します。
-> そのため、APIサーバー (`npm run dev`) を同時に起動しておかないと、
+> そのため、APIサーバー (`pnpm run dev`) を同時に起動しておかないと、
 > リクエストがタイムアウトし続け **Loading 中のまま** になります。
 > **開発時の認証トークンについて（便利な補助コマンド）**
 
@@ -124,17 +128,17 @@ npm run swagger
   デフォルトで投入されるテストユーザーは `alice`/`bob`/`charlie` に加えて README 内の例に合わせて `tanaka` がいます。
   パスワードはいずれも `password123` です。
 
-  `npm run seed-demo` は同じ e-mail が存在すればパスワードも上書きするように改良されているので、
+  `pnpm run seed-demo` は同じ e-mail が存在すればパスワードも上書きするように改良されているので、
   変更があった場合は再実行するだけで OK です。
-  ただし `tanaka` のパスワードだけを個別にリセットしたいときは `npm run seed-tanaka` を使ってください。
+  ただし `tanaka` のパスワードだけを個別にリセットしたいときは `pnpm run seed-tanaka` を使ってください。
 
 ```bash
 # サーバー配下（推奨）
 cd server
-npm run token -- --email tanaka@example.com --password password123
+pnpm run token --email tanaka@example.com --password password123
 
 # またはプロジェクトルートから（ディレクトリ移動したくない場合）
-npm --prefix server run token -- --email tanaka@example.com --password password123
+pnpm --filter server run token --email tanaka@example.com --password password123
 ```
 
 - 出力例：
@@ -148,7 +152,7 @@ curl example:
 curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:3000/api/auth/me
 ```
 
-(パスワードやアカウントが間違っているとログイン失敗エラーが表示されます。まず `npm run seed-demo` してユーザーを投入するか、`/api/auth/register` で自分でアカウントを作成してください。)
+(パスワードやアカウントが間違っているとログイン失敗エラーが表示されます。まず `pnpm run seed-demo` してユーザーを投入するか、`/api/auth/register` で自分でアカウントを作成してください。)
 
 - オプション：`--save` をつけると `server/.env` に `TEST_TOKEN=<JWT_TOKEN>` を追記します（ローカル限定の利便性向上。`.env` はコミットしないでください）。
 
@@ -156,10 +160,10 @@ curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:3000/api/auth/me
 
 ```bash
 # 全ユーザーのパスワードをデフォルト（password123）に更新する
-npm run seed-demo
+pnpm run seed-demo
 
 # tanaka@example.com のみパスワードを (再)設定する
-npm run seed-tanaka
+pnpm run seed-tanaka
 ```
 
 ---
@@ -169,7 +173,7 @@ npm run seed-tanaka
 1. **ターミナル1でAPIサーバーを起動：**
 
    ```bash
-   npm run dev
+   pnpm run dev
    ```
 
    待機：`🚀 API running on http://localhost:300` が表示されるまで
@@ -177,7 +181,7 @@ npm run seed-tanaka
 2. **ターミナル2でSwagger UIを起動：**
 
    ```bash
-   npm run swagger
+   pnpm run swagger
    ```
 
 3. **ブラウザで [http://localhost:8080](http://localhost:8080) を開く**
@@ -187,7 +191,7 @@ npm run seed-tanaka
 
 ## ⚠️ トラブルシューティング
 
-### `npm run dev` で DB接続エラーが出る場合
+### `pnpm run dev` で DB接続エラーが出る場合
 
 ```
 ❌ DB connection failed: ConnectionRefusedError [SequelizeConnectionRefusedError]: connect ECONNREFUSED 127.0.0.1:3306
@@ -204,7 +208,7 @@ mysql -u app -p -h localhost book_review -e "SELECT 1;"
 # パスワード: apppass
 ```
 
-### `npm run swagger` で Parser error が出る場合
+### `pnpm run swagger` で Parser error が出る場合
 
 - ブラウザキャッシュをクリア（Ctrl+Shift+Delete）
 - Swagger UIサーバーを再起動
@@ -220,7 +224,7 @@ Failed to fetch http://localhost:300/api
 
 **解決方法：**
 
-- 別のターミナルで `npm run dev` を実行
+- 別のターミナルで `pnpm run dev` を実行
 
 ---
 
