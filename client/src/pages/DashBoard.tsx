@@ -290,11 +290,8 @@ export function DashboardPage() {
               key={book.id}
               title={book.title}
               author={book.author}
-              ratingDisplay={
-                book.averageRating != null
-                  ? String(book.averageRating)
-                  : "評価なし"
-              }
+              averageRating={book.averageRating}
+              reviewCount={book.reviewCount}
               summary={book.summary}
               ISBN={book.ISBN}
               publicationYear={book.publicationYear}
