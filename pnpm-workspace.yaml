@@ -13,12 +13,3 @@ allowBuilds:
 fetchTimeout: 60000
 strictSsl: true
 updateNotifier: false
-
-# Vitest 4.1.2 が同じバージョンの coverage provider を解決できるよう補完する。
-packageExtensions:
-  "vitest@4.1.2":
-    peerDependencies:
-      "@vitest/coverage-v8": "4.1.2"
-    peerDependenciesMeta:
-      "@vitest/coverage-v8":
-        optional: true
