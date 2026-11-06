@@ -9,8 +9,8 @@ pnpm-debug.log*
 
 # lockファイル（使うパッケージマネージャ1つだけ残す）
 package-lock.json
-!server/package-lock.json
-!client/package-lock.json
+yarn.lock
+.pnpm-store/
 
 
 # ========================================
@@ -92,38 +92,20 @@ book-review-app.code-workspace
 CODING_GUIDELINES.md
 server/docs.code-workspace
 .gitnexus
-# .claude/skills/
-# .github/skills/architecture/SKILL.md
-# .github/skills/coding-standards/SKILL.md
-# .github/skills/testing/SKILL.md
-# .github/skills/ui-design/SKILL.md
-# .github/skills/security/SKILL.md
-
-# AI 設定のローカル専用ファイル
+# AI 設定のローカル専用ファイル（個人設定のみ。AGENTS.md / CLAUDE.md / .agents/skills/ / .claude/skills/ は共有）
 CLAUDE.local.md
 PROJECT_MEMORY.local.md
 .claude/settings.local.json
-.claude/settings.json
 
-# AI 設定ファイル一式
+# AI 設定の補助ファイル
 PROJECT_MEMORY.md
 .mcp.json
-.github/copilot-instructions.md
-.github/agents/
-.github/instructions/
 .github/hooks/
 .github/mcp/
 .github/skills/
 
-# Track only shared skill docs used for CI parity workflow.
-!.github/skills/
-.github/skills/*
-!.github/skills/README.md
-!.github/skills/test-ci-parity/
-!.github/skills/test-ci-parity/SKILL.md
-.github/skills/README.md
-#Ignore vscode AI rules
+# Codacy の自動生成ファイル
 .github/instructions/codacy.instructions.md
-AGENTS.md
 .envrc
 .codex
+

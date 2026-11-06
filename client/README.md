@@ -21,24 +21,18 @@ This project now includes Tailwind CSS for utility‑first styling. The configur
 `tailwind.config.js` and `postcss.config.js` live in the root of the `client` folder and
 are already wired into Vite.
 
-> **Note:** the ESLint configuration is pinned to ESLint 9.x to satisfy peer
-> dependencies of plugins (`eslint-plugin-react-hooks` etc.). If you update
-> eslint yourself, you may need to adjust or reinstall lint-related packages,
-> or install with `npm install --legacy-peer-deps` to bypass peer conflicts.
-> To install dependencies after pulling from the repository run (ensure you clear any
-> existing modules first):
+依存関係はリポジトリルートの pnpm workspace で管理します。
+Node.js 24.x と pnpm 11.25.0 を使用してください。
 
 ```bash
-cd client
-rm -rf node_modules package-lock.json yarn.lock
-npm install   # or yarn
+# リポジトリルートから client / server をまとめてインストール
+pnpm install --frozen-lockfile
+
+# client だけを起動する場合
+pnpm --filter client run dev
 ```
 
-```bash
-cd client
-npm install
-# or yarn
-```
+ロックファイルは削除せず、依存関係を更新するときも `pnpm-lock.yaml` をコミットしてください。
 
 The global stylesheet (`src/index.css`) begins with the Tailwind directives
 `@tailwind base;`, `@tailwind components;` and `@tailwind utilities;`. Preexisting
@@ -134,7 +128,7 @@ logger.error("エラーが発生しました:", error);
 
    ```bash
    cd server
-   npm run dev
+   pnpm run dev
    ```
 
    `🚀 API running on http://localhost:3000` のようなログが出ていることを確認
@@ -150,7 +144,7 @@ logger.error("エラーが発生しました:", error);
 
    ```bash
    cd client
-   npm run dev
+   pnpm run dev
    # または Ctrl+C で停止して、もう一度起動
    ```
 
