@@ -20,24 +20,23 @@ jobs:
         with:
           fetch-depth: 0 # SonarCloud用：完全な履歴を取得
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       # バックエンド分析
-      - name: Install server dependencies
-        working-directory: ./server
-        run: |
-          npm ci
-          # npm ci sometimes skips optional native binaries due to an npm bug;
-          # Vitest pulls in rollup which depends on @rollup/rollup-<platform>.
-          # re-run npm install to fetch the missing package or explicitly add it.
-          npm install --no-save @rollup/rollup-linux-x64-gnu@4.59.0 || true
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Build server
         working-directory: ./server
-        run: npm run build --if-present
+        run: pnpm run build
 
       - name: Run server tests with coverage
         working-directory: ./server
@@ -48,22 +47,13 @@ jobs:
           DB_HOST: 127.0.0.1
           DB_PORT: 3306
           JWT_SECRET: test-jwt-secret
-        run: npm run coverage:ci
+        run: pnpm run coverage:ci
 
       # フロントエンド分析
-      - name: Install client dependencies
-        working-directory: ./client
-        # npm_config_os/cpu でCI環境（linux/x64）向けパッケージのみをインストール
-        # Vite7のrollupがplatform-specificなoptionalパッケージを宣言するためdarwin-arm64が混入しないよう制御
-        # lockfileどおりにインストールしてeslint系の再解決を避ける
-        env:
-          npm_config_os: linux
-          npm_config_cpu: x64
-        run: npm ci
 
       - name: Build client
         working-directory: ./client
-        run: npm run build --if-present
+        run: pnpm run build
 
       - name: Validate SonarCloud configuration
         run: |

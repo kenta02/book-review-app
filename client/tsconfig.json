@@ -15,7 +15,7 @@
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
-    // and npm install -D @types/node
+    // Node.js の型定義は pnpm --filter client add -D @types/node で追加する
 
     // Other Outputs
     "sourceMap": true,

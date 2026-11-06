@@ -243,7 +243,7 @@ if (require.main === module) {
     console.info(`📄 OpenAPI spec: http://localhost:${port}/openapi.yaml`);
     console.info(`💾 OpenAPI JSON: http://localhost:${port}/openapi.json`);
     console.info(`🔀 API proxy: http://localhost:${port}/api/* -> http://${LOCAL_PROXY_HOSTNAME}:${DEFAULT_API_SERVER_PORT}/api/*`);
-    console.info(`\n⚠️  Note: API server (npm run dev) must be running on port ${DEFAULT_API_SERVER_PORT}`);
+    console.info(`\n⚠️  Note: API server (pnpm run dev) must be running on port ${DEFAULT_API_SERVER_PORT}`);
   });
 }
 

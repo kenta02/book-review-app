@@ -76,8 +76,8 @@ Book Review App は、ユーザーが書籍レビューを投稿・編集・検�
 
 ### 前提
 
-- Node.js 18+
-- npm または yarn
+- Node.js 24.x
+- pnpm 11.25.0（`package.json` の `packageManager` に固定）
 - MySQL 8+（ローカル / Docker）
 
 ### インストール
@@ -85,8 +85,15 @@ Book Review App は、ユーザーが書籍レビューを投稿・編集・検�
 ```bash
 git clone <YOUR_REPO_URL>
 cd book-review-app
-npm install
+npm install --global pnpm@11.25.0
+pnpm install --frozen-lockfile
 ```
+
+ルートの `pnpm install` で client / server の依存関係もインストールします。
+`pnpm-lock.yaml` はコミットし、依存追加は `pnpm --filter client add <package>` または
+`pnpm --filter server add <package>` を使用してください。
+既存の npm 環境から切り替える際は、開発サーバーを停止し、ルート・client・server の
+`node_modules` を削除してから上記のインストールを実行してください。
 
 ### server 起動
 
@@ -94,8 +101,8 @@ npm install
 cd server
 cp .env.example .env
 # .envにDB設定追加
-npm run db:migrate
-npm run dev
+pnpm run db:migrate
+pnpm run dev
 ```
 
 ### client 起動
@@ -103,20 +110,22 @@ npm run dev
 ```bash
 cd client
 cp .env.example .env
-npm run dev
+pnpm run dev
 ```
 
 ## 利用可能なコマンド
 
-| コマンド                          | 説明                 |
-| --------------------------------- | -------------------- |
-| `npm run dev`                     | 開発サーバ起動       |
-| `npm run build`                   | 本番ビルド           |
-| `npm run lint`                    | ESLint 実行          |
-| `npm run test`                    | Vitest 実行          |
-| `npm run coverage`                | カバレッジ           |
-| `cd server && npm run db:migrate` | マイグレーション適用 |
-| `cd server && npm run db:seed`    | シードデータ投入     |
+| コマンド                                            | 説明                           |
+| --------------------------------------------------- | ------------------------------ |
+| `pnpm --filter client run dev`                      | フロントエンド起動             |
+| `pnpm --filter server run dev`                      | API サーバー起動               |
+| `pnpm -r run build`                                 | 両パッケージのビルド           |
+| `pnpm -r run lint`                                  | 両パッケージの ESLint          |
+| `pnpm run test`                                     | workspace ロックファイルの検証 |
+| `pnpm --filter server run test:ci-parity`           | サーバーテスト・カバレッジ     |
+| `pnpm --filter client exec vitest --run --coverage` | クライアントテスト・カバレッジ |
+| `pnpm --filter server run db:migrate`               | マイグレーション適用           |
+| `pnpm run seed-demo`                                | シードデータ投入               |
 
 ## デプロイ
 

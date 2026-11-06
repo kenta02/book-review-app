@@ -1,0 +1,15 @@
+packages:
+  - client
+  - server
+
+# ネイティブ依存のインストールに必要なスクリプトのみ許可する。
+allowBuilds:
+  bcrypt: true
+  sqlite3: true
+  unrs-resolver: true
+  # 利用統計の送信スクリプトは実行しない。
+  "@scarf/scarf": false
+
+fetchTimeout: 60000
+strictSsl: true
+updateNotifier: false
