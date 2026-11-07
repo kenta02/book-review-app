@@ -1,9 +1,11 @@
 import { useNavigate } from "react-router-dom";
+import { RatingSummary } from "./common/RatingSummary";
 
 interface BookCardProps {
   readonly title: string;
   readonly author: string;
-  readonly ratingDisplay: string;
+  readonly averageRating?: number | null | undefined;
+  readonly reviewCount?: number | undefined;
   readonly summary: string;
   readonly ISBN: string;
   readonly publicationYear: number;
@@ -20,7 +22,8 @@ export function BookCard(props: Readonly<BookCardProps>) {
   const {
     title,
     author,
-    ratingDisplay,
+    averageRating,
+    reviewCount,
     summary,
     ISBN,
     publicationYear,
@@ -30,11 +33,6 @@ export function BookCard(props: Readonly<BookCardProps>) {
   const isLiked = liked ?? false;
 
   const navigate = useNavigate();
-  const filledStars = Math.max(
-    0,
-    Math.min(5, Math.round(Number(ratingDisplay))),
-  );
-  const reviewCountLabel = "(15 reviews)";
 
   const handleCardClick = () => {
     navigate(`/books/${bookId}`);
@@ -69,21 +67,11 @@ export function BookCard(props: Readonly<BookCardProps>) {
 
           {/* 評価 */}
           <div className="mb-3">
-            <div className="flex items-center gap-1">
-              {Array.from({ length: 5 }, (_, index) => (
-                <span
-                  key={`${bookId}-star-${index}`}
-                  className={
-                    index < filledStars ? "text-yellow-400" : "text-gray-300"
-                  }
-                >
-                  ★
-                </span>
-              ))}
-            </div>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {reviewCountLabel}
-            </p>
+            <RatingSummary
+              averageRating={averageRating}
+              reviewCount={reviewCount}
+              keyPrefix={bookId}
+            />
           </div>
 
           {/* 説明文 */}

@@ -1,4 +1,5 @@
 import type { Book } from "../../types";
+import { RatingSummary } from "../common/RatingSummary";
 
 interface BookInfoDetailProps {
   book?: Book | null;
@@ -35,20 +36,13 @@ export function BookInfoDetail({ book }: BookInfoDetailProps) {
 
           {/* 評価 */}
           <div className="mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="flex">
-                <span className="text-yellow-400">★</span>
-                <span className="text-yellow-400">★</span>
-                <span className="text-yellow-400">★</span>
-                <span className="text-yellow-400">★</span>
-                <span className="text-yellow-400">★</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900 dark:text-white">
-                5.0
-              </span>
-              <span className="text-gray-600 dark:text-gray-400">
-                (2件のレビュー)
-              </span>
+            <div className="mb-2">
+              <RatingSummary
+                averageRating={book?.averageRating}
+                reviewCount={book?.reviewCount}
+                variant="detail"
+                keyPrefix={book?.id ?? "detail"}
+              />
             </div>
           </div>
 

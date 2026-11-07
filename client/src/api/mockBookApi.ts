@@ -81,6 +81,19 @@ const mockBooks: Record<number, Book> = {
     averageRating: 4.1,
     reviewCount: 90,
   },
+  // 未評価の書籍（レビューなし）
+  7: {
+    id: 7,
+    title: "未評価の書籍",
+    author: "テスト著者",
+    publicationYear: 2024,
+    ISBN: "9784101010999",
+    summary: "レビューがまだ付いていない書籍のモックデータ。",
+    createdAt: "2024-01-01T00:00:00.000Z",
+    updatedAt: "2024-01-01T00:00:00.000Z",
+    averageRating: null,
+    reviewCount: 0,
+  },
 };
 
 // 書籍のAPIのモック
