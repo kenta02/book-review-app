@@ -1,11 +1,22 @@
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MainLayout } from "./MainLayout";
 import { BrowserRouter } from "react-router-dom";
 
 // simple stub Sidebar since we don't need its full functionality in this test
 // but MainLayout already imports real Sidebar so we can render normally.
+
+// ヘッダーが読む認証状態を固定する（このテストの関心は認証ではないため）
+vi.mock("../../auth/useAuth", () => ({
+  useAuth: () => ({
+    user: null,
+    status: "unauthenticated",
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+  }),
+}));
 
 describe("MainLayout", () => {
   // Vitest の jsdom 環境では localStorage にアクセスすると

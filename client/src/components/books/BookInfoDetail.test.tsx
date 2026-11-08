@@ -18,7 +18,9 @@ const baseBook: Book = {
 describe("BookInfoDetail", () => {
   it("API の平均評価とレビュー件数を表示する", () => {
     render(
-      <BookInfoDetail book={{ ...baseBook, averageRating: 3.5, reviewCount: 8 }} />,
+      <BookInfoDetail
+        book={{ ...baseBook, averageRating: 3.5, reviewCount: 8 }}
+      />,
     );
     expect(screen.getByText("3.5")).toBeInTheDocument();
     expect(screen.getByText("(8件のレビュー)")).toBeInTheDocument();
@@ -27,7 +29,9 @@ describe("BookInfoDetail", () => {
 
   it("未評価の書籍は「評価なし」を表示する", () => {
     render(
-      <BookInfoDetail book={{ ...baseBook, averageRating: null, reviewCount: 0 }} />,
+      <BookInfoDetail
+        book={{ ...baseBook, averageRating: null, reviewCount: 0 }}
+      />,
     );
     expect(screen.getByText("評価なし")).toBeInTheDocument();
   });

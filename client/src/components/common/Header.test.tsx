@@ -1,7 +1,45 @@
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import { Header } from "./Header";
+
+// 認証状態とページ遷移をテストから切り替える
+const { mockUseAuth, mockNavigate } = vi.hoisted(() => ({
+  mockUseAuth: vi.fn(),
+  mockNavigate: vi.fn(),
+}));
+vi.mock("../../auth/useAuth", () => ({ useAuth: () => mockUseAuth() }));
+vi.mock("react-router-dom", async () => {
+  const actual = (await vi.importActual(
+    "react-router-dom",
+  )) as typeof import("react-router-dom");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
+/** Header は Link を含むため Router で包んで描画する */
+const renderHeader = (props: { onMenuClick?: () => void } = {}) =>
+  render(
+    <MemoryRouter>
+      <Header {...props} />
+    </MemoryRouter>,
+  );
+
+/** 認証状態を指定する（logout は呼び出しを検証できるよう返す） */
+const setAuth = (
+  status: "loading" | "authenticated" | "unauthenticated",
+  username?: string,
+) => {
+  const logout = vi.fn();
+  mockUseAuth.mockReturnValue({
+    status,
+    user: username ? { id: 1, username, email: "u@example.com" } : null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout,
+  });
+  return logout;
+};
 
 // simple in-memory stub for localStorage used in tests
 const localStorageMock = (() => {
@@ -28,6 +66,8 @@ const resetEnv = () => {
 
 describe("Header", () => {
   beforeEach(() => {
+    mockNavigate.mockReset();
+    setAuth("unauthenticated");
     Object.defineProperty(globalThis, "localStorage", {
       value: localStorageMock,
       writable: true,
@@ -38,7 +78,7 @@ describe("Header", () => {
 
   it("ブランドとメニューボタンをレンダリングし onMenuClick を呼ぶ", () => {
     const onMenu = vi.fn();
-    render(<Header onMenuClick={onMenu} />);
+    renderHeader({ onMenuClick: onMenu });
 
     const menuBtn = screen.getByLabelText("メニュー");
     expect(menuBtn).toBeInTheDocument();
@@ -51,7 +91,7 @@ describe("Header", () => {
   });
 
   it("ダークモードを切り替え状態を保持する", () => {
-    render(<Header />);
+    renderHeader();
     const darkBtn = screen.getByLabelText("ダークモード切り替え");
 
     // initial state should be light mode
@@ -86,12 +126,48 @@ describe("Header", () => {
       configurable: true,
     });
 
-    render(<Header />);
+    renderHeader();
     expect(screen.getByLabelText("ダークモード切り替え")).toBeInTheDocument();
 
     Object.defineProperty(globalThis, "localStorage", {
       value: originalLocalStorage,
       configurable: true,
     });
+  });
+
+  it("未ログインならログイン・新規登録リンクを表示する", () => {
+    renderHeader();
+    expect(screen.getByRole("link", { name: "ログイン" })).toHaveAttribute(
+      "href",
+      "/login",
+    );
+    expect(screen.getByRole("link", { name: "新規登録" })).toHaveAttribute(
+      "href",
+      "/register",
+    );
+    expect(screen.queryByText("ログアウト")).not.toBeInTheDocument();
+  });
+
+  it("ログイン済みならユーザー名とログアウトを表示し、押すと logout してログイン画面へ", () => {
+    const logout = setAuth("authenticated", "john_doe");
+    renderHeader();
+
+    expect(screen.getByTestId("header-username")).toHaveTextContent("john_doe");
+    expect(
+      screen.queryByRole("link", { name: "ログイン" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "ログアウト" }));
+    expect(logout).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith("/login");
+  });
+
+  it("確認中はログイン関連の表示を出さない（ちらつき防止）", () => {
+    setAuth("loading");
+    renderHeader();
+    expect(screen.queryByText("ログアウト")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "ログイン" }),
+    ).not.toBeInTheDocument();
   });
 });

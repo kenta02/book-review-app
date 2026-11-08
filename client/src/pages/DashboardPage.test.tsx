@@ -6,6 +6,17 @@ import { DashboardPage } from "./DashBoard";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import type { Book } from "../types";
 
+// ヘッダーが読む認証状態を固定する（このテストの関心は認証ではないため）
+vi.mock("../auth/useAuth", () => ({
+  useAuth: () => ({
+    user: null,
+    status: "unauthenticated",
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+  }),
+}));
+
 vi.mock("../api/apiClient", () => {
   return {
     apiClient: {
