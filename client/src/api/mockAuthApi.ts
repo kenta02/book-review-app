@@ -23,6 +23,16 @@ const mockAccounts: MockAccount[] = [
 /** モックのトークンは `mock-token-<userId>` 形式 */
 const TOKEN_PREFIX = "mock-token-";
 
+/**
+ * メールアドレスが同じかを、大文字小文字を区別せずに比較する。
+ * サーバー（MySQL の既定の照合順序）が区別しない挙動に合わせるため。
+ * @example
+ * isSameEmail("John@Example.com", "john@example.com"); // true
+ */
+function isSameEmail(a: string, b: string): boolean {
+  return a.toLowerCase() === b.toLowerCase();
+}
+
 /** パスワードを除いた公開用ユーザーに変換する */
 function toAuthUser({ id, username, email }: MockAccount): AuthUser {
   return { id, username, email };
@@ -44,7 +54,9 @@ export const mockAuthApi = {
   ): Promise<ApiResponse<AuthResult>> {
     await waitWithAbort(300, abortSignal);
 
-    if (mockAccounts.some((account) => account.email === body.email)) {
+    if (
+      mockAccounts.some((account) => isSameEmail(account.email, body.email))
+    ) {
       throw new ApiHttpError(409, "Email already registered");
     }
 
@@ -71,7 +83,8 @@ export const mockAuthApi = {
     await waitWithAbort(300, abortSignal);
 
     const account = mockAccounts.find(
-      (item) => item.email === body.email && item.password === body.password,
+      (item) =>
+        isSameEmail(item.email, body.email) && item.password === body.password,
     );
     if (!account) {
       throw new ApiHttpError(401, "Invalid email or password");
