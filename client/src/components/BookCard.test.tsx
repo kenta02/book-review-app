@@ -23,7 +23,8 @@ describe("BookCard", () => {
   const baseProps = {
     title: "タイトル",
     author: "著者",
-    ratingDisplay: "4.2",
+    averageRating: 4.2,
+    reviewCount: 3,
     summary: "説明文",
     ISBN: "ABC",
     publicationYear: 2021,
@@ -42,6 +43,17 @@ describe("BookCard", () => {
     // click anywhere on the card
     fireEvent.click(screen.getByTestId("book-card"));
     expect(mockNavigate).toHaveBeenCalledWith("/books/123");
+  });
+
+  it("shows API rating and review count", () => {
+    render(<BookCard {...baseProps} />);
+    expect(screen.getByText("4.2 (3件のレビュー)")).toBeInTheDocument();
+    expect(screen.queryByText(/15 reviews/)).not.toBeInTheDocument();
+  });
+
+  it("shows no-review label when unrated", () => {
+    render(<BookCard {...baseProps} averageRating={null} reviewCount={0} />);
+    expect(screen.getByText("レビューなし")).toBeInTheDocument();
   });
 
   it("shows liked heart when liked prop true and prevents propagation", () => {

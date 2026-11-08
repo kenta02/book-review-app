@@ -5,6 +5,14 @@ interface BookInfoDetailProps {
 }
 
 export function BookInfoDetail({ book }: BookInfoDetailProps) {
+  // APIの平均評価・件数。レビューが無い書籍は null / 0 として扱う
+  const averageRating = book?.averageRating ?? null;
+  const reviewCount = book?.reviewCount ?? 0;
+  const filledStars =
+    averageRating == null
+      ? 0
+      : Math.max(0, Math.min(5, Math.round(averageRating)));
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl p-6 mb-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -37,17 +45,24 @@ export function BookInfoDetail({ book }: BookInfoDetailProps) {
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-2">
               <div className="flex">
-                <span className="text-yellow-400">★</span>
-                <span className="text-yellow-400">★</span>
-                <span className="text-yellow-400">★</span>
-                <span className="text-yellow-400">★</span>
-                <span className="text-yellow-400">★</span>
+                {Array.from({ length: 5 }, (_, index) => (
+                  <span
+                    key={`star-${index}`}
+                    className={
+                      index < filledStars ? "text-yellow-400" : "text-gray-300"
+                    }
+                  >
+                    ★
+                  </span>
+                ))}
               </div>
               <span className="text-xl font-bold text-gray-900 dark:text-white">
-                5.0
+                {averageRating == null ? "未評価" : averageRating.toFixed(1)}
               </span>
               <span className="text-gray-600 dark:text-gray-400">
-                (2件のレビュー)
+                {reviewCount > 0
+                  ? `(${reviewCount}件のレビュー)`
+                  : "(レビューなし)"}
               </span>
             </div>
           </div>

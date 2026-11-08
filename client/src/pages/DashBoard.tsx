@@ -140,7 +140,8 @@ export function DashboardPage() {
             key={book.id}
             title={book.title}
             author={book.author}
-            ratingDisplay={"4.5"} // ここは仮の値です。実際にはAPIから取得した評価を表示します。
+            averageRating={book.averageRating}
+            reviewCount={book.reviewCount}
             summary={book.summary}
             ISBN={book.ISBN}
             publicationYear={book.publicationYear}

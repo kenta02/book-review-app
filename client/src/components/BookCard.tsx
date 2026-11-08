@@ -3,7 +3,10 @@ import { useNavigate } from "react-router-dom";
 interface BookCardProps {
   readonly title: string;
   readonly author: string;
-  readonly ratingDisplay: string;
+  /** 平均評価（1〜5）。レビューが無い場合は null */
+  readonly averageRating?: number | null | undefined;
+  /** レビュー件数 */
+  readonly reviewCount?: number | undefined;
   readonly summary: string;
   readonly ISBN: string;
   readonly publicationYear: number;
@@ -15,7 +18,8 @@ export function BookCard(props: Readonly<BookCardProps>) {
   const {
     title,
     author,
-    ratingDisplay,
+    averageRating,
+    reviewCount,
     summary,
     ISBN,
     publicationYear,
@@ -25,11 +29,16 @@ export function BookCard(props: Readonly<BookCardProps>) {
   const isLiked = liked ?? false;
 
   const navigate = useNavigate();
-  const filledStars = Math.max(
-    0,
-    Math.min(5, Math.round(Number(ratingDisplay))),
-  );
-  const reviewCountLabel = "(15 reviews)";
+  // 未評価（null / 件数0）のときは星をすべて灰色にし、件数ラベルで未評価を伝える
+  const count = reviewCount ?? 0;
+  const filledStars =
+    averageRating == null
+      ? 0
+      : Math.max(0, Math.min(5, Math.round(averageRating)));
+  const reviewCountLabel =
+    count > 0
+      ? `${averageRating?.toFixed(1) ?? "-"} (${count}件のレビュー)`
+      : "レビューなし";
 
   const handleCardClick = () => {
     navigate(`/books/${bookId}`);
