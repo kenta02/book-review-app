@@ -1,17 +1,23 @@
 import type {
   ApiResponse,
+  AuthResult,
+  AuthUser,
   Book,
   BookListQuery,
   BookListResponse,
   CreateBookRequest,
   CreateReviewRequest,
   DeleteReviewRequest,
+  LoginRequest,
   Pagination,
+  RegisterRequest,
   Review,
   UpdateReviewRequest,
   User,
 } from "../types";
 import { ApiHttpError } from "../errors/AppError";
+import { getToken } from "../auth/tokenStorage";
+import { mockAuthApi } from "./mockAuthApi";
 import { mockBookApi } from "./mockBookApi";
 import { mockReviewApi } from "./mockReviewApi";
 import { mockUserApi } from "./mockUserApi";
@@ -35,6 +41,29 @@ function unwrapResponseData<T>(payload: unknown): T {
 }
 
 /**
+ * 保存済みトークンがあれば `Authorization: Bearer` ヘッダーを付けた init を返す。
+ * トークンが無い場合は init をそのまま返す（未ログインの公開 API 呼び出しを変えない）。
+ * 呼び出し側で明示した Authorization ヘッダーがある場合は上書きしない。
+ * @param init - 元の fetch オプション
+ * @returns 認証ヘッダー付きの fetch オプション
+ * @example
+ * fetch("/api/reviews", withAuthHeader({ method: "POST" }));
+ */
+export function withAuthHeader<T extends RequestInit>(init?: T): T | undefined {
+  const token = getToken();
+  if (!token) {
+    return init;
+  }
+
+  const headers = new Headers(init?.headers);
+  if (!headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  return { ...init, headers } as T;
+}
+
+/**
  * JSON レスポンスを返す API エンドポイントへリクエストを送り、パース済みの値を返す。
  * レスポンスが `ok` でない場合は {@link ApiHttpError} をスローする。
  * UI 層には直接渡さず、呼び出し元で normalizeError を通すこと。
@@ -46,7 +75,7 @@ async function fetchJson<T>(
   input: RequestInfo | URL,
   init?: Omit<RequestInit, "signal"> & { signal?: AbortSignal },
 ): Promise<T> {
-  const response = await fetch(input, init);
+  const response = await fetch(input, withAuthHeader(init));
 
   if (!response.ok) {
     throw new ApiHttpError(response.status, response.statusText);
@@ -84,7 +113,7 @@ async function fetchVoid(
   input: RequestInfo | URL,
   init?: Omit<RequestInit, "signal"> & { signal?: AbortSignal },
 ): Promise<void> {
-  const response = await fetch(input, init);
+  const response = await fetch(input, withAuthHeader(init));
 
   if (!response.ok) {
     throw new ApiHttpError(response.status, response.statusText);
@@ -479,5 +508,67 @@ export const apiClient = {
         ...options,
       });
     }
+  },
+
+  /**
+   * 新規ユーザーを登録し、ユーザー情報とトークンを取得
+   * @param body - ユーザー名・メール・パスワード
+   * @returns {data: AuthResult} ユーザーとトークン
+   */
+  register: async (
+    body: RegisterRequest,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<AuthResult>> => {
+    if (isMockMode()) {
+      return await mockAuthApi.register(body, abortSignal);
+    }
+
+    const options = abortSignal ? { signal: abortSignal } : undefined;
+    const result = await fetchJson<AuthResult>(`/api/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      ...options,
+    });
+    return { data: result };
+  },
+
+  /**
+   * ログインし、ユーザー情報とトークンを取得
+   * @param body - メールとパスワード
+   * @returns {data: AuthResult} ユーザーとトークン
+   */
+  login: async (
+    body: LoginRequest,
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<AuthResult>> => {
+    if (isMockMode()) {
+      return await mockAuthApi.login(body, abortSignal);
+    }
+
+    const options = abortSignal ? { signal: abortSignal } : undefined;
+    const result = await fetchJson<AuthResult>(`/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      ...options,
+    });
+    return { data: result };
+  },
+
+  /**
+   * 保存済みトークンのユーザー情報を取得（リロード後のログイン状態復元に使う）
+   * @returns {data: {user}} 自分のユーザー情報。トークン不正なら 401
+   */
+  getMe: async (
+    abortSignal?: AbortSignal,
+  ): Promise<ApiResponse<{ user: AuthUser }>> => {
+    if (isMockMode()) {
+      return await mockAuthApi.getMe(getToken(), abortSignal);
+    }
+
+    const options = abortSignal ? { signal: abortSignal } : undefined;
+    const result = await fetchJson<{ user: AuthUser }>(`/api/auth/me`, options);
+    return { data: result };
   },
 };

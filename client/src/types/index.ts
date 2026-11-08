@@ -127,3 +127,29 @@ export type useBooksResult = {
   refresh: () => Promise<void>;
   isFetched?: boolean; // データが初回取得されたかどうかを示すフラグ
 };
+
+// 認証済みユーザーの型（サーバーの AuthUserDto と同じ形）
+export interface AuthUser {
+  id: number;
+  username: string;
+  email: string;
+}
+
+// ログインリクエストの型
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+// 新規登録リクエストの型
+export interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+}
+
+// ログイン・新規登録の成功時にサーバーが返す型
+export interface AuthResult {
+  user: AuthUser;
+  token: string;
+}
