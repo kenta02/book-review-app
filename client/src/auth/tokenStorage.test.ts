@@ -8,14 +8,14 @@ import {
 
 describe("tokenStorage", () => {
   afterEach(() => {
-    localStorage.clear();
+    sessionStorage.clear();
     vi.restoreAllMocks();
   });
 
   it("保存したトークンを取得できる", () => {
     setToken("abc");
     expect(getToken()).toBe("abc");
-    expect(localStorage.getItem(TOKEN_STORAGE_KEY)).toBe("abc");
+    expect(sessionStorage.getItem(TOKEN_STORAGE_KEY)).toBe("abc");
   });
 
   it("未保存なら null を返す", () => {
@@ -28,7 +28,7 @@ describe("tokenStorage", () => {
     expect(getToken()).toBeNull();
   });
 
-  it("localStorage が例外を投げても落ちない", () => {
+  it("sessionStorage が例外を投げても落ちない", () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new Error("blocked");
     });

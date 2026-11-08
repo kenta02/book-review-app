@@ -1,10 +1,12 @@
-// JWT を localStorage に保存・取得・削除するための関数群。
-// - プライベートブラウズ等で localStorage が使えない環境でもアプリが落ちないよう、
+// JWT を sessionStorage に保存・取得・削除するための関数群。
+// - 保存先に sessionStorage を選んだ理由は docs/adr/0001-jwt-storage.md を参照。
+//   （タブを閉じれば消える。localStorage より保持期間が短く、リロードには耐える）
+// - ブラウザの設定等で storage が使えない環境でもアプリが落ちないよう、
 //   すべて try/catch で包み、失敗時は「トークンなし」として扱う。
 // - apiClient（API 層）と AuthProvider（UI 層）の両方から使うため、
 //   React に依存しない純粋な関数として分離している。
 
-/** localStorage のキー名 */
+/** sessionStorage のキー名 */
 export const TOKEN_STORAGE_KEY = "auth_token";
 
 /**
@@ -15,7 +17,7 @@ export const TOKEN_STORAGE_KEY = "auth_token";
  */
 export function getToken(): string | null {
   try {
-    return localStorage.getItem(TOKEN_STORAGE_KEY);
+    return sessionStorage.getItem(TOKEN_STORAGE_KEY);
   } catch {
     return null;
   }
@@ -29,7 +31,7 @@ export function getToken(): string | null {
  */
 export function setToken(token: string): void {
   try {
-    localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
   } catch {
     // 保存できなくても、そのセッション中はメモリ上のログイン状態で動作できる
   }
@@ -42,7 +44,7 @@ export function setToken(token: string): void {
  */
 export function clearToken(): void {
   try {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
   } catch {
     // 削除できない環境では何もしない
   }

@@ -664,12 +664,12 @@ describe("apiClient の認証ヘッダー", () => {
   const originalFetch = globalThis.fetch;
 
   afterEach(() => {
-    localStorage.clear();
+    sessionStorage.clear();
     (globalThis as unknown as { fetch?: typeof fetch }).fetch = originalFetch;
   });
 
   it("トークンがあれば Authorization: Bearer を付ける", async () => {
-    localStorage.setItem("auth_token", "tok");
+    sessionStorage.setItem("auth_token", "tok");
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -689,7 +689,7 @@ describe("apiClient の認証ヘッダー", () => {
   });
 
   it("既に Authorization があれば上書きしない", () => {
-    localStorage.setItem("auth_token", "tok");
+    sessionStorage.setItem("auth_token", "tok");
     const result = withAuthHeader({ headers: { Authorization: "Bearer own" } });
     expect(new Headers(result?.headers).get("Authorization")).toBe(
       "Bearer own",
