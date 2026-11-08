@@ -2,7 +2,7 @@ import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiHttpError } from "../errors/AppError";
 import type { Book } from "../types";
-import { apiClient } from "./apiClient";
+import { apiClient, withAuthHeader } from "./apiClient";
 import { mockBookApi } from "./mockBookApi";
 
 const dummyBooks: Book[] = [
@@ -62,7 +62,10 @@ describe("apiClient", () => {
     const response = await apiClient.getAllBooks();
 
     expect(response.data.books).toEqual(dummyBooks);
-    expect(fetchMock).toHaveBeenCalledWith("/api/books?page=1&limit=100", undefined);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/books?page=1&limit=100",
+      undefined,
+    );
   });
 
   it("getAllBooks: signal を fetch に渡す", async () => {
@@ -656,3 +659,50 @@ describe("apiClient", () => {
     vi.stubEnv("VITE_USE_MOCK", "false");
   });
 });
+
+describe("apiClient の認証ヘッダー", () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    sessionStorage.clear();
+    (globalThis as unknown as { fetch?: typeof fetch }).fetch = originalFetch;
+  });
+
+  it("トークンがあれば Authorization: Bearer を付ける", async () => {
+    sessionStorage.setItem("auth_token", "tok");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ data: { id: 1 } }),
+    });
+    setFetchMock(fetchMock as unknown as typeof fetch);
+
+    await withAuthFetchJsonProbe();
+
+    const init = fetchMock.mock.calls[0]![1] as RequestInit;
+    expect(new Headers(init.headers).get("Authorization")).toBe("Bearer tok");
+  });
+
+  it("トークンが無ければ init を変更しない", () => {
+    const init = { method: "GET" };
+    expect(withAuthHeader(init)).toBe(init);
+  });
+
+  it("既に Authorization があれば上書きしない", () => {
+    sessionStorage.setItem("auth_token", "tok");
+    const result = withAuthHeader({ headers: { Authorization: "Bearer own" } });
+    expect(new Headers(result?.headers).get("Authorization")).toBe(
+      "Bearer own",
+    );
+  });
+});
+
+/** 実 API モードで認証付きの fetch が 1 回走るようにする（削除 API を利用） */
+async function withAuthFetchJsonProbe() {
+  vi.stubEnv("VITE_USE_MOCK", "false");
+  try {
+    await apiClient.getMe();
+  } finally {
+    vi.unstubAllEnvs();
+  }
+}
