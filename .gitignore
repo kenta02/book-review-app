@@ -86,7 +86,8 @@ kadai.txt
 
 
 # ドキュメント類
-docs/
+docs/*
+!docs/adr/
 .copilot-instructions
 book-review-app.code-workspace
 CODING_GUIDELINES.md
