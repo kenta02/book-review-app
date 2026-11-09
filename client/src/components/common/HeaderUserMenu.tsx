@@ -53,7 +53,7 @@ export function HeaderUserMenu() {
       </Link>
       <Link
         to="/register"
-        className="rounded bg-purple-600 px-3 py-1 font-semibold text-white transition hover:bg-purple-700"
+        className="rounded bg-purple-600 px-3 py-1 font-semibold text-white! transition hover:bg-purple-700 hover:text-white!"
       >
         新規登録
       </Link>

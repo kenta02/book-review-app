@@ -109,7 +109,7 @@ export function RegisterPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded bg-purple-600 px-4 py-2 font-semibold text-white transition hover:bg-purple-700 disabled:opacity-60"
+          className="rounded bg-purple-600! px-4 py-2 font-semibold text-white transition hover:bg-purple-700! disabled:opacity-60"
         >
           {submitting ? "登録中..." : "登録する"}
         </button>

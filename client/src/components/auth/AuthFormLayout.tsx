@@ -27,7 +27,7 @@ export function AuthFormLayout({
           <span>📚</span>
           <span>BookReview</span>
         </div>
-        <h1 className="mb-4 text-center text-lg font-semibold text-gray-900 dark:text-white">
+        <h1 className="mb-4 text-center text-lg! leading-snug! font-semibold text-gray-900 dark:text-white">
           {title}
         </h1>
         {children}
