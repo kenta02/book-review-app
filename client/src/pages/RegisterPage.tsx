@@ -14,6 +14,8 @@ import type { RegisterRequest } from "../types";
 /**
  * 新規登録画面（/register）。
  * 登録に成功するとそのままログイン状態になり、ダッシュボードへ移動する。
+ * 既にログイン済みの場合も、履歴を置き換えてダッシュボードへ移動する。
+ * @throws {Error} AuthProvider の外で描画した場合
  * @example
  * <Route path="/register" element={<RegisterPage />} />
  */
@@ -52,7 +54,11 @@ export function RegisterPage() {
       });
     };
 
-  /** 送信処理: 入力を検証し、通れば登録 API を呼ぶ */
+  /**
+   * フォームの既定の送信を止め、ユーザー名とメールアドレスの前後の空白を除いて検証・送信する。
+   * パスワードは変更せず、入力エラーがあれば API を呼ばずに項目ごとのエラーを表示する。
+   * 登録処理の例外は捕捉して日本語メッセージで表示し、処理中は送信ボタンを無効にする。
+   */
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFormError(null);

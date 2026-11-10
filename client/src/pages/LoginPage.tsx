@@ -12,6 +12,7 @@ import type { LoginRequest } from "../types";
  * ログイン画面（/login）。
  * - 送信前に入力を検証し、API のエラーは normalizeError → 日本語メッセージに変換して表示する
  * - ログイン済みになると、自動でダッシュボードへ移動する
+ * @throws {Error} AuthProvider の外で描画した場合
  * @example
  * <Route path="/login" element={<LoginPage />} />
  */
@@ -47,7 +48,11 @@ export function LoginPage() {
       });
     };
 
-  /** 送信処理: 入力を検証し、通ればログイン API を呼ぶ */
+  /**
+   * フォームの既定の送信を止め、メールアドレスの前後の空白を除いて検証・送信する。
+   * パスワードは変更せず、入力エラーがあれば API を呼ばずに項目ごとのエラーを表示する。
+   * ログイン処理の例外は捕捉して日本語メッセージで表示し、処理中は送信ボタンを無効にする。
+   */
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFormError(null);

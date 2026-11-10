@@ -6,6 +6,7 @@ import { useAuth } from "../../auth/useAuth";
  * - 確認中（loading）: 何も出さない（ログイン／ログアウトの表示がちらつくのを防ぐ）
  * - ログイン済み: ユーザー名とログアウトボタン
  * - 未ログイン: ログイン・新規登録へのリンク
+ * @throws {Error} AuthProvider または Router の外で描画した場合
  * @example
  * <HeaderUserMenu />
  */

@@ -6,6 +6,7 @@ import { BookDetailPage } from "./pages/BookDetailPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 
+/** ブラウザーの URL に応じて、認証画面や書籍・レビュー関連の画面を表示する。 */
 export default function App() {
   return (
     <BrowserRouter>

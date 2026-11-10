@@ -14,6 +14,13 @@ interface HeaderProps {
   onMenuClick?: () => void;
 }
 
+/**
+ * ブランド、メニューボタン、認証状態に応じたユーザー表示を含むヘッダー。
+ * ダークモードを切り替え、html 要素に反映して localStorage に保存する。
+ * 保存値の取得・解析に失敗した場合はライトモードで開始し、保存失敗は無視する。
+ * @param props - onMenuClick はメニューボタンを押したときに呼ばれる
+ * @throws {Error} AuthProvider または Router の外で描画した場合
+ */
 export function Header({ onMenuClick }: HeaderProps) {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     // localStorage から初期状態を取得 (テスト／SSR 時は存在しない可能性があるため安全に扱う)
