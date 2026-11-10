@@ -1,0 +1,126 @@
+import { useState, type FormEvent } from "react";
+import { Link, Navigate } from "react-router-dom";
+import { AuthFormLayout } from "../components/auth/AuthFormLayout";
+import { TextField } from "../components/auth/TextField";
+import { getAuthErrorMessage } from "../auth/authErrorMessage";
+import { useAuth } from "../auth/useAuth";
+import { validateLoginForm, type FieldErrors } from "../auth/validateAuthForm";
+import { normalizeError } from "../errors/normalizeError";
+import type { LoginRequest } from "../types";
+
+/**
+ * ログイン画面（/login）。
+ * - 送信前に入力を検証し、API のエラーは normalizeError → 日本語メッセージに変換して表示する
+ * - ログイン済みになると、自動でダッシュボードへ移動する
+ * @throws {Error} AuthProvider の外で描画した場合
+ * @example
+ * <Route path="/login" element={<LoginPage />} />
+ */
+export function LoginPage() {
+  const { status, login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<LoginRequest>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // ログイン済み（ログイン成功直後を含む）はダッシュボードへ
+  if (status === "authenticated") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  /**
+   * 入力値を更新し、編集した項目のエラーとフォーム全体のエラーを消す。
+   * 修正後も古いエラーが次の送信まで残り続けるのを防ぐ。
+   * @param field - 編集した項目
+   * @param setValue - その項目の値を更新する関数
+   * @returns TextField の onChange に渡す関数
+   */
+  const handleChange =
+    (field: keyof LoginRequest, setValue: (value: string) => void) =>
+    (value: string) => {
+      setValue(value);
+      setFormError(null);
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    };
+
+  /**
+   * フォームの既定の送信を止め、メールアドレスの前後の空白を除いて検証・送信する。
+   * パスワードは変更せず、入力エラーがあれば API を呼ばずに項目ごとのエラーを表示する。
+   * ログイン処理の例外は捕捉して日本語メッセージで表示し、処理中は送信ボタンを無効にする。
+   */
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFormError(null);
+
+    const values: LoginRequest = { email: email.trim(), password };
+    const errors = validateLoginForm(values);
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await login(values);
+    } catch (error) {
+      setFormError(getAuthErrorMessage(normalizeError(error), "login"));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <AuthFormLayout
+      title="ログイン"
+      footer={
+        <>
+          アカウントをお持ちでない方は{" "}
+          <Link to="/register" className="text-purple-600 hover:underline">
+            新規登録
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        {formError && (
+          <p
+            role="alert"
+            className="rounded bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300"
+          >
+            {formError}
+          </p>
+        )}
+        <TextField
+          id="email"
+          label="メールアドレス"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={handleChange("email", setEmail)}
+          error={fieldErrors.email}
+        />
+        <TextField
+          id="password"
+          label="パスワード"
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={handleChange("password", setPassword)}
+          error={fieldErrors.password}
+        />
+        <button
+          type="submit"
+          disabled={submitting}
+          className="rounded bg-purple-600! px-4 py-2 font-semibold text-white transition hover:bg-purple-700! disabled:opacity-60"
+        >
+          {submitting ? "ログイン中..." : "ログイン"}
+        </button>
+      </form>
+    </AuthFormLayout>
+  );
+}

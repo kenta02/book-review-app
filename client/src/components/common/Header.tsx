@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { HeaderUserMenu } from "./HeaderUserMenu";
 
 // TODO: Headerコンポーネントの実装;
 //   - ロゴ「BookReview
@@ -13,6 +14,13 @@ interface HeaderProps {
   onMenuClick?: () => void;
 }
 
+/**
+ * ブランド、メニューボタン、認証状態に応じたユーザー表示を含むヘッダー。
+ * ダークモードを切り替え、html 要素に反映して localStorage に保存する。
+ * 保存値の取得・解析に失敗した場合はライトモードで開始し、保存失敗は無視する。
+ * @param props - onMenuClick はメニューボタンを押したときに呼ばれる
+ * @throws {Error} AuthProvider または Router の外で描画した場合
+ */
 export function Header({ onMenuClick }: HeaderProps) {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     // localStorage から初期状態を取得 (テスト／SSR 時は存在しない可能性があるため安全に扱う)
@@ -94,14 +102,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         >
           🔔
         </button>
-        <div className="flex items-center gap-3">
-          <span className="text-gray-900 dark:text-gray-100 font-medium text-sm">
-            山田太郎
-          </span>
-          <button className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-lg hover:bg-gray-400 dark:hover:bg-gray-500">
-            👤
-          </button>
-        </div>
+        <HeaderUserMenu />
       </div>
     </header>
   );
