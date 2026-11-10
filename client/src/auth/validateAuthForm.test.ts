@@ -32,11 +32,16 @@ describe("validateRegisterForm", () => {
     expect(validateRegisterForm(valid)).toEqual({});
   });
 
-  it("ユーザー名は前後の空白を除いて 2 文字以上", () => {
+  it("ユーザー名は 2 文字以上", () => {
     expect(
-      validateRegisterForm({ ...valid, username: " a " }).username,
+      validateRegisterForm({ ...valid, username: "a" }).username,
     ).toBeDefined();
-    expect(validateRegisterForm({ ...valid, username: " ab " })).toEqual({});
+    expect(validateRegisterForm({ ...valid, username: "ab" })).toEqual({});
+  });
+
+  it("ユーザー名は trim せず、渡された値の長さで検証する（サーバーと同じ）", () => {
+    // 空白込みで 3 文字なので通る。空白除去は呼び出し側の責務
+    expect(validateRegisterForm({ ...valid, username: " a " })).toEqual({});
   });
 
   it("ユーザー名は 150 文字まで", () => {

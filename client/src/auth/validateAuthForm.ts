@@ -55,7 +55,8 @@ export function validateLoginForm(
 
 /**
  * 新規登録フォームの入力チェック。
- * @param values - 入力値
+ * 値の正規化（trim）は行わない。サーバーの検証と結果を揃えるため、送信する値をそのまま渡すこと。
+ * @param values - 入力値（送信する値そのまま）
  * @returns 項目ごとのエラー。空オブジェクトなら入力は正しい
  * @example
  * validateRegisterForm({ username: "a", email: "a@example.com", password: "password123" });
@@ -65,7 +66,8 @@ export function validateRegisterForm(
   values: RegisterRequest,
 ): FieldErrors<RegisterRequest> {
   const errors: FieldErrors<RegisterRequest> = {};
-  const username = values.username.trim();
+  // trim はしない（サーバーと同じく渡された値をそのまま検証する）。空白の除去は呼び出し側で行う
+  const { username } = values;
   if (
     username.length < USERNAME_MIN_LENGTH ||
     username.length > USERNAME_MAX_LENGTH
