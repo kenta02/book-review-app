@@ -28,6 +28,25 @@ export function LoginPage() {
     return <Navigate to="/dashboard" replace />;
   }
 
+  /**
+   * 入力値を更新し、編集した項目のエラーとフォーム全体のエラーを消す。
+   * 修正後も古いエラーが次の送信まで残り続けるのを防ぐ。
+   * @param field - 編集した項目
+   * @param setValue - その項目の値を更新する関数
+   * @returns TextField の onChange に渡す関数
+   */
+  const handleChange =
+    (field: keyof LoginRequest, setValue: (value: string) => void) =>
+    (value: string) => {
+      setValue(value);
+      setFormError(null);
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    };
+
   /** 送信処理: 入力を検証し、通ればログイン API を呼ぶ */
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -77,7 +96,7 @@ export function LoginPage() {
           type="email"
           autoComplete="email"
           value={email}
-          onChange={setEmail}
+          onChange={handleChange("email", setEmail)}
           error={fieldErrors.email}
         />
         <TextField
@@ -86,7 +105,7 @@ export function LoginPage() {
           type="password"
           autoComplete="current-password"
           value={password}
-          onChange={setPassword}
+          onChange={handleChange("password", setPassword)}
           error={fieldErrors.password}
         />
         <button

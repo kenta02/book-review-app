@@ -73,6 +73,53 @@ describe("RegisterPage", () => {
     expect(register).not.toHaveBeenCalled();
   });
 
+  it("ユーザー名とメールの前後の空白を除いた値で検証・送信する", async () => {
+    const register = vi
+      .spyOn(apiClient, "register")
+      .mockResolvedValue({ data: { user, token: "reg-token" } });
+    renderRegister();
+
+    fill("  new_user  ", " new@example.com ", "password123");
+    fireEvent.click(screen.getByRole("button", { name: "登録する" }));
+
+    expect(await screen.findByText("dashboard-page")).toBeInTheDocument();
+    expect(register).toHaveBeenCalledWith({
+      username: "new_user",
+      email: "new@example.com",
+      password: "password123",
+    });
+  });
+
+  it("入力を直すと、その項目のエラーとフォーム全体のエラーが消える", async () => {
+    vi.spyOn(apiClient, "register").mockRejectedValue(
+      new ApiHttpError(409, "Conflict"),
+    );
+    renderRegister();
+
+    // 検証エラー（ユーザー名）を出す
+    fill("a", "new@example.com", "password123");
+    fireEvent.click(screen.getByRole("button", { name: "登録する" }));
+    expect(
+      screen.getByText("ユーザー名は2〜150文字で入力してください"),
+    ).toBeInTheDocument();
+
+    // ユーザー名を直すと、ユーザー名のエラーだけ消える
+    fireEvent.change(screen.getByLabelText("ユーザー名"), {
+      target: { value: "new_user" },
+    });
+    expect(
+      screen.queryByText("ユーザー名は2〜150文字で入力してください"),
+    ).not.toBeInTheDocument();
+
+    // API エラー（フォーム全体）を出し、入力を直すと消える
+    fireEvent.click(screen.getByRole("button", { name: "登録する" }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("メールアドレス"), {
+      target: { value: "other@example.com" },
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("メール重複（409）は分かる形で表示し、トークンは保存しない", async () => {
     vi.spyOn(apiClient, "register").mockRejectedValue(
       new ApiHttpError(409, "Conflict"),

@@ -93,6 +93,39 @@ describe("LoginPage", () => {
     );
   });
 
+  it("入力を直すと、その項目のエラーとフォーム全体のエラーが消える", async () => {
+    vi.spyOn(apiClient, "login").mockRejectedValue(
+      new ApiHttpError(401, "Unauthorized"),
+    );
+    renderLogin();
+
+    // 検証エラー（パスワード）を出す
+    fill("john@example.com", "short");
+    fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+    expect(
+      screen.getByText("パスワードは8文字以上で入力してください"),
+    ).toBeInTheDocument();
+
+    // パスワードを直すと、パスワードのエラーだけ消える
+    fireEvent.change(screen.getByLabelText("パスワード"), {
+      target: { value: "password123" },
+    });
+    expect(
+      screen.queryByText("パスワードは8文字以上で入力してください"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("パスワード")).not.toHaveAttribute(
+      "aria-invalid",
+    );
+
+    // API エラー（フォーム全体）を出し、入力を直すと消える
+    fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("メールアドレス"), {
+      target: { value: "other@example.com" },
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("新規登録へのリンクがある", () => {
     renderLogin();
     expect(screen.getByRole("link", { name: "新規登録" })).toHaveAttribute(
