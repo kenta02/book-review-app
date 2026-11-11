@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { validateReviewForm } from "./validateReviewForm";
+import {
+  validateReviewContent,
+  validateReviewForm,
+} from "./validateReviewForm";
 
 describe("validateReviewForm", () => {
   it("正しい入力ならエラーなし", () => {
@@ -49,5 +52,23 @@ describe("validateReviewForm", () => {
   it("評価と本文が両方不正なら両方のエラーを返す", () => {
     const errors = validateReviewForm({ rating: null, content: "" });
     expect(Object.keys(errors).sort()).toEqual(["content", "rating"]);
+  });
+});
+
+describe("validateReviewContent", () => {
+  it("本文は 1〜1000 文字ならエラーなし（境界値）", () => {
+    expect(validateReviewContent("a")).toBeUndefined();
+    expect(validateReviewContent("a".repeat(1000))).toBeUndefined();
+  });
+
+  it("空・1001 文字以上ならエラー", () => {
+    expect(validateReviewContent("")).toBeDefined();
+    expect(validateReviewContent("a".repeat(1001))).toBeDefined();
+  });
+
+  it("validateReviewForm の本文エラーと同じ文言を返す", () => {
+    expect(validateReviewForm({ rating: 3, content: "" }).content).toBe(
+      validateReviewContent(""),
+    );
   });
 });

@@ -34,15 +34,15 @@ vi.mock("../components/books/ReviewSectionDetail", () => ({
   ReviewSectionDetail: ({
     reviews,
     bookId,
-    onReviewSubmitted,
+    onReviewChanged,
   }: {
     reviews: unknown;
     bookId: number;
-    onReviewSubmitted: () => void;
+    onReviewChanged: () => void;
   }) => (
     <div data-testid="review-section-detail" data-book-id={bookId}>
       {JSON.stringify(reviews)}
-      <button onClick={onReviewSubmitted}>投稿完了を通知</button>
+      <button onClick={onReviewChanged}>投稿完了を通知</button>
     </div>
   ),
 }));
