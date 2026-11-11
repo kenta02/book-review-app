@@ -31,8 +31,19 @@ vi.mock("../components/books/BookInfoDetail", () => ({
 }));
 
 vi.mock("../components/books/ReviewSectionDetail", () => ({
-  ReviewSectionDetail: ({ reviews }: { reviews: unknown }) => (
-    <div data-testid="review-section-detail">{JSON.stringify(reviews)}</div>
+  ReviewSectionDetail: ({
+    reviews,
+    bookId,
+    onReviewSubmitted,
+  }: {
+    reviews: unknown;
+    bookId: number;
+    onReviewSubmitted: () => void;
+  }) => (
+    <div data-testid="review-section-detail" data-book-id={bookId}>
+      {JSON.stringify(reviews)}
+      <button onClick={onReviewSubmitted}>投稿完了を通知</button>
+    </div>
   ),
 }));
 
@@ -137,6 +148,64 @@ describe("BookDetailPage", () => {
         screen.getByText(/レビューの取得に失敗しました。/),
       ).toBeInTheDocument();
     });
+  });
+
+  it("レビュー投稿の通知を受けると、書籍とレビューを再取得して表示を更新する", async () => {
+    const getBook = apiClient.getBookById as unknown as ReturnType<
+      typeof vi.fn
+    >;
+    const getReviews = apiClient.getReviews as unknown as ReturnType<
+      typeof vi.fn
+    >;
+    getBook.mockResolvedValue({ data: book });
+    getReviews.mockResolvedValue({ data: { reviews } });
+    render(<BookDetailPage />);
+    await screen.findByTestId("review-section-detail");
+    // 書籍 ID がレビューセクションに渡る
+    expect(screen.getByTestId("review-section-detail")).toHaveAttribute(
+      "data-book-id",
+      "1",
+    );
+
+    // 投稿後は、平均評価・件数が変わった書籍と、増えたレビューが返ってくる
+    const newBook = { ...book, reviewCount: 2 };
+    const newReviews = [...reviews, { ...reviews[0], id: 2, content: "new" }];
+    getBook.mockResolvedValue({ data: newBook });
+    getReviews.mockResolvedValue({ data: { reviews: newReviews } });
+    fireEvent.click(screen.getByText("投稿完了を通知"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("book-info-detail")).toHaveTextContent(
+        '"reviewCount":2',
+      );
+      expect(screen.getByTestId("review-section-detail")).toHaveTextContent(
+        "new",
+      );
+    });
+    // 再取得中に画面全体を「読み込み中」に戻さない（フォームの状態を保つため）
+    expect(screen.queryByText(/レビューを読み込み中/)).not.toBeInTheDocument();
+  });
+
+  it("投稿後の再取得に失敗しても、今の表示を残す", async () => {
+    const getBook = apiClient.getBookById as unknown as ReturnType<
+      typeof vi.fn
+    >;
+    const getReviews = apiClient.getReviews as unknown as ReturnType<
+      typeof vi.fn
+    >;
+    getBook.mockResolvedValue({ data: book });
+    getReviews.mockResolvedValue({ data: { reviews } });
+    render(<BookDetailPage />);
+    await screen.findByTestId("review-section-detail");
+
+    getReviews.mockRejectedValue(new Error("fail reload"));
+    fireEvent.click(screen.getByText("投稿完了を通知"));
+
+    await waitFor(() => expect(getReviews).toHaveBeenCalledTimes(2));
+    expect(screen.getByTestId("review-section-detail")).toHaveTextContent(
+      "great",
+    );
+    expect(screen.queryByText(/取得に失敗しました/)).not.toBeInTheDocument();
   });
 
   it("bookId がないとき API を呼ばない", async () => {

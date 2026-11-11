@@ -19,6 +19,24 @@ export function BookDetailPage() {
     navigate(-1);
   };
 
+  /**
+   * レビュー投稿後に、書籍情報（平均評価・件数）とレビュー一覧を再取得する。
+   * 画面全体を「読み込み中」に戻さない（フォームの状態を保つため）。失敗しても画面は今の表示のまま残す。
+   */
+  const reloadAfterReviewChange = async () => {
+    if (!bookId) return;
+    try {
+      const [bookRes, reviewsRes] = await Promise.all([
+        apiClient.getBookById(Number(bookId)),
+        apiClient.getReviews(Number(bookId)),
+      ]);
+      setBook(bookRes.data.id ? bookRes.data : null);
+      setReviews(reviewsRes.data.reviews);
+    } catch (err) {
+      logger.error("投稿後の再取得に失敗しました。", err);
+    }
+  };
+
   useEffect(() => {
     // 書籍がない場合
     if (!bookId) {
@@ -86,7 +104,11 @@ export function BookDetailPage() {
       ) : error ? (
         <p className="text-red-500">{error}</p>
       ) : (
-        <ReviewSectionDetail reviews={reviews} />
+        <ReviewSectionDetail
+          reviews={reviews}
+          bookId={Number(bookId)}
+          onReviewSubmitted={reloadAfterReviewChange}
+        />
       )}
     </MainLayout>
   );
