@@ -20,7 +20,7 @@ export function BookDetailPage() {
   };
 
   /**
-   * レビュー投稿後に、書籍情報（平均評価・件数）とレビュー一覧を再取得する。
+   * レビューの投稿・編集・削除後に、書籍情報（平均評価・件数）とレビュー一覧を再取得する。
    * 画面全体を「読み込み中」に戻さない（フォームの状態を保つため）。失敗しても画面は今の表示のまま残す。
    */
   const reloadAfterReviewChange = async () => {
@@ -107,7 +107,7 @@ export function BookDetailPage() {
         <ReviewSectionDetail
           reviews={reviews}
           bookId={Number(bookId)}
-          onReviewSubmitted={reloadAfterReviewChange}
+          onReviewChanged={reloadAfterReviewChange}
         />
       )}
     </MainLayout>
