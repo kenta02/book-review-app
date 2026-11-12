@@ -8,8 +8,14 @@ import { AuthProvider } from "./AuthProvider";
 import { getToken, setToken } from "./tokenStorage";
 import { useAuth } from "./useAuth";
 import type { AuthContextValue } from "./authContext";
+import type { AuthUser } from "../types";
 
-const user = { id: 1, username: "john_doe", email: "john@example.com" };
+const user: AuthUser = {
+  id: 1,
+  username: "john_doe",
+  email: "john@example.com",
+  role: "user",
+};
 
 /** useAuth の値をテストから触れるようにする小さな表示用コンポーネント */
 function Probe({ onValue }: { onValue: (v: AuthContextValue) => void }) {

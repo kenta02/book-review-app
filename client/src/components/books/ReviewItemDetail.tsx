@@ -14,7 +14,7 @@ interface ReviewItemDetailProps {
 }
 
 /**
- * レビュー1件の表示。自分のレビューにだけ「編集」「削除」を表示する。
+ * レビュー1件の表示。自分のレビュー、または管理者のときだけ「編集」「削除」を表示する。
  * - 編集: 本文だけを編集するフォームに切り替える（サーバーが本文しか更新しないため）
  * - 削除: 確認を挟んでから実行する。コメントが付いたレビューは削除できない（サーバーが 409 を返す）
  * @example
@@ -34,6 +34,9 @@ export function ReviewItemDetail({
   // 自分のレビューか（ユーザーが削除済みで userId が null のレビューは誰のものでもない）
   const isOwner =
     user !== null && review.userId !== null && user.id === review.userId;
+  // 操作を表示するか: 自分のレビュー、または管理者。
+  // 表示の出し分けだけで、権限の判定はサーバーが行う（管理者はサーバーが他人のレビューの更新・削除を許可する）
+  const canManage = isOwner || user?.role === "admin";
 
   /** 編集に成功したとき: 編集モードを閉じて、一覧を再取得する */
   const handleSaved = async () => {
@@ -110,7 +113,7 @@ export function ReviewItemDetail({
             <button className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center gap-1">
               💬 コメント
             </button>
-            {isOwner && !isEditing && !isConfirmingDelete && (
+            {canManage && !isEditing && !isConfirmingDelete && (
               <>
                 <button
                   type="button"
@@ -134,7 +137,7 @@ export function ReviewItemDetail({
                 </button>
               </>
             )}
-            {isOwner && isConfirmingDelete && (
+            {canManage && isConfirmingDelete && (
               <div
                 role="group"
                 aria-label="削除の確認"

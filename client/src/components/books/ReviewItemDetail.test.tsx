@@ -18,14 +18,16 @@ const review: Review = {
   createdAt: "",
 };
 
-/** ログインユーザーを差し替えてレビュー1件を描画する（user が null なら未ログイン） */
+/** ログインユーザーを差し替えてレビュー1件を描画する（user が null なら未ログイン、role は既定で一般ユーザー） */
 const renderItem = (
   userId: number | null,
   target: Review = review,
   onReviewChanged: () => Promise<void> | void = vi.fn(),
+  role: "user" | "admin" = "user",
 ) => {
   mockUseAuth.mockReturnValue({
-    user: userId === null ? null : { id: userId, username: "u", email: "e" },
+    user:
+      userId === null ? null : { id: userId, username: "u", email: "e", role },
     status: userId === null ? "unauthenticated" : "authenticated",
   });
   render(
@@ -56,6 +58,27 @@ describe("ReviewItemDetail", () => {
       expect(
         screen.queryByRole("button", { name: /編集/ }),
       ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /削除/ }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("管理者は他人のレビューにも「編集」「削除」を表示する", () => {
+      renderItem(2, review, vi.fn(), "admin");
+
+      expect(screen.getByRole("button", { name: /編集/ })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /削除/ })).toBeInTheDocument();
+    });
+
+    it("管理者は投稿者が削除済み（userId が null）のレビューにも表示する", () => {
+      renderItem(2, { ...review, userId: null }, vi.fn(), "admin");
+
+      expect(screen.getByRole("button", { name: /削除/ })).toBeInTheDocument();
+    });
+
+    it("一般ユーザーは role が user なら他人のレビューに表示しない", () => {
+      renderItem(2, review, vi.fn(), "user");
+
       expect(
         screen.queryByRole("button", { name: /削除/ }),
       ).not.toBeInTheDocument();
@@ -136,6 +159,19 @@ describe("ReviewItemDetail", () => {
         .spyOn(apiClient, "deleteReview")
         .mockResolvedValue(undefined);
       const onReviewChanged = renderItem(1);
+
+      click("🗑️ 削除");
+      click("削除する");
+
+      await waitFor(() => expect(onReviewChanged).toHaveBeenCalledTimes(1));
+      expect(deleteReview).toHaveBeenCalledWith({ reviewId: 10 });
+    });
+
+    it("管理者は他人のレビューを削除できる（そのレビューの ID で API を呼ぶ）", async () => {
+      const deleteReview = vi
+        .spyOn(apiClient, "deleteReview")
+        .mockResolvedValue(undefined);
+      const onReviewChanged = renderItem(2, review, vi.fn(), "admin");
 
       click("🗑️ 削除");
       click("削除する");
