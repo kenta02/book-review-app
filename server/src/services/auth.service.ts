@@ -11,6 +11,8 @@ export type AuthUserDto = {
   id: number;
   username: string;
   email: string;
+  /** 権限（'user' | 'admin'）。クライアントが管理者向けの操作を出し分けるために返す */
+  role: string;
 };
 
 export type AuthSuccessDto = {
@@ -27,12 +29,26 @@ function getJwtSecret(): string {
 }
 
 function toAuthUserDto(model: userRepository.UserInstance): AuthUserDto {
-  const json = model.toJSON() as { id: number; username: string; email: string }; // NOSONAR
+  const json = model.toJSON() as { id: number; username: string; email: string; role: string }; // NOSONAR
   return {
     id: json.id,
     username: json.username,
     email: json.email,
+    role: json.role,
   };
+}
+
+/**
+ * 認証トークン（JWT）を発行する。
+ * role はトークンに含めない。権限は認証ミドルウェアが毎回 DB の最新値を読むため、
+ * トークンに入れると権限変更後も古い値が残ってしまう。
+ *
+ * @param user - トークンを発行するユーザー
+ * @returns 署名済みの JWT（有効期限 30 日）
+ */
+function issueToken(user: AuthUserDto): string {
+  const payload = { id: user.id, username: user.username, email: user.email };
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: '30d' });
 }
 
 /**
@@ -78,7 +94,7 @@ export async function register(payload: RegisterPayload): Promise<AuthSuccessDto
   }
 
   const user = toAuthUserDto(createdUser);
-  const token = jwt.sign(user, getJwtSecret(), { expiresIn: '30d' });
+  const token = issueToken(user);
 
   return { user, token };
 }
@@ -107,7 +123,7 @@ export async function login(payload: LoginPayload): Promise<AuthSuccessDto> {
   }
 
   const user = toAuthUserDto(existingUser);
-  const token = jwt.sign(user, getJwtSecret(), { expiresIn: '30d' });
+  const token = issueToken(user);
 
   return { user, token };
 }

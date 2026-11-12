@@ -72,7 +72,7 @@ describe('認証登録 API: POST /api/auth/register', () => {
     vi.spyOn(User, 'findOne').mockResolvedValue(null);
     vi.spyOn(bcrypt, 'hash').mockImplementation((async () => 'hashed') as typeof bcrypt.hash);
     vi.spyOn(User, 'create').mockResolvedValue({
-      toJSON: () => ({ id: 10, username: 'ok', email: 'ok@example.com' }),
+      toJSON: () => ({ id: 10, username: 'ok', email: 'ok@example.com', role: 'user' }),
     } as unknown as UserInstance);
     vi.spyOn(jwt, 'sign').mockImplementation((() => 'token') as typeof jwt.sign);
 
@@ -85,6 +85,7 @@ describe('認証登録 API: POST /api/auth/register', () => {
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data.user.email).toBe('ok@example.com');
+    expect(res.body.data.user.role).toBe('user');
     expect(res.body.data.token).toBe('token');
   });
 });
@@ -129,10 +130,10 @@ describe('認証ログイン API: POST /api/auth/login', () => {
     expect(res.body.error.code).toBe('AUTHENTICATION_FAILED');
   });
 
-  it('ログイン成功時は 200 と token を返す', async () => {
-    // 正常系：findOne, bcrypt.compare, jwt.sign をモック
+  it('ログイン成功時は 200 と token と role を返す', async () => {
+    // 正常系：findOne, bcrypt.compare, jwt.sign をモック（管理者でログイン）
     vi.spyOn(User, 'findOne').mockResolvedValue({
-      toJSON: () => ({ id: 1, username: 'u', email: 'u@example.com', password: 'hashed' }),
+      toJSON: () => ({ id: 1, username: 'u', email: 'u@example.com', password: 'hashed', role: 'admin' }),
     } as unknown as UserInstance);
     vi.spyOn(bcrypt, 'compare').mockImplementation((async () => true) as typeof bcrypt.compare);
     vi.spyOn(jwt, 'sign').mockImplementation((() => 'token') as typeof jwt.sign);
@@ -145,6 +146,9 @@ describe('認証ログイン API: POST /api/auth/login', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.token).toBe('token');
+    expect(res.body.data.user.role).toBe('admin');
+    // パスワードのハッシュはレスポンスに含めない
+    expect(res.body.data.user.password).toBeUndefined();
   });
 });
 
@@ -169,7 +173,7 @@ describe('プロフィール API: GET /api/auth/me', () => {
   it('認証済みユーザーなら 200 で user を返す', async () => {
     const authApp = makeApp(5);
     vi.spyOn(User, 'findByPk').mockResolvedValue({
-      toJSON: () => ({ id: 5, username: 'me', email: 'me@example.com' }),
+      toJSON: () => ({ id: 5, username: 'me', email: 'me@example.com', role: 'user' }),
     } as unknown as UserInstance);
 
     const res = await request(authApp).get('/api/auth/me');
@@ -177,5 +181,6 @@ describe('プロフィール API: GET /api/auth/me', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.user.username).toBe('me');
+    expect(res.body.data.user.role).toBe('user');
   });
 });

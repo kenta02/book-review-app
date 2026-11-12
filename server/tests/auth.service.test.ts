@@ -26,7 +26,7 @@ vi.mock('jsonwebtoken', () => ({
   },
 }));
 
-function makeUserInstance(input: { id: number; username: string; email: string; password?: string }) {
+function makeUserInstance(input: { id: number; username: string; email: string; password?: string; role?: string }) {
   return {
     toJSON: () => input,
   } as unknown as userRepository.UserInstance;
@@ -76,7 +76,7 @@ describe('auth.service', () => {
       vi.mocked(userRepository.findUserByEmail).mockResolvedValue(null);
       vi.mocked(bcrypt.hash).mockResolvedValue('hashed' as never);
       vi.mocked(userRepository.createUser).mockResolvedValue(
-        makeUserInstance({ id: 10, username: 'alice', email: 'alice@example.com', password: 'hashed' })
+        makeUserInstance({ id: 10, username: 'alice', email: 'alice@example.com', password: 'hashed', role: 'user' })
       );
       vi.mocked(jwt.sign).mockReturnValue('token' as never);
 
@@ -92,7 +92,7 @@ describe('auth.service', () => {
         password: 'hashed',
       });
       expect(result).toEqual({
-        user: { id: 10, username: 'alice', email: 'alice@example.com' },
+        user: { id: 10, username: 'alice', email: 'alice@example.com', role: 'user' },
         token: 'token',
       });
     });
@@ -137,7 +137,7 @@ describe('auth.service', () => {
 
     it('throws 401 when password mismatch', async () => {
       vi.mocked(userRepository.findUserByEmail).mockResolvedValue(
-        makeUserInstance({ id: 1, username: 'u1', email: 'u1@example.com', password: 'hashed' })
+        makeUserInstance({ id: 1, username: 'u1', email: 'u1@example.com', password: 'hashed', role: 'user' })
       );
       vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
 
@@ -148,7 +148,7 @@ describe('auth.service', () => {
 
     it('returns token when credentials are valid', async () => {
       vi.mocked(userRepository.findUserByEmail).mockResolvedValue(
-        makeUserInstance({ id: 1, username: 'u1', email: 'u1@example.com', password: 'hashed' })
+        makeUserInstance({ id: 1, username: 'u1', email: 'u1@example.com', password: 'hashed', role: 'user' })
       );
       vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
       vi.mocked(jwt.sign).mockReturnValue('token-login' as never);
@@ -156,9 +156,37 @@ describe('auth.service', () => {
       const result = await authService.login({ email: 'u1@example.com', password: 'password123' });
 
       expect(result).toEqual({
-        user: { id: 1, username: 'u1', email: 'u1@example.com' },
+        user: { id: 1, username: 'u1', email: 'u1@example.com', role: 'user' },
         token: 'token-login',
       });
+    });
+
+    it('returns role admin for an admin user', async () => {
+      vi.mocked(userRepository.findUserByEmail).mockResolvedValue(
+        makeUserInstance({ id: 2, username: 'boss', email: 'boss@example.com', password: 'hashed', role: 'admin' })
+      );
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+      vi.mocked(jwt.sign).mockReturnValue('token-admin' as never);
+
+      const result = await authService.login({ email: 'boss@example.com', password: 'password123' });
+
+      expect(result.user.role).toBe('admin');
+    });
+
+    it('does not put role in the JWT payload (role is read from DB on each request)', async () => {
+      vi.mocked(userRepository.findUserByEmail).mockResolvedValue(
+        makeUserInstance({ id: 2, username: 'boss', email: 'boss@example.com', password: 'hashed', role: 'admin' })
+      );
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+      vi.mocked(jwt.sign).mockReturnValue('token-admin' as never);
+
+      await authService.login({ email: 'boss@example.com', password: 'password123' });
+
+      expect(jwt.sign).toHaveBeenCalledWith(
+        { id: 2, username: 'boss', email: 'boss@example.com' },
+        'test-jwt-secret',
+        { expiresIn: '30d' }
+      );
     });
   });
 
@@ -174,13 +202,13 @@ describe('auth.service', () => {
 
     it('returns user profile when found', async () => {
       vi.mocked(userRepository.findUserById).mockResolvedValue(
-        makeUserInstance({ id: 5, username: 'me', email: 'me@example.com' })
+        makeUserInstance({ id: 5, username: 'me', email: 'me@example.com', role: 'user' })
       );
 
       const result = await authService.getMyProfile(5);
 
       expect(result).toEqual({
-        user: { id: 5, username: 'me', email: 'me@example.com' },
+        user: { id: 5, username: 'me', email: 'me@example.com', role: 'user' },
       });
     });
   });
