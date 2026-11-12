@@ -17,6 +17,15 @@ const mockAccounts: MockAccount[] = [
     username: "john_doe",
     email: "john@example.com",
     password: "password123",
+    role: "user",
+  },
+  // 管理者の動作確認用（他人のレビューの編集・削除など）
+  {
+    id: 2,
+    username: "admin",
+    email: "admin@example.com",
+    password: "password123",
+    role: "admin",
   },
 ];
 
@@ -34,8 +43,8 @@ function isSameEmail(a: string, b: string): boolean {
 }
 
 /** パスワードを除いた公開用ユーザーに変換する */
-function toAuthUser({ id, username, email }: MockAccount): AuthUser {
-  return { id, username, email };
+function toAuthUser({ id, username, email, role }: MockAccount): AuthUser {
+  return { id, username, email, role };
 }
 
 /**
@@ -65,6 +74,7 @@ export const mockAuthApi = {
       username: body.username,
       email: body.email,
       password: body.password,
+      role: "user", // 新規登録は常に一般ユーザー（サーバーと同じ）
     };
     mockAccounts.push(account);
 

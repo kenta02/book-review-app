@@ -7,8 +7,14 @@ import { AuthProvider } from "../auth/AuthProvider";
 import { getToken } from "../auth/tokenStorage";
 import { ApiHttpError } from "../errors/AppError";
 import { LoginPage } from "./LoginPage";
+import type { AuthUser } from "../types";
 
-const user = { id: 1, username: "john_doe", email: "john@example.com" };
+const user: AuthUser = {
+  id: 1,
+  username: "john_doe",
+  email: "john@example.com",
+  role: "user",
+};
 
 /** 実際の AuthProvider を使い、ログイン後に /dashboard へ移動するところまで確認する */
 const renderLogin = () =>

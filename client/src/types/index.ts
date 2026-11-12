@@ -128,11 +128,16 @@ export type useBooksResult = {
   isFetched?: boolean; // データが初回取得されたかどうかを示すフラグ
 };
 
+// ユーザーの権限（サーバーの OpenAPI の User.role と同じ）
+export type UserRole = "user" | "admin";
+
 // 認証済みユーザーの型（サーバーの AuthUserDto と同じ形）
 export interface AuthUser {
   id: number;
   username: string;
   email: string;
+  /** 権限。管理者向けの操作を出し分けるために使う（権限そのものの判定はサーバーが行う） */
+  role: UserRole;
 }
 
 // ログインリクエストの型

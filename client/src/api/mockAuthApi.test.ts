@@ -13,7 +13,31 @@ describe("mockAuthApi", () => {
       id: 1,
       username: "john_doe",
       email: "john@example.com",
+      role: "user",
     });
+  });
+
+  it("管理者アカウントでログインすると role が admin になる", async () => {
+    const { data } = await mockAuthApi.login({
+      email: "admin@example.com",
+      password: "password123",
+    });
+    expect(data.user.role).toBe("admin");
+  });
+
+  it("新規登録したユーザーの role は常に user", async () => {
+    const { data } = await mockAuthApi.register({
+      username: "role_check",
+      email: "role-check@example.com",
+      password: "password123",
+    });
+    expect(data.user.role).toBe("user");
+  });
+
+  it("自分の情報（getMe）にも role が含まれ、パスワードは含まれない", async () => {
+    const { data } = await mockAuthApi.getMe("mock-token-2");
+    expect(data.user.role).toBe("admin");
+    expect(data.user).not.toHaveProperty("password");
   });
 
   it("パスワード誤りは 401", async () => {
