@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
+import { useAuth } from "../auth/useAuth";
 import { MainLayout } from "../components/layouts/MainLayout";
 import { BookCard } from "../components/BookCard";
 import { BOOK_LIST_ERROR_MESSAGES } from "../constants/messages";
@@ -48,6 +49,10 @@ export function DashboardPage() {
 
   const { books, loading, errorCode, isFetched, refresh } =
     useBooks(appliedQuery);
+
+  // 削除の導線は管理者にだけ表示する（表示の出し分けだけで、権限の判定はサーバーが行う）
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   // エラーメッセージの取得
   const errorMessage = errorCode ? BOOK_LIST_ERROR_MESSAGES[errorCode] : null;
@@ -296,6 +301,8 @@ export function DashboardPage() {
               ISBN={book.ISBN}
               publicationYear={book.publicationYear}
               bookId={book.id}
+              canDelete={isAdmin}
+              onDeleted={refresh}
             />
           ))}
       </div>
