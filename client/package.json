@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
+    "lint": "oxlint -c .oxlintrc.jsonc . && eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -31,12 +31,14 @@
     "autoprefixer": "^10.6.2",
     "depcheck": "^1.4.7",
     "eslint": "^10.14.0",
+    "eslint-plugin-oxlint": "1.94.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.14.0",
     "husky": "^9.1.7",
     "jsdom": "^29.0.1",
     "lint-staged": "^16.2.7",
+    "oxlint": "1.94.0",
     "postcss": "^8.5.32",
     "react-doctor": "^0.9.22",
     "tailwindcss": "^4.2.2",

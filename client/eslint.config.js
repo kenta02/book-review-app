@@ -1,6 +1,8 @@
 import { FlatCompat } from "@eslint/eslintrc";
 import js from "@eslint/js";
 import { fileURLToPath } from "node:url";
+import path from "node:path";
+import oxlint from "eslint-plugin-oxlint";
 
 const compat = new FlatCompat({
   baseDirectory: fileURLToPath(new URL(".", import.meta.url)),
@@ -8,7 +10,7 @@ const compat = new FlatCompat({
 });
 
 // 既存の推奨ルールを維持したまま flat config に変換する。
-export default compat.config({
+const baseConfig = compat.config({
   "ignorePatterns": [
     "dist",
     "coverage"
@@ -68,3 +70,11 @@ export default compat.config({
     }
   ]
 });
+
+// oxlint が担当するルールを ESLint 側で無効化する（重複検査の防止）。
+// oxlint 側の設定は .oxlintrc.jsonc を参照する。
+const dirname = path.dirname(fileURLToPath(import.meta.url));
+export default [
+  ...baseConfig,
+  ...oxlint.buildFromOxlintConfigFile(path.join(dirname, ".oxlintrc.jsonc")),
+];
