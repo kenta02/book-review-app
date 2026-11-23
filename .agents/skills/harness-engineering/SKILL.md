@@ -1,12 +1,6 @@
 ---
-id: "harness-engineering"
-name: "ハーネスエンジニアリング"
-version: "1.0.0"
-author: "kenta02"
-visibility: "internal"
-language: "ja"
-tags: ["harness", "testing", "ci", "reliability"]
-description: "テストハーネスとCIパイプライン設計のガイドライン。" 
+name: harness-engineering
+description: テストハーネスや CI の設計・安定化、フラッカーテスト対応のときに使う
 ---
 
 # ハーネスエンジニアリング

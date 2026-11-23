@@ -1,12 +1,6 @@
 ---
-id: "ui-design"
-name: "UI 実装・スタイリング"
-version: "1.0.0"
-author: "kenta02"
-visibility: "internal"
-language: "ja"
-tags: ["ui", "design", "frontend", "react"]
-description: "React コンポーネント設計、Tailwind CSS、アクセシビリティに関するガイドライン"
+name: ui-design
+description: React コンポーネントや Tailwind CSS のスタイル、アクセシビリティを実装・修正するときに使う
 ---
 
 # UI 実装・スタイリング

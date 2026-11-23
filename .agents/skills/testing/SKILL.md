@@ -1,12 +1,6 @@
 ---
-id: "testing"
-name: "テスト戦略"
-version: "1.0.0"
-author: "kenta02"
-visibility: "internal"
-language: "ja"
-tags: ["test", "vitest", "e2e"]
-description: "ユニット・統合・E2E テストの方針と使用ツールに関するガイドライン"
+name: testing
+description: テストを追加・修正するときや回帰確認を行うときに使う（Vitest によるユニット・統合テスト）
 ---
 
 # テスト戦略
@@ -19,9 +13,9 @@ description: "ユニット・統合・E2E テストの方針と使用ツール�
   - 例: `/api/books` の検索条件、`/api/reviews` 投稿処理を確認。
 - モック: 外部 API（Google Books API など）はテスト用スタブに差し替える。モック用ライブラリは指定なし（必要になった時点で選定）。
 
-## E2E
+## E2E（未導入）
 
-- Playwright などを検討し、主要フローをカバー（ログイン→書籍一覧→レビュー投稿）。
+- 現状は導入していない。導入する場合は Playwright などを検討し、主要フローをカバー（ログイン→書籍一覧→レビュー投稿）。
 - テストデータは Fixtures で管理し、CI では SQLite メモリ DB を利用。
   - サンプル書籍データやレビューを用意する。
 

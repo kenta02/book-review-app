@@ -1,12 +1,6 @@
 ---
-id: "backend-integration"
-name: "バックエンド連携・認証"
-version: "1.0.0"
-author: "kenta02"
-visibility: "internal"
-language: "ja"
-tags: ["backend","integration","auth"]
-description: "API 設計や認証、外部サービスとの連携に関するガイドライン"
+name: backend-integration
+description: API 設計、認証フロー、外部 API（Google Books など）連携を実装・修正するときに使う
 ---
 
 # バックエンド連携・認証
