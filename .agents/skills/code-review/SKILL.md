@@ -1,12 +1,6 @@
 ---
-id: "code-review"
-name: "コードレビュー統合ガイド"
-version: "1.0.0"
-author: "kenta02"
-visibility: "internal"
-language: "ja"
-tags: ["code-review", "quality", "typescript", "react", "backend", "database"]
-description: "PR・ブランチのコードレビュー時にチェックすべき項目を統合したガイド。各領域へのリンクを提供。"
+name: code-review
+description: PR・ブランチのレビュー時に、観点別のチェック項目を確認するために使う
 ---
 
 # コードレビュー統合ガイド

@@ -1,12 +1,6 @@
 ---
-id: "architecture"
-name: "アーキテクチャ・ディレクトリ構成"
-version: "1.0.0"
-author: "kenta02"
-visibility: "internal"
-language: "ja"
-tags: ["architecture","design"]
-description: "プロジェクトのファイル/モジュール配置や機能分離に関するガイドライン"
+name: architecture
+description: ファイル・ディレクトリ配置、モジュール分割、依存関係の設計を行うときに使う
 ---
 
 # アーキテクチャ・ディレクトリ構成

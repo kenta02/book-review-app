@@ -1,12 +1,6 @@
 ---
-id: "security"
-name: "セキュリティ・認証"
-version: "1.0.0"
-author: "kenta02"
-visibility: "internal"
-language: "ja"
-tags: ["security", "auth", "privacy"]
-description: "認証・認可、暗号化、API セキュリティ、データ保護に関するガイドライン"
+name: security
+description: 認証・認可、入力検証、データ保護に関わる実装・レビューのときに使う
 ---
 
 # セキュリティ・認証

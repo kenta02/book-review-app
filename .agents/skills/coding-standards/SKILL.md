@@ -1,12 +1,6 @@
 ---
-id: "coding-standards"
-name: "コーディング規約"
-version: "1.0.0"
-author: "kenta02"
-visibility: "internal"
-language: "ja"
-tags: ["guidelines","code","typescript","react"]
-description: "TypeScript/JavaScript や React、API 設計、テスト等に関する詳細なコーディング規約"
+name: coding-standards
+description: コードを書く・レビューするときに、命名・型・エラーハンドリングなどの規約を確認するために使う
 ---
 
 # コーディング規約

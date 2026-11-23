@@ -9,11 +9,12 @@ description: 差分を確認し、プロジェクト規約（[TYPE] 説明（日
 
 1. `git status` と `git diff`（ステージ済みは `git diff --cached`）で変更内容を確認する。
 2. 現在のブランチを確認する。`main` / `develop` への直接コミットは避け、
-   ブランチ戦略（`../docs/projects/book-review-app/specs/BRANCH_STRATEGY.md`）に沿った
+   ブランチ戦略（`../project-documentation/projects/book-review-app/specs/BRANCH_STRATEGY.md`）に沿った
    `feature/` `bugfix/` `hotfix/` ブランチで作業する。違反する場合はコミット前にユーザーへ警告する。
 3. 目的の異なる変更が混在していれば、分けてコミットすることを提案する。
 4. ファイルは名前を指定して追加する（`git add -A` / `git add .` は使わない）。
-   `.env`、秘密情報、`node_modules`、ローカル専用ファイル（`CLAUDE.md`、`.claude/`、`.agents/skills/`）は含めない。
+   `.env`、秘密情報、`node_modules`、ローカル専用ファイル（`CLAUDE.local.md`、`.claude/settings.local.json`）は含めない。
+   `AGENTS.md` / `CLAUDE.md` / `.agents/skills/` / `.claude/skills/` は共有対象なので、変更があればコミットする。
 5. コミットメッセージを作る。
 
    - 形式: `[TYPE] 説明（日本語）`
