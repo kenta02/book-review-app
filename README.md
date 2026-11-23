@@ -120,7 +120,7 @@ pnpm run dev
 | `pnpm --filter client run dev`                      | フロントエンド起動             |
 | `pnpm --filter server run dev`                      | API サーバー起動               |
 | `pnpm -r run build`                                 | 両パッケージのビルド           |
-| `pnpm -r run lint`                                  | 両パッケージの ESLint          |
+| `pnpm -r run lint`                                  | 両パッケージの oxlint + ESLint |
 | `pnpm run test`                                     | workspace ロックファイルの検証 |
 | `pnpm --filter server run test:ci-parity`           | サーバーテスト・カバレッジ     |
 | `pnpm --filter client exec vitest --run --coverage` | クライアントテスト・カバレッジ |

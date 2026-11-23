@@ -99,6 +99,20 @@ i++;
 | クォート   | **シングルクォート** | 統一性、コンシステンシー |
 | const/let  | **const 優先**       | 不変性、バグ防止         |
 
+### Lint（oxlint と ESLint の併用）
+
+`pnpm run lint`（client / server）は oxlint → ESLint の順に両方を実行する。
+
+| ツール | 担当 | 設定 |
+| ------ | ---- | ---- |
+| oxlint | 高速な一次チェック（`no-explicit-any`・`no-var`・`no-console`・`unused-imports`・React Hooks など） | `.oxlintrc.jsonc` |
+| ESLint | oxlint が未対応のルール（`import-x/no-unresolved`・`import-x/order`・`import-x/no-named-as-default-member`） | `eslint.config.*` |
+
+- oxlint が担当するルールは `eslint-plugin-oxlint` により ESLint 側で自動的に無効化される。ルールを追加・変更するときは `.oxlintrc.jsonc` に書く。
+- oxlint が未対応のルールは従来どおり ESLint の設定に書く。
+- `lint` に oxlint を含めないと、ESLint 側で無効化されたルールが検査されなくなるため、スクリプトを分割しないこと。
+- 詳細は `specs/implementation/oxlint併用導入計画.md` を参照。
+
 ...（中略: ここに前記の長大なガイドラインの全文が続く）...
 
 **最終更新**: 2026 年 1 月 16 日  

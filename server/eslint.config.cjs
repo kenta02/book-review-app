@@ -1,5 +1,7 @@
 const { FlatCompat } = require("@eslint/eslintrc");
 const js = require("@eslint/js");
+const path = require("node:path");
+const oxlint = require("eslint-plugin-oxlint");
 
 const compat = new FlatCompat({
   baseDirectory: __dirname,
@@ -7,7 +9,7 @@ const compat = new FlatCompat({
 });
 
 // 既存ルールを維持し、ESLint 10 対応の import プラグインへ移行する。
-module.exports = compat.config({
+const baseConfig = compat.config({
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": "latest",
@@ -89,3 +91,10 @@ module.exports = compat.config({
     "coverage/"
   ]
 });
+
+// oxlint が担当するルールを ESLint 側で無効化する（重複検査の防止）。
+// oxlint 側の設定は .oxlintrc.jsonc を参照する。
+module.exports = [
+  ...baseConfig,
+  ...oxlint.buildFromOxlintConfigFile(path.join(__dirname, ".oxlintrc.jsonc")),
+];
