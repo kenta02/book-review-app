@@ -1,82 +1,58 @@
 # Backend Integration - 実装例
 
-## API エンドポイント例
+## 主なエンドポイント
+
+| メソッド | パス                            | 認証          |
+| -------- | ------------------------------- | ------------- |
+| POST     | `/api/auth/register`            | 不要          |
+| POST     | `/api/auth/login`               | 不要          |
+| GET      | `/api/auth/me`                  | 必要          |
+| GET      | `/api/books`                    | 不要          |
+| GET      | `/api/books/:id`                | 不要          |
+| POST     | `/api/books`                    | 管理者        |
+| PUT      | `/api/books/:id`                | 管理者        |
+| DELETE   | `/api/books/:id`                | 管理者        |
+| GET      | `/api/books/:bookId/reviews`    | 不要          |
+| GET      | `/api/reviews`                  | 不要          |
+| GET      | `/api/reviews/:reviewId`        | 不要          |
+| POST     | `/api/reviews`                  | 必要          |
+| PUT      | `/api/reviews/:reviewId`        | 本人か管理者  |
+| DELETE   | `/api/reviews/:reviewId`        | 本人か管理者  |
+| GET      | `/api/reviews/:reviewId/comments` | 不要        |
+| POST     | `/api/reviews/:reviewId/comments` | 必要        |
+| GET      | `/api/users/:id`                | 不要          |
+
+## ルート定義
 
 ```typescript
-// GET - 書籍一覧取得
-GET /api/books
-Query: { page: 1, limit: 20, search: 'react' }
-Response: { data: Book[], total: 100 }
-
-// GET - 書籍詳細取得
-GET /api/books/:id
-Response: { data: Book }
-
-// POST - レビュー投稿
-POST /api/reviews
-Body: { bookId, rating, text }
-Response: { data: Review }
-
-// PUT - レビュー更新
-PUT /api/reviews/:id
-Body: { rating, text }
-Response: { data: Review }
-
-// DELETE - レビュー削除
-DELETE /api/reviews/:id
-Response: { success: true }
+// server/src/routes/reviews.ts
+router.get('/reviews', listReviews);
+router.post('/reviews', authenticateToken, createReview);
 ```
 
-## API クライアント例（フロントエンド）
+## エラーの送出
 
 ```typescript
-// src/api/bookApi.ts
-import axios from "axios";
+// service 層
+throw new ApiError(404, 'BOOK_NOT_FOUND', ERROR_MESSAGES.BOOK_NOT_FOUND);
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
-
-export const bookApi = {
-  getBooks: (params) => api.get("/books", { params }),
-  getBook: (id) => api.get(`/books/${id}`),
-  searchBooks: (query) => api.get("/books/search", { params: { q: query } }),
-};
-
-// usecase:
-const { data } = useQuery(["books"], () => bookApi.getBooks({ page: 1 }));
+// 入力エラー（controller で直接返す）
+return res.status(400).json({
+  success: false,
+  error: {
+    message: ERROR_MESSAGES.VALIDATION_FAILED,
+    code: 'VALIDATION_ERROR',
+    details: parseResult.errors,
+  },
+});
 ```
 
-## JWT 認証フロー例
+## フロントエンドからの呼び出し
 
 ```typescript
-// ログイン
-POST /api/auth/login
-→ Response: { accessToken, refreshToken, user }
-
-// リクエスト
-GET /api/books
-Headers: { Authorization: 'Bearer <accessToken>' }
-
-// トークンリフレッシュ
-POST /api/auth/refresh
-Body: { refreshToken }
-→ Response: { accessToken }
-```
-
-## ミドルウェア例（バックエンド）
-
-```typescript
-// src/middleware/auth.ts
-export const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = decoded.id;
-    next();
-  } catch {
-    res.status(401).json({ error: "Unauthorized" });
-  }
-};
-
-// src/routes/books.ts
-app.get("/books", verifyToken, bookController.getBooks);
+// client/src/api/apiClient.ts では fetch を使い、withAuthHeader でトークンを付ける
+const response = await fetch(url, withAuthHeader({ method: 'POST' }));
+if (!response.ok) {
+  throw new ApiHttpError(response.status, response.statusText);
+}
 ```

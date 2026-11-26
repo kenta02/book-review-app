@@ -3,91 +3,80 @@
 ## 認証フロー（JWT）
 
 ```typescript
-// ログイン処理
+// ログイン
 POST /api/auth/login
 Request: { email, password }
-Response: {
-  accessToken: 'eyJhbGciOiJIUzI1NiIs...',
-  refreshToken: 'eyJhbGciOiJIUzI1NiIs...',
-  user: { id, email, name }
-}
+成功時: user（id, username, email, role）と token
 
-// API リクエスト
-GET /api/books
-Headers: { Authorization: 'Bearer eyJhbGciOiJIUzI1NiIs...' }
+// 認証が必要な API
+GET /api/auth/me
+Headers: { Authorization: 'Bearer <token>' }
 ```
 
-## パスワードハッシング例（バックエンド）
+## ルートでの認証・認可
 
 ```typescript
-import bcrypt from "bcrypt";
+// server/src/routes/books.ts
+router.post('/', authenticateToken, requireAdmin, createBook);
+```
 
-// パスワード登録時
-const hashedPassword = await bcrypt.hash(password, 12);
-await userRepository.create({ email, password: hashedPassword });
+## 本人か管理者かの確認（service 層）
 
-// ログイン時のパスワード検証
-const user = await userRepository.findByEmail(email);
-const isPasswordValid = await bcrypt.compare(password, user.password);
+```typescript
+// server/src/services/review.service.ts と同じ形
+const isAdmin = requesterRole === 'admin';
+if (!isAdmin && Number(review.get('userId')) !== Number(userId)) {
+  throw new ApiError(403, 'FORBIDDEN', ERROR_MESSAGES.FORBIDDEN_REVIEW_UPDATE);
+}
+```
+
+## パスワードのハッシュ化
+
+```typescript
+// 登録時
+const hashedPassword = await bcrypt.hash(password, 10);
+
+// ログイン時（失敗理由は区別せず返す）
+const isPasswordValid = await bcrypt.compare(password, storedHash);
 if (!isPasswordValid) {
-  throw new AppError(401, "Invalid credentials");
+  throw new ApiError(401, 'AUTHENTICATION_FAILED', ERROR_MESSAGES.AUTHENTICATION_FAILED);
 }
 ```
 
-## CORS 設定例
-
-```typescript
-// src/middleware/cors.ts
-import cors from "cors";
-
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173", // 開発環境
-      "https://example.com", // 本番環境
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-  }),
-);
-```
-
-## 環境変数（機密情報）例
+## 環境変数（server/.env の例）
 
 ```bash
-# .env.local (gitignore に追加)
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=app
 DB_PASS=change-me
 DB_NAME=book_review
-JWT_SECRET=your-super-secret-key-change-in-production
-API_KEY=sk-...
+JWT_SECRET=change-me
+CORS_ORIGINS=http://localhost:3000
 ```
 
 ## SQL インジェクション対策（Sequelize）
 
 ```typescript
-// ✓ 安全（ORM メソッドはパラメータ化される）
+// 安全: ORM のメソッドはパラメータ化される
 const user = await User.findOne({ where: { email: userInput } });
 
-// ✓ 安全（Raw SQL は replacements でバインド）
+// 安全: 生の SQL は replacements でバインドする
 const rows = await sequelize.query('SELECT * FROM users WHERE email = :email', {
   replacements: { email: userInput },
   type: QueryTypes.SELECT,
 });
 
-// ✗ 危険（文字列連結）
+// 危険: 文字列の連結
 const query = `SELECT * FROM users WHERE email = '${userInput}'`;
 ```
 
 ## XSS 対策（React）
 
-```typescript
-// ✓ React は自動エスケープ
-const user = { name: '<script>alert("xss")</script>' };
-<div>{user.name}</div>  // 安全にエスケープされる
+```tsx
+// 安全: React は自動でエスケープする
+<div>{user.username}</div>
 
-// ✗ dangerouslySetInnerHTML を避ける
-<div dangerouslySetInnerHTML={{ __html: user.name }} />
+// 使わない
+<div dangerouslySetInnerHTML={{ __html: user.username }} />
 ```

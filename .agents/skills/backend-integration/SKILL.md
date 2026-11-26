@@ -6,19 +6,41 @@ description: API 設計、認証フロー、外部 API（Google Books など）�
 # バックエンド連携・認証
 
 本書籍レビューアプリの API 設計や認証方式、外部サービスとの連携についてのガイドラインです。
+API 契約は `server/src/openapi.yaml` も参照し、食い違う場合は実装を確認してください。
 
 ## API
 
-- RESTful 標準に従いエンドポイント設計。リソース名は複数形（例: `/api/books`, `/api/reviews`, `/api/users`）。
-- バリデーションは `express-validator` や Zod を使用し、Books/Reviews の入力チェックを重点的に実施。
-- エラーレスポンスは統一フォーマット `{ error: string; details?: any }` を返す。
+- RESTful に設計する。ベースパスは `/api`、リソース名は複数形（`/api/books`、`/api/reviews`、`/api/users`）。
+- 層は `routes` → `controllers` → `services` → `repositories` の順に分ける。
+- 入力は `server/src/validators/` の検証関数で確認する（`express-validator` や Zod は未導入）。
+- 成功時は `{ success: true, data }` を返す。
+- 入力エラーは controller が `400` を直接返す。業務エラーは service で `ApiError` を投げ、`apiErrorHandler`（`server/src/middleware/errorHandler.ts`）が整形する。エラーの形式は次のとおり。
+
+```typescript
+{
+  success: false;
+  error: {
+    message: string; // 英語
+    code: string; // 例: 'VALIDATION_ERROR'
+    details?: { field: string; message: string }[];
+  };
+}
+```
 
 ## 認証
 
-- JWT を使用。トークンは Authorization ヘッダーで送信。
-- 書籍データへのアクセスはログイン必須。未認証時は `401` を返す。
-- CORS 設定は `server/src/middleware/cors.ts` で管理。
+- JWT を `Authorization: Bearer <token>` ヘッダーで送る。有効期限は 30 日で、リフレッシュは未導入。
+- 参照系（書籍・レビュー・コメント・ユーザープロフィール）は認証不要。
+- 認証が必要なルートは `authenticateToken`、管理者専用は `requireAdmin` を付ける。未認証は `401`、権限不足は `403`。
+- 権限の一覧は [セキュリティ・認証](../security/SKILL.md) を参照。
+- CORS は `server/src/app.ts` で設定する（環境変数 `CORS_ORIGINS`）。
+
+## フロントエンド連携
+
+- API 呼び出しは `client/src/api/apiClient.ts` にまとめる。トークンは `withAuthHeader` が付与する。
+- `VITE_USE_MOCK=true` でモック API に切り替わる。API を追加・変更するときはモックもそろえる。
+- 失敗時は `ApiHttpError` を投げ、UI 側で `normalizeError` を通す。
 
 ## 外部サービス
 
-- 現状では主要な外部連携は不要だが、将来的に Google Books API などと連携する場合は `src/lib` にラッパーを作成。
+- 現状、外部 API の連携はない。Google Books API などを追加する場合は、配置を決めてから実装する。
