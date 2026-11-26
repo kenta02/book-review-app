@@ -43,4 +43,5 @@ API 契約は `server/src/openapi.yaml` も参照し、食い違う場合は実�
 
 ## 外部サービス
 
-- 現状、外部 API の連携はない。Google Books API などを追加する場合は、配置を決めてから実装する。
+- 現状、外部 API の連携はない。
+- Google Books API 連携（`docs/kadai.md` の 5-1）は、課題の指定により server 側で Axios を使う（server への追加が必要）。配置は実装前に決める。
