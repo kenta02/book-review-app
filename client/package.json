@@ -38,7 +38,7 @@
     "jsdom": "^29.0.1",
     "lint-staged": "^16.2.7",
     "postcss": "^8.5.32",
-    "react-doctor": "^0.9.22",
+    "react-doctor": "^0.9.23",
     "tailwindcss": "^4.2.2",
     "typedoc": "^0.28.20",
     "typescript": "5.9.3",
