@@ -5,12 +5,20 @@ import { apiClient } from "../api/apiClient";
 import { DashboardPage } from "./DashBoard";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import type { Book } from "../types";
+import { ApiHttpError } from "../errors/AppError";
 
 // ヘッダーが読む認証状態を固定する（このテストの関心は認証ではないため）
+// 書籍カードの「削除」は権限で出し分けるため、ログインユーザーはテストごとに差し替える
+let currentUser: {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+} | null = null;
 vi.mock("../auth/useAuth", () => ({
   useAuth: () => ({
-    user: null,
-    status: "unauthenticated",
+    user: currentUser,
+    status: currentUser ? "authenticated" : "unauthenticated",
     login: vi.fn(),
     register: vi.fn(),
     logout: vi.fn(),
@@ -22,6 +30,7 @@ vi.mock("../api/apiClient", () => {
     apiClient: {
       getAllBooks: vi.fn(),
       searchBooks: vi.fn(),
+      deleteBook: vi.fn(),
     },
   };
 });
@@ -64,6 +73,8 @@ describe("DashboardPage", () => {
     // reset api mock and localStorage stub
     (apiClient.getAllBooks as unknown as ReturnType<typeof vi.fn>).mockReset();
     (apiClient.searchBooks as unknown as ReturnType<typeof vi.fn>).mockReset();
+    (apiClient.deleteBook as unknown as ReturnType<typeof vi.fn>).mockReset();
+    currentUser = null;
     Object.defineProperty(globalThis, "localStorage", {
       value: localStorageMock,
       writable: true,
@@ -393,6 +404,7 @@ describe("DashboardPage 検索ボタンと URL クエリ同期", () => {
 
   beforeEach(() => {
     searchBooksMock.mockReset();
+    currentUser = null;
     Object.defineProperty(globalThis, "localStorage", {
       value: localStorageMock,
       writable: true,
@@ -622,6 +634,60 @@ describe("DashboardPage 検索ボタンと URL クエリ同期", () => {
     await waitFor(() => {
       expect(screen.queryByText(/Error:/)).not.toBeInTheDocument();
       expect(screen.getAllByText(/Sample/).length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("書籍カードの削除（管理者のみ）", () => {
+    const deleteBookMock = () =>
+      apiClient.deleteBook as unknown as ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      searchBooksMock.mockReset();
+      searchBooksMock.mockResolvedValue(okResponse(sample));
+    });
+
+    it("一般ユーザーにはカードの「削除」を表示しない", async () => {
+      currentUser = { id: 2, username: "john", email: "e", role: "user" };
+      renderDashboard();
+      await screen.findByTestId("book-card");
+
+      expect(
+        screen.queryByRole("button", { name: "削除" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("管理者が削除すると、一覧を再取得して表示を更新する", async () => {
+      currentUser = { id: 1, username: "admin", email: "e", role: "admin" };
+      deleteBookMock().mockResolvedValue(undefined);
+      renderDashboard();
+      await screen.findByTestId("book-card");
+      expect(searchBooksMock).toHaveBeenCalledTimes(1);
+
+      // 削除後の再取得では、その書籍が一覧から消えている
+      searchBooksMock.mockResolvedValue(okResponse([]));
+      fireEvent.click(screen.getByRole("button", { name: "削除" }));
+      fireEvent.click(screen.getByRole("button", { name: "削除する" }));
+
+      await waitFor(() => expect(searchBooksMock).toHaveBeenCalledTimes(2));
+      expect(deleteBookMock()).toHaveBeenCalledWith(100);
+      await waitFor(() =>
+        expect(screen.queryByTestId("book-card")).not.toBeInTheDocument(),
+      );
+    });
+
+    it("409 のときはエラーを表示し、一覧は再取得しない", async () => {
+      currentUser = { id: 1, username: "admin", email: "e", role: "admin" };
+      deleteBookMock().mockRejectedValue(new ApiHttpError(409, "conflict"));
+      renderDashboard();
+      await screen.findByTestId("book-card");
+
+      fireEvent.click(screen.getByRole("button", { name: "削除" }));
+      fireEvent.click(screen.getByRole("button", { name: "削除する" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "関連データがあるため、この書籍は削除できません",
+      );
+      expect(searchBooksMock).toHaveBeenCalledTimes(1);
     });
   });
 });

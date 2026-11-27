@@ -5,6 +5,9 @@ import { ReviewSectionDetail } from "../components/books/ReviewSectionDetail";
 import type { Book, Review } from "../types";
 import { useEffect, useState } from "react";
 import { apiClient } from "../api/apiClient";
+import { useAuth } from "../auth/useAuth";
+import { DeleteBookConfirm } from "../components/books/DeleteBookConfirm";
+import { useDeleteBook } from "../hooks/useDeleteBook";
 import { logger } from "../utils/logger";
 
 export function BookDetailPage() {
@@ -14,6 +17,20 @@ export function BookDetailPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 削除の導線は管理者にだけ表示する（表示の出し分けだけで、権限の判定はサーバーが行う）
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
+  // 削除に成功したら、この書籍はもう存在しないのでダッシュボードへ戻る
+  const {
+    isConfirming,
+    deleting,
+    error: deleteError,
+    requestDelete,
+    cancel,
+    confirmDelete,
+  } = useDeleteBook(Number(bookId), () => navigate("/dashboard"));
 
   const handleBack = () => {
     navigate(-1);
@@ -85,15 +102,32 @@ export function BookDetailPage() {
             <span aria-hidden="true">✏️</span>
             <span>編集</span>
           </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2"
-          >
-            <span aria-hidden="true">🗑️</span>
-            <span>削除</span>
-          </button>
+          {isAdmin && !isConfirming && (
+            <button
+              type="button"
+              onClick={requestDelete}
+              className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2"
+            >
+              <span aria-hidden="true">🗑️</span>
+              <span>削除</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* 削除の確認・エラー（管理者のみ） */}
+      {isAdmin && (
+        <div className="mb-6">
+          <DeleteBookConfirm
+            title={book?.title ?? ""}
+            isConfirming={isConfirming}
+            deleting={deleting}
+            error={deleteError}
+            onConfirm={confirmDelete}
+            onCancel={cancel}
+          />
+        </div>
+      )}
 
       {/* 本の詳細セクション */}
       <BookInfoDetail book={book} />
